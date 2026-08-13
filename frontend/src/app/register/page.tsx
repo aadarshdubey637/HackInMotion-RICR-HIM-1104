@@ -6,9 +6,12 @@ import { Sprout } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { ApiError } from '@/lib/api';
 import { Spinner, Notice } from '@/components/ui';
+import { LanguageSwitcher } from '@/components/language-switcher';
+import { useTranslation } from '@/lib/language-context';
 
 export default function RegisterPage() {
   const { register } = useAuth();
+  const { t, language } = useTranslation();
   const [form, setForm] = useState({ name: '', email: '', phone: '', password: '' });
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -37,6 +40,9 @@ export default function RegisterPage() {
         email: form.email,
         password: form.password,
         phone: form.phone || undefined,
+        // Save the language picked on this screen, so the account opens in it
+        // on any other device.
+        language,
       });
     } catch (err) {
       setSubmitting(false);
@@ -53,12 +59,16 @@ export default function RegisterPage() {
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center bg-gradient-to-b from-brand-50 to-soil-50 px-4 py-10">
       <div className="w-full max-w-sm">
+        <div className="mb-3 flex justify-end">
+          <LanguageSwitcher variant="inline" />
+        </div>
+
         <div className="mb-6 text-center">
           <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-600 shadow-lg shadow-brand-600/25">
             <Sprout className="h-8 w-8 text-white" aria-hidden />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">Create your account</h1>
-          <p className="mt-1 text-sm text-slate-600">Takes less than a minute.</p>
+          <h1 className="text-2xl font-bold text-slate-900">{t('auth.createAccount')}</h1>
+          <p className="mt-1 text-sm text-slate-600">{t('auth.takesAMinute')}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="card space-y-4 p-6">

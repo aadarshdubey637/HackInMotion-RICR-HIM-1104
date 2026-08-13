@@ -6,9 +6,12 @@ import { Sprout, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { ApiError } from '@/lib/api';
 import { Spinner, Notice } from '@/components/ui';
+import { LanguageSwitcher } from '@/components/language-switcher';
+import { useTranslation } from '@/lib/language-context';
 
 export default function LoginPage() {
   const { login } = useAuth();
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -26,11 +29,7 @@ export default function LoginPage() {
       // so a double-tap cannot fire a second request.
     } catch (err) {
       setSubmitting(false);
-      setError(
-        err instanceof ApiError
-          ? err.message
-          : 'Could not sign in. Please check your connection and try again.',
-      );
+      setError(err instanceof ApiError ? err.message : t('auth.serverError'));
     }
   }
 
@@ -44,24 +43,28 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center bg-gradient-to-b from-brand-50 to-soil-50 px-4 py-10">
       <div className="w-full max-w-sm">
+        {/* Language first: a farmer cannot be asked to read an English screen
+            in order to find the control that makes the app readable. */}
+        <div className="mb-3 flex justify-end">
+          <LanguageSwitcher variant="inline" />
+        </div>
+
         <div className="mb-7 text-center">
           <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-600 shadow-lg shadow-brand-600/25">
             <Sprout className="h-8 w-8 text-white" aria-hidden />
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">Smart Farm</h1>
-          <p className="mt-1 text-sm text-slate-600">
-            Your farming advisor — weather, water, crop health and prices.
-          </p>
+          <h1 className="text-2xl font-bold text-slate-900">{t('auth.loginTitle')}</h1>
+          <p className="mt-1 text-sm text-slate-600">{t('auth.loginSubtitle')}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="card space-y-4 p-6">
-          <h2 className="text-lg font-bold text-slate-800">Sign in</h2>
+          <h2 className="text-lg font-bold text-slate-800">{t('auth.signIn')}</h2>
 
           {error ? <Notice tone="warn">{error}</Notice> : null}
 
           <div>
             <label htmlFor="email" className="label">
-              Email
+              {t('auth.email')}
             </label>
             <input
               id="email"
@@ -78,7 +81,7 @@ export default function LoginPage() {
 
           <div>
             <label htmlFor="password" className="label">
-              Password
+              {t('auth.password')}
             </label>
             <div className="relative">
               <input
@@ -104,7 +107,7 @@ export default function LoginPage() {
 
           <button type="submit" disabled={submitting} className="btn-primary w-full">
             {submitting ? <Spinner className="h-5 w-5" /> : null}
-            {submitting ? 'Signing in…' : 'Sign in'}
+            {submitting ? t('common.loading') : t('auth.signIn')}
           </button>
 
           <button type="button" onClick={useDemoAccount} className="btn-ghost w-full text-sm">
@@ -113,9 +116,9 @@ export default function LoginPage() {
         </form>
 
         <p className="mt-5 text-center text-sm text-slate-600">
-          New here?{' '}
+          {t('auth.noAccount')}{' '}
           <Link href="/register" className="font-semibold text-brand-700 underline underline-offset-2">
-            Create an account
+            {t('auth.register')}
           </Link>
         </p>
       </div>

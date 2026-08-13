@@ -1,21 +1,24 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
-import Image from 'next/image';
 import {
   Stethoscope,
   Camera,
   X,
-  Plus,
   Users,
   ClipboardCheck,
   Info,
   ChevronDown,
+  Volume2,
+  Square,
+  Mic,
 } from 'lucide-react';
 import { AppShell } from '@/components/app-shell';
 import { useAuth } from '@/lib/auth-context';
 import { api, ApiError } from '@/lib/api';
-import type { Crop, HealthLog, Diagnosis } from '@/lib/types';
+import { useVoice, buildSpokenDiagnosis } from '@/lib/voice';
+import { useSpeechRecognition, detectLanguage } from '@/lib/speech';
+import type { Crop, HealthLog, Diagnosis, DiagnosisCandidate } from '@/lib/types';
 import {
   Card,
   SectionHeading,
@@ -26,7 +29,7 @@ import {
   Badge,
   healthSeverityStyles,
 } from '@/components/ui';
-import { cn, cropLabel, timeAgo, humanise } from '@/lib/utils';
+import { cn, timeAgo } from '@/lib/utils';
 import { useTranslation } from '@/lib/language-context';
 
 const OBSERVATION_TYPES = [
@@ -159,11 +162,12 @@ function HealthContent() {
               {nearby.reports.slice(0, 4).map((report) => (
                 <div key={`${report.name}-${report.crop}`} className="flex items-center justify-between gap-2">
                   <span className="text-sm font-semibold text-amber-900">
-                    {report.name} <span className="font-normal">on {tCrop(report.crop)}</span>
+                    {report.name}{' '}
+                    <span className="font-normal">
+                      {t('health.onCrop')} {tCrop(report.crop)}
+                    </span>
                   </span>
-                  <Badge tone="warn">
-                    {report.count} reports
-                  </Badge>
+                  <Badge tone="warn">{t('health.reports', { count: report.count })}</Badge>
                 </div>
               ))}
             </div>
@@ -218,7 +222,7 @@ function ObservationForm({
   onCancel: () => void;
   onSuccess: (diagnosis: Diagnosis, warning?: string) => void;
 }) {
-  const { t, tCrop } = useTranslation();
+  const { t, tCrop, language } = useTranslation();
   const fileInput = useRef<HTMLInputElement>(null);
   const [cropId, setCropId] = useState(crops[0]?.id ?? '');
   const [description, setDescription] = useState('');
@@ -264,6 +268,9 @@ function ObservationForm({
         description,
         observationType,
         image,
+        // Plant.id localises its disease descriptions and treatment advice,
+        // but only for the language actually asked for.
+        language,
       });
       onSuccess(response.diagnosis, response.warning);
     } catch (err) {
@@ -357,6 +364,16 @@ function ObservationForm({
             className="field py-3"
             placeholder={t('health.description')}
           />
+
+          {/* Dictation. The diagnosis engine maps regional symptom words onto
+              its English vocabulary, so "पत्तों पर पीले धब्बे" scores exactly
+              like "yellow patches on leaves" — speaking is a first-class way
+              to describe a problem here, not a convenience wrapper. */}
+          <DictateButton
+            onText={(text) =>
+              setDescription((prev) => (prev ? `${prev.trim()} ${text}` : text))
+            }
+          />
         </div>
 
         <div>
@@ -408,6 +425,67 @@ function ObservationForm({
   );
 }
 
+/**
+ * Dictate the symptom description.
+ *
+ * Listens in the farmer's language and appends what it hears. If the speech
+ * comes back in a different script than expected, the interface follows it —
+ * a farmer who starts speaking Punjabi into a Hindi app meant to be using
+ * Punjabi, and should not have to say so twice.
+ */
+function DictateButton({ onText }: { onText: (text: string) => void }) {
+  const { t, language, setLanguage } = useTranslation();
+  const speech = useSpeechRecognition();
+
+  if (!speech.supported) return null;
+
+  async function dictate() {
+    if (speech.listening) {
+      speech.stop();
+      return;
+    }
+
+    const heard = await speech.listen(language);
+    if (!heard) return;
+
+    const spoken = detectLanguage(heard);
+    if (spoken && spoken !== language) setLanguage(spoken);
+
+    onText(heard);
+  }
+
+  return (
+    <div className="mt-2">
+      <button
+        type="button"
+        onClick={() => void dictate()}
+        aria-pressed={speech.listening}
+        className={cn(
+          'flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl border text-sm font-semibold transition',
+          speech.listening
+            ? 'border-red-300 bg-red-50 text-red-700'
+            : 'border-soil-300 bg-white text-slate-700 hover:bg-soil-50',
+        )}
+      >
+        <Mic className={cn('h-4 w-4', speech.listening && 'animate-pulse')} aria-hidden />
+        {speech.listening ? t('voice.dictateStop') : t('voice.dictate')}
+      </button>
+
+      <p className="mt-1 text-xs text-slate-500">
+        {speech.error === 'mic-blocked'
+          ? t('voice.micBlocked')
+          : speech.error === 'no-speech'
+            ? t('voice.didNotCatch')
+            : t('voice.dictateHint')}
+      </p>
+
+      {speech.interim ? (
+        <p className="mt-1 text-xs italic text-slate-400">{speech.interim}</p>
+      ) : null}
+    </div>
+  );
+}
+
 // ─────────────────────────── Result ───────────────────────────
 
 function DiagnosisResult({
@@ -419,7 +497,17 @@ function DiagnosisResult({
   warning?: string;
   onDismiss: () => void;
 }) {
+  const { t, tNarrative, language } = useTranslation();
+  const voice = useVoice();
   const style = healthSeverityStyles[diagnosis.severity];
+
+  function readAloud() {
+    if (voice.speaking) {
+      voice.stop();
+      return;
+    }
+    voice.speak(buildSpokenDiagnosis(diagnosis, t, tNarrative), language);
+  }
 
   return (
     <Card className={cn('border-l-4 border-brand-500')}>
@@ -429,13 +517,43 @@ function DiagnosisResult({
             <span className={cn('rounded-lg px-2 py-1 text-xs font-bold', style.bg, style.text)}>
               {style.label}
             </span>
-            <Badge tone="neutral">{Math.round(diagnosis.confidence * 100)}% confident</Badge>
+            <Badge tone="neutral">
+              {t('health.confidence', { percent: Math.round(diagnosis.confidence * 100) })}
+            </Badge>
+            {diagnosis.method === 'rule-engine+plant-id' ? (
+              <Badge tone="brand">
+                <Camera className="h-3 w-3" aria-hidden />
+                {t('health.fromPhoto')}
+              </Badge>
+            ) : null}
           </div>
-          <h2 className="text-lg font-bold text-slate-900">{diagnosis.summary}</h2>
+          <h2 className="text-lg font-bold text-slate-900">{tNarrative(diagnosis.summary)}</h2>
         </div>
-        <button type="button" onClick={onDismiss} aria-label="Close" className="btn-ghost shrink-0 px-2">
-          <X className="h-5 w-5" aria-hidden />
-        </button>
+
+        <div className="flex shrink-0 items-center gap-1">
+          {voice.supported ? (
+            <button
+              type="button"
+              onClick={readAloud}
+              aria-label={voice.speaking ? t('voice.stopReading') : t('voice.readAloud')}
+              className={cn('btn-ghost px-2', voice.speaking && 'text-brand-700')}
+            >
+              {voice.speaking ? (
+                <Square className="h-5 w-5 fill-current" aria-hidden />
+              ) : (
+                <Volume2 className="h-5 w-5" aria-hidden />
+              )}
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={onDismiss}
+            aria-label={t('voice.close')}
+            className="btn-ghost shrink-0 px-2"
+          >
+            <X className="h-5 w-5" aria-hidden />
+          </button>
+        </div>
       </div>
 
       {warning ? (
@@ -444,10 +562,26 @@ function DiagnosisResult({
         </div>
       ) : null}
 
+      {/* A photo that is not of a plant is the single most common bad input —
+          say so plainly rather than reporting a confident nonsense diagnosis. */}
+      {diagnosis.image && !diagnosis.image.isPlant ? (
+        <div className="mt-2">
+          <Notice tone="warn">{t('health.notAPlant')}</Notice>
+        </div>
+      ) : null}
+
+      {/* Plant.id has no localised content for most Indian languages; when the
+          text below came back in English, say why rather than looking broken. */}
+      {diagnosis.image?.languageFellBack ? (
+        <div className="mt-2">
+          <Notice tone="info">{t('health.detailsInEnglish')}</Notice>
+        </div>
+      ) : null}
+
       {/* What to do */}
       <div className="mt-4">
         <h3 className="mb-2 text-sm font-bold uppercase tracking-wide text-slate-500">
-          What to do now
+          {t('health.whatToDo')}
         </h3>
         <ol className="space-y-2">
           {diagnosis.nextSteps.map((step, i) => (
@@ -455,7 +589,7 @@ function DiagnosisResult({
               <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-100 text-xs font-bold text-brand-800">
                 {i + 1}
               </span>
-              <span>{step}</span>
+              <span>{tNarrative(step)}</span>
             </li>
           ))}
         </ol>
@@ -465,39 +599,11 @@ function DiagnosisResult({
       {diagnosis.candidates.length > 0 ? (
         <div className="mt-4 border-t border-soil-200 pt-3">
           <h3 className="mb-2 text-sm font-bold uppercase tracking-wide text-slate-500">
-            What it might be
+            {t('health.whatItMightBe')}
           </h3>
           <div className="space-y-2.5">
             {diagnosis.candidates.map((candidate) => (
-              <div key={candidate.name} className="rounded-xl bg-soil-50 p-3">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="font-semibold text-slate-800">
-                    {candidate.name}
-                    <span className="ml-1.5 text-xs font-normal capitalize text-slate-500">
-                      {candidate.kind}
-                    </span>
-                  </p>
-                  <span className="shrink-0 text-sm font-bold tabular-nums text-slate-600">
-                    {Math.round(candidate.confidence * 100)}%
-                  </span>
-                </div>
-
-                {/* Confidence bar */}
-                <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-soil-200">
-                  <div
-                    className="h-full rounded-full bg-brand-500"
-                    style={{ width: `${Math.round(candidate.confidence * 100)}%` }}
-                  />
-                </div>
-
-                <ul className="mt-2 space-y-0.5">
-                  {candidate.evidence.map((line, i) => (
-                    <li key={i} className="text-xs text-slate-600">
-                      · {line}
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              <CandidateCard key={candidate.name} candidate={candidate} />
             ))}
           </div>
         </div>
@@ -515,6 +621,171 @@ function DiagnosisResult({
         </div>
       </div>
     </Card>
+  );
+}
+
+/**
+ * One candidate in the differential.
+ *
+ * The detail block below the confidence bar is everything Plant.id returned —
+ * what the problem is, what causes it, how to treat it, and reference photos.
+ * It is collapsed by default: the farmer's first question is "what is it and
+ * what do I do", and four paragraphs of pathology in between those two answers
+ * buries the part that matters.
+ */
+function CandidateCard({ candidate }: { candidate: DiagnosisCandidate }) {
+  const { t } = useTranslation();
+  const [expanded, setExpanded] = useState(false);
+
+  const details = candidate.details;
+  const treatment = details?.treatment;
+  const hasTreatment =
+    treatment !== undefined &&
+    treatment.chemical.length + treatment.biological.length + treatment.prevention.length > 0;
+  const hasDetails = Boolean(
+    details?.description || details?.cause || hasTreatment || details?.similarImages?.length,
+  );
+
+  return (
+    <div className="rounded-xl bg-soil-50 p-3">
+      <div className="flex items-center justify-between gap-2">
+        <p className="min-w-0 font-semibold text-slate-800">
+          {candidate.name}
+          <span className="ml-1.5 text-xs font-normal capitalize text-slate-500">
+            {candidate.kind}
+          </span>
+        </p>
+        <span className="shrink-0 text-sm font-bold tabular-nums text-slate-600">
+          {Math.round(candidate.confidence * 100)}%
+        </span>
+      </div>
+
+      {details?.scientificName && details.scientificName !== candidate.name ? (
+        <p className="text-xs italic text-slate-500">{details.scientificName}</p>
+      ) : null}
+
+      {/* Confidence bar */}
+      <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-soil-200">
+        <div
+          className="h-full rounded-full bg-brand-500"
+          style={{ width: `${Math.round(candidate.confidence * 100)}%` }}
+        />
+      </div>
+
+      {/* Where it came from. A candidate the photo model proposed on its own
+          has no symptom or weather corroboration behind it, and saying so is
+          the difference between a ranked differential and a black box. */}
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        {candidate.source !== 'rules' ? (
+          <Badge tone="brand">
+            <Camera className="h-3 w-3" aria-hidden />
+            {t('health.fromPhoto')}
+          </Badge>
+        ) : null}
+        {candidate.source === 'image' ? <Badge tone="warn">{t('health.notInOurList')}</Badge> : null}
+        {details?.classification?.length ? (
+          <Badge tone="neutral">{details.classification[0]}</Badge>
+        ) : null}
+      </div>
+
+      <ul className="mt-2 space-y-0.5">
+        {candidate.evidence.map((line, i) => (
+          <li key={i} className="text-xs text-slate-600">
+            · {line}
+          </li>
+        ))}
+      </ul>
+
+      {hasDetails ? (
+        <>
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            aria-expanded={expanded}
+            className="mt-2 flex min-h-[36px] items-center gap-1 text-xs font-semibold text-brand-700"
+          >
+            {t('health.aboutThis')}
+            <ChevronDown
+              className={cn('h-4 w-4 transition-transform', expanded && 'rotate-180')}
+              aria-hidden
+            />
+          </button>
+
+          {expanded ? (
+            <div className="mt-2 space-y-3 border-t border-soil-200 pt-2.5">
+              {details?.description ? (
+                <p className="text-xs leading-relaxed text-slate-700">{details.description}</p>
+              ) : null}
+
+              {details?.cause ? (
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                    {t('health.cause')}
+                  </p>
+                  <p className="text-xs leading-relaxed text-slate-700">{details.cause}</p>
+                </div>
+              ) : null}
+
+              {hasTreatment ? (
+                <div className="space-y-2">
+                  <TreatmentList
+                    title={t('health.treatmentChemical')}
+                    items={treatment.chemical}
+                  />
+                  <TreatmentList
+                    title={t('health.treatmentBiological')}
+                    items={treatment.biological}
+                  />
+                  <TreatmentList
+                    title={t('health.treatmentPrevention')}
+                    items={treatment.prevention}
+                  />
+                </div>
+              ) : null}
+
+              {/* Reference photos are often more convincing than a percentage:
+                  the farmer can hold the phone next to the plant and compare. */}
+              {details?.similarImages?.length ? (
+                <div>
+                  <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                    {t('health.referencePhotos')}
+                  </p>
+                  <div className="flex gap-2">
+                    {details.similarImages.slice(0, 3).map((url) => (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        key={url}
+                        src={url}
+                        alt={`${candidate.name} reference`}
+                        loading="lazy"
+                        className="h-20 w-20 rounded-lg border border-soil-200 object-cover"
+                      />
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+function TreatmentList({ title, items }: { title: string; items: string[] }) {
+  if (items.length === 0) return null;
+
+  return (
+    <div>
+      <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">{title}</p>
+      <ul className="mt-0.5 space-y-0.5">
+        {items.map((item, i) => (
+          <li key={i} className="text-xs leading-relaxed text-slate-700">
+            · {item}
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
@@ -584,7 +855,7 @@ function HealthLogCard({
                 disabled={updating}
                 className="rounded-lg border border-soil-300 px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-soil-100"
               >
-                Mark treated
+                {t('health.markTreated')}
               </button>
               <button
                 type="button"
@@ -592,7 +863,7 @@ function HealthLogCard({
                 disabled={updating}
                 className="rounded-lg border border-soil-300 px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-soil-100"
               >
-                Resolved
+                {t('health.markResolved')}
               </button>
             </div>
           ) : null}

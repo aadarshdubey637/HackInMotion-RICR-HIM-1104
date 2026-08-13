@@ -29,6 +29,13 @@ export const createObservationBody = z.object({
     .string()
     .refine((v) => !Number.isNaN(Date.parse(v)), 'Not a valid date')
     .optional(),
+  /**
+   * The language the farmer is currently using in the app, so image-analysis
+   * descriptions can be requested in it. Sent per-observation rather than read
+   * from the profile alone, because the language picker changes immediately
+   * while the saved profile may lag behind.
+   */
+  language: z.string().trim().min(2).max(10).optional(),
 });
 
 export const updateObservationBody = z.object({

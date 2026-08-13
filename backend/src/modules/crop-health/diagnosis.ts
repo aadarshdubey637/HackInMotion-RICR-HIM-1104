@@ -32,6 +32,8 @@
 import type { HealthSeverity } from '@prisma/client';
 import type { CropProfile, DiseaseProfile, PestProfile, WeatherTriggers } from '../../domain/crops';
 import type { DailyWeather } from '../weather/openmeteo';
+import type { PlantIdAssessment, PlantIdFinding } from './plant-id';
+import { expandRegionalSymptoms } from './symptom-lexicon';
 
 // ─────────────────────────── Types ───────────────────────────
 
@@ -48,6 +50,19 @@ export interface WeatherContext {
   wetDays: number;
 }
 
+/** Extra material from image analysis, shown alongside a candidate. */
+export interface CandidateDetails {
+  /** Scientific name, when the farmer-facing name is a common one. */
+  scientificName?: string;
+  description?: string;
+  cause?: string;
+  /** e.g. ["Fungi"] — tells a pathogen apart from a deficiency. */
+  classification?: string[];
+  treatment?: { chemical: string[]; biological: string[]; prevention: string[] };
+  /** Reference photos to compare the affected plant against. */
+  similarImages?: string[];
+}
+
 export interface Candidate {
   kind: 'disease' | 'pest';
   name: string;
@@ -58,12 +73,20 @@ export interface Candidate {
   evidence: string[];
   actions: string[];
   explanation: string;
+  /**
+   * Where this candidate came from. `image` means only Plant.id proposed it —
+   * it is not in our curated list for this crop, so it carries no weather or
+   * symptom corroboration and is labelled as such on screen.
+   */
+  source: 'rules' | 'rules+image' | 'image';
+  details?: CandidateDetails;
   /** Which signals contributed, for transparency and debugging. */
   signals: {
     symptomScore: number;
     weatherScore: number;
     matchedKeywords: string[];
     weatherFavourable: boolean;
+    imageProbability?: number;
   };
 }
 
@@ -81,6 +104,17 @@ export interface Diagnosis {
   method: 'rule-engine' | 'rule-engine+plant-id';
   /** Honest statement of what the analysis could and could not use. */
   limitations: string[];
+  /** What the image analysis concluded, when a photo was analysed. */
+  image?: {
+    /** False when the photo is not of a plant — the farmer should retake it. */
+    isPlant: boolean;
+    /** True when the model saw no disease at all. */
+    looksHealthy: boolean;
+    /** Language the external descriptions came back in. */
+    language: string;
+    /** Set when the farmer's language has no Plant.id content and we used English. */
+    languageFellBack: boolean;
+  };
 }
 
 // ─────────────────────── Weather context ───────────────────────
@@ -117,9 +151,21 @@ export function buildWeatherContext(recentDays: DailyWeather[]): WeatherContext 
 
 // ─────────────────────── Symptom matching ───────────────────────
 
-/** Normalise free text for matching: lowercase, collapse whitespace. */
+/**
+ * Normalise free text for matching: lowercase, drop punctuation, collapse
+ * whitespace.
+ *
+ * Uses Unicode letter/number classes rather than `[a-z0-9]`. Stripping to
+ * ASCII would erase a Devanagari or Gurmukhi description completely, leaving
+ * an empty string that scores zero against every candidate — which is exactly
+ * what happened to descriptions dictated in Hindi before this.
+ */
 function normalise(text: string): string {
-  return text.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim();
+  return text
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 /**
@@ -241,6 +287,114 @@ function scoreWeather(
   };
 }
 
+// ─────────────────── Image findings ↔ curated profiles ───────────────────
+
+/**
+ * Plant.id answers in taxonomy; our profiles are named the way a farmer talks.
+ * "Erysiphaceae" and "Powdery Mildew" are the same problem, and matching on
+ * the raw strings finds nothing — which used to mean a confident 88% image
+ * identification was silently discarded.
+ *
+ * Keys are lowercase fragments of what Plant.id returns; values are fragments
+ * of our profile names. Only genuinely equivalent pairs belong here.
+ */
+const NAME_SYNONYMS: Record<string, string[]> = {
+  erysiphaceae: ['powdery mildew'],
+  'powdery mildew': ['powdery mildew'],
+  peronosporaceae: ['downy mildew'],
+  'downy mildew': ['downy mildew'],
+  pucciniales: ['rust', 'yellow rust', 'white rust'],
+  uredinales: ['rust', 'yellow rust'],
+  phytophthora: ['late blight'],
+  'late blight': ['late blight'],
+  alternaria: ['early blight', 'alternaria blight', 'purple blotch'],
+  'early blight': ['early blight'],
+  magnaporthe: ['blast', 'rice blast'],
+  pyricularia: ['blast', 'rice blast'],
+  xanthomonas: ['bacterial leaf blight', 'bacterial blight', 'black arm'],
+  bipolaris: ['brown spot'],
+  helminthosporium: ['brown spot'],
+  cercospora: ['leaf spot', 'tikka leaf spot'],
+  colletotrichum: ['red rot', 'anthracnose'],
+  fusarium: ['wilt'],
+  verticillium: ['verticillium wilt'],
+  ascochyta: ['ascochyta blight'],
+  exserohilum: ['turcicum leaf blight'],
+  aphididae: ['aphid', 'mustard aphid'],
+  aleyrodidae: ['whitefly'],
+  thripidae: ['thrips'],
+  noctuidae: ['armyworm', 'fall armyworm', 'pod borer'],
+  helicoverpa: ['pod borer', 'fruit borer'],
+  spodoptera: ['fall armyworm'],
+  delphacidae: ['brown planthopper'],
+  cicadellidae: ['leaf folder', 'hopper'],
+  termitidae: ['termite'],
+  'nutrient deficiency': ['blossom end rot'],
+  'water-related issue': [],
+};
+
+/** Every string Plant.id offers us for one finding, lowercased. */
+function findingAliases(finding: PlantIdFinding): string[] {
+  return [finding.name, finding.localName ?? '', ...finding.commonNames]
+    .filter(Boolean)
+    .map((s) => normalise(s));
+}
+
+/**
+ * Does an image finding refer to the same problem as a curated profile?
+ *
+ * Tries direct containment in either direction first, then the synonym table.
+ * Containment alone is too weak for short names — "rust" is a substring of
+ * plenty — so single-word profile names must match a whole alias word.
+ */
+function findingMatchesProfile(finding: PlantIdFinding, profileName: string): boolean {
+  const profile = normalise(profileName);
+  const aliases = findingAliases(finding);
+
+  for (const alias of aliases) {
+    if (!alias) continue;
+    if (alias === profile) return true;
+
+    // Multi-word names are distinctive enough to match on containment.
+    if (profile.includes(' ') && (alias.includes(profile) || profile.includes(alias))) return true;
+
+    // Single-word profile names must appear as a whole word in the alias.
+    if (!profile.includes(' ') && alias.split(' ').includes(profile)) return true;
+  }
+
+  for (const [needle, profiles] of Object.entries(NAME_SYNONYMS)) {
+    if (!aliases.some((alias) => alias.includes(needle))) continue;
+    if (profiles.some((p) => profile.includes(p) || p.includes(profile))) return true;
+  }
+
+  return false;
+}
+
+/** The name to show a farmer: a common name beats a fungal family. */
+function farmerFacingName(finding: PlantIdFinding): string {
+  const common = finding.commonNames.find((n) => n.trim().length > 0);
+  if (common) {
+    // Plant.id pluralises families ("Powdery Mildews"); singular reads better.
+    return common.replace(/s$/, '');
+  }
+  return finding.localName?.trim() || finding.name;
+}
+
+/** Insects are pests; fungi, bacteria and viruses are diseases. */
+function findingKind(finding: PlantIdFinding): 'disease' | 'pest' {
+  const classification = finding.classification.map((c) => c.toLowerCase());
+  const pestish = ['insecta', 'insect', 'arachnida', 'animalia', 'acari', 'nematoda'];
+  return classification.some((c) => pestish.some((p) => c.includes(p))) ? 'pest' : 'disease';
+}
+
+/** Turn Plant.id's treatment advice into the engine's flat action list. */
+function treatmentActions(finding: PlantIdFinding): string[] {
+  const treatment = finding.treatment;
+  if (!treatment) return [];
+  // Prevention last: it matters, but not before an active infection is dealt with.
+  return [...treatment.biological, ...treatment.chemical, ...treatment.prevention].slice(0, 6);
+}
+
 // ─────────────────────────── Engine ───────────────────────────
 
 export interface DiagnosisInput {
@@ -250,7 +404,7 @@ export interface DiagnosisInput {
   weather: WeatherContext;
   hasImage: boolean;
   /** Optional Plant.id result, folded in as an extra signal. */
-  externalFindings?: Array<{ name: string; probability: number }>;
+  external?: PlantIdAssessment | null;
 }
 
 const SEVERITY_RANK: Record<HealthSeverity, number> = {
@@ -261,7 +415,17 @@ const SEVERITY_RANK: Record<HealthSeverity, number> = {
 };
 
 export function diagnose(input: DiagnosisInput): Diagnosis {
-  const { crop, description, weather, hasImage, externalFindings } = input;
+  const { crop, weather, hasImage, external } = input;
+
+  // A description dictated in Hindi or Punjabi is rewritten into one the
+  // English symptom vocabulary can score. English text passes through
+  // unchanged, so this only ever adds signal.
+  const regional = expandRegionalSymptoms(input.description);
+  const description = regional.expanded;
+
+  const externalFindings = external?.findings ?? [];
+  /** Findings that corroborated a curated profile, so we do not repeat them. */
+  const consumedFindings = new Set<PlantIdFinding>();
 
   const candidates: Candidate[] = [];
 
@@ -273,19 +437,17 @@ export function diagnose(input: DiagnosisInput): Diagnosis {
     const weatherVerdict = scoreWeather(profile.favouredBy, weather);
 
     // An external image match for this same name is strong corroboration.
-    const external = externalFindings?.find((f) =>
-      normalise(f.name).includes(normalise(profile.name)) ||
-      normalise(profile.name).includes(normalise(f.name)),
-    );
+    const finding = externalFindings.find((f) => findingMatchesProfile(f, profile.name));
 
     // Symptoms are the primary signal; weather modulates rather than drives.
     // Without any symptom or image match we do not raise the candidate at all —
     // otherwise every humid week would flag every humid-weather disease.
-    if (symptoms.score === 0 && !external) return;
+    if (symptoms.score === 0 && !finding) return;
 
     let confidence = symptoms.score * 0.65 + weatherVerdict.score * 0.35;
-    if (external) {
-      confidence = Math.max(confidence, external.probability) * 0.6 + confidence * 0.4;
+    if (finding) {
+      consumedFindings.add(finding);
+      confidence = Math.max(confidence, finding.probability) * 0.6 + confidence * 0.4;
     }
 
     // Unrecognised crop means the disease list is generic — be less certain.
@@ -297,8 +459,13 @@ export function diagnose(input: DiagnosisInput): Diagnosis {
     if (symptoms.matched.length > 0) {
       evidence.push(`You described: ${symptoms.matched.slice(0, 4).join(', ')}.`);
     }
-    if (external) {
-      evidence.push(`Image analysis suggested ${external.name} (${Math.round(external.probability * 100)}% match).`);
+    if (regional.matchedTerms.length > 0 && symptoms.matched.length > 0) {
+      evidence.push(`Understood from your own words: ${regional.matchedTerms.slice(0, 4).join(', ')}.`);
+    }
+    if (finding) {
+      evidence.push(
+        `Image analysis suggested ${farmerFacingName(finding)} (${Math.round(finding.probability * 100)}% match).`,
+      );
     }
     if (weatherVerdict.reasons.length > 0) {
       evidence.push(`Recent weather favours it — ${weatherVerdict.reasons.slice(0, 2).join(', and ')}.`);
@@ -312,19 +479,84 @@ export function diagnose(input: DiagnosisInput): Diagnosis {
       confidence: round2(clamp(confidence, 0, 0.95)),
       severity: profile.severity,
       evidence,
-      actions: profile.actions,
+      // Curated actions first — they are crop- and India-specific. Anything
+      // the image analysis adds is appended rather than substituted.
+      actions: finding
+        ? [...profile.actions, ...treatmentActions(finding).slice(0, 3)]
+        : profile.actions,
       explanation: profile.explanation,
+      source: finding ? 'rules+image' : 'rules',
+      details: finding
+        ? {
+            scientificName: finding.name,
+            description: finding.description ?? undefined,
+            cause: finding.cause ?? undefined,
+            classification: finding.classification,
+            treatment: finding.treatment ?? undefined,
+            similarImages: finding.similarImages,
+          }
+        : undefined,
       signals: {
         symptomScore: symptoms.score,
         weatherScore: weatherVerdict.score,
         matchedKeywords: symptoms.matched,
         weatherFavourable: weatherVerdict.favourable,
+        ...(finding ? { imageProbability: finding.probability } : {}),
       },
     });
   };
 
   for (const disease of crop.diseases) evaluate(disease, 'disease');
   for (const pest of crop.pests) evaluate(pest, 'pest');
+
+  // Anything the photo identified that our curated list for this crop does not
+  // cover. Dropping these was the single biggest cause of "no problem
+  // identified" on a photo the model had confidently diagnosed — our list is
+  // 40-odd problems, Plant.id knows around 90.
+  for (const finding of externalFindings) {
+    if (consumedFindings.has(finding)) continue;
+    if (finding.probability < 0.2) continue;
+
+    const kind = findingKind(finding);
+    const actions = treatmentActions(finding);
+
+    candidates.push({
+      kind,
+      name: farmerFacingName(finding),
+      // No symptom or weather corroboration, so we never let a photo alone
+      // reach the confidence a fully-triangulated candidate can.
+      confidence: round2(clamp(finding.probability * 0.75, 0, 0.8)),
+      // Severity is genuinely unknown for a problem outside our list.
+      severity: 'MODERATE',
+      evidence: [
+        `Identified from your photo (${Math.round(finding.probability * 100)}% match).`,
+        `Not in our ${crop.label} problem list, so weather and your description could not be cross-checked.`,
+      ],
+      actions:
+        actions.length > 0
+          ? actions
+          : ['Show this photo to your local Krishi Vigyan Kendra before treating.'],
+      explanation:
+        finding.description ??
+        'Identified from the photograph by image analysis, without local corroboration.',
+      source: 'image',
+      details: {
+        scientificName: finding.name,
+        description: finding.description ?? undefined,
+        cause: finding.cause ?? undefined,
+        classification: finding.classification,
+        treatment: finding.treatment ?? undefined,
+        similarImages: finding.similarImages,
+      },
+      signals: {
+        symptomScore: 0,
+        weatherScore: 0,
+        matchedKeywords: [],
+        weatherFavourable: false,
+        imageProbability: finding.probability,
+      },
+    });
+  }
 
   // Rank by confidence, but let a CRITICAL candidate outrank a marginally more
   // confident MILD one — the cost of missing late blight is far higher than
@@ -340,7 +572,7 @@ export function diagnose(input: DiagnosisInput): Diagnosis {
 }
 
 function assemble(candidates: Candidate[], input: DiagnosisInput): Diagnosis {
-  const { crop, hasImage, description, externalFindings } = input;
+  const { crop, hasImage, description, external } = input;
 
   const limitations: string[] = [];
   if (!hasImage) {
@@ -354,16 +586,67 @@ function assemble(candidates: Candidate[], input: DiagnosisInput): Diagnosis {
   if (description.trim().length < 20) {
     limitations.push('A longer description of what you are seeing would improve accuracy.');
   }
-  if (hasImage && !externalFindings) {
+  if (hasImage && !external) {
     limitations.push('Image analysis was unavailable, so the photo was stored but not analysed.');
+  }
+  if (external?.languageFellBack) {
+    limitations.push(
+      'Detailed descriptions from image analysis are only published in English and Hindi, so those sections are in English.',
+    );
   }
   limitations.push(
     'This is guidance to help you check the right things — not a confirmed diagnosis. Consult your local extension officer for anything serious.',
   );
 
-  const method: Diagnosis['method'] = externalFindings ? 'rule-engine+plant-id' : 'rule-engine';
+  const method: Diagnosis['method'] = external ? 'rule-engine+plant-id' : 'rule-engine';
+
+  const imageSummary: Diagnosis['image'] = external
+    ? {
+        isPlant: external.isPlant,
+        looksHealthy: external.isHealthy,
+        language: external.language,
+        languageFellBack: external.languageFellBack,
+      }
+    : undefined;
+
+  // The photo is not of a plant. Saying "no problem found" here would be
+  // misleading — the farmer needs to know the photo itself was the issue.
+  if (external && !external.isPlant) {
+    return {
+      candidates: [],
+      severity: 'MILD',
+      summary: 'That photo does not appear to show a plant, so it could not be analysed.',
+      nextSteps: [
+        'Take the photo again, filling the frame with the affected leaf, stem or fruit.',
+        'Shoot in daylight, holding the phone steady about a hand’s width away.',
+        'Avoid shadows and keep the background simple — soil or your hand behind the leaf works well.',
+      ],
+      confidence: 0.1,
+      method,
+      limitations,
+      image: imageSummary,
+    };
+  }
 
   if (candidates.length === 0) {
+    // A clean bill of health from the image is a real answer, not a failure.
+    if (external?.isHealthy) {
+      return {
+        candidates: [],
+        severity: 'MILD',
+        summary: 'The plant in your photo looks healthy — no disease was detected.',
+        nextSteps: [
+          'No treatment is needed based on this photo.',
+          'Keep watching the same plants over the next week, especially after rain.',
+          'If something still looks wrong, photograph the specific part that concerns you and describe what changed.',
+        ],
+        confidence: round2(clamp(external.isHealthyProbability, 0.3, 0.9)),
+        method,
+        limitations,
+        image: imageSummary,
+      };
+    }
+
     return {
       candidates: [],
       severity: 'MILD',
@@ -378,6 +661,7 @@ function assemble(candidates: Candidate[], input: DiagnosisInput): Diagnosis {
       confidence: 0.2,
       method,
       limitations,
+      image: imageSummary,
     };
   }
 
@@ -398,8 +682,14 @@ function assemble(candidates: Candidate[], input: DiagnosisInput): Diagnosis {
   // Lead with the top candidate's actions, then add differentiating checks.
   const nextSteps = [...primary.actions];
   if (alternatives.length > 0) {
+    // An image-only candidate's explanation is a paragraph from Plant.id, not
+    // the one-clause reason a curated profile carries — naming it is enough.
+    const differentiator =
+      alternatives[0].source === 'image'
+        ? 'compare your plant against the reference photos below.'
+        : `${alternatives[0].explanation.toLowerCase()}`;
     nextSteps.push(
-      `Also rule out ${alternatives.map((a) => a.name).join(' and ')} — ${alternatives[0].explanation.toLowerCase()}`,
+      `Also rule out ${alternatives.map((a) => a.name).join(' and ')} — ${differentiator}`,
     );
   }
   if (SEVERITY_RANK[severity] >= 3) {
@@ -416,6 +706,7 @@ function assemble(candidates: Candidate[], input: DiagnosisInput): Diagnosis {
     confidence: primary.confidence,
     method,
     limitations,
+    image: imageSummary,
   };
 }
 

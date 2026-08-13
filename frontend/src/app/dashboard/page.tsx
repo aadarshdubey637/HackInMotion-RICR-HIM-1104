@@ -25,10 +25,13 @@ import {
   Users,
 } from 'lucide-react';
 import { AppShell } from '@/components/app-shell';
+import { READ_ALOUD_EVENT } from '@/components/voice-assistant';
 import { useAuth } from '@/lib/auth-context';
 import { api, ApiError } from '@/lib/api';
 import { readCache, writeCache, describeAge } from '@/lib/offline';
 import { useVoice, buildSpokenBriefing } from '@/lib/voice';
+import { useTranslation } from '@/lib/language-context';
+import { LANGUAGES } from '@/lib/translations';
 import type { NearbyOutbreaks } from '@/lib/types';
 import type { Dashboard, ActionItem } from '@/lib/types';
 import {
@@ -61,13 +64,16 @@ const WEATHER_ICONS = {
 } as const;
 
 function DashboardContent() {
-  const { currentFarm, user } = useAuth();
+  const { currentFarm } = useAuth();
+  const { t, tNarrative, language } = useTranslation();
   const [data, setData] = useState<Dashboard | null>(null);
   const [error, setError] = useState<{ message: string; offline: boolean } | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   /** Set when the view is being served from cache rather than the network. */
   const [cacheAge, setCacheAge] = useState<string | null>(null);
   const [nearby, setNearby] = useState<NearbyOutbreaks | null>(null);
+  /** Set when read-aloud had to fall back to another language's voice. */
+  const [voiceNotice, setVoiceNotice] = useState<string | null>(null);
 
   const voice = useVoice();
 
@@ -127,22 +133,44 @@ function DashboardContent() {
     setRefreshing(false);
   }
 
+  // "सुनाओ" spoken into the voice assistant narrates this page.
+  useEffect(() => {
+    const handler = () => readAloud();
+    window.addEventListener(READ_ALOUD_EVENT, handler);
+    return () => window.removeEventListener(READ_ALOUD_EVENT, handler);
+  });
+
   function readAloud() {
     if (!data) return;
     if (voice.speaking) {
       voice.stop();
       return;
     }
-    const briefing = buildSpokenBriefing({
-      farmName: data.farm.name,
-      actions: data.actions,
-      irrigation: data.irrigation,
-      weather: data.weather,
-    });
-    // Use Hindi only when the browser actually has a Hindi voice installed —
-    // otherwise it reads English text with the wrong phonetics.
-    const wantsHindi = user?.language === 'hi' && voice.hasLanguage('hi');
-    voice.speak(briefing, wantsHindi ? 'hi-IN' : 'en-IN');
+
+    // The briefing is composed in whichever language the farmer is reading, so
+    // switching the interface to Punjabi switches the narration too.
+    const briefing = buildSpokenBriefing(
+      {
+        farmName: data.farm.name,
+        actions: data.actions,
+        irrigation: data.irrigation,
+        weather: data.weather,
+      },
+      t,
+      tNarrative,
+    );
+
+    // `speak` falls back on its own when the device has no voice for this
+    // language; surfacing that is honest rather than silently reading the
+    // wrong phonetics and leaving the farmer wondering what went wrong.
+    const spoken = voice.resolve(language);
+    setVoiceNotice(
+      spoken.fellBack
+        ? t('voice.noVoiceInstalled', { language: LANGUAGES[language].nativeLabel })
+        : null,
+    );
+
+    voice.speak(briefing, language);
   }
 
   if (!currentFarm) return null;
@@ -190,7 +218,7 @@ function DashboardContent() {
             <button
               type="button"
               onClick={readAloud}
-              aria-label={voice.speaking ? 'Stop reading' : 'Read today’s guidance aloud'}
+              aria-label={voice.speaking ? t('voice.stopReading') : t('voice.readAloud')}
               className={cn('btn-ghost px-2', voice.speaking && 'text-brand-700')}
             >
               {voice.speaking ? (
@@ -204,13 +232,15 @@ function DashboardContent() {
             type="button"
             onClick={refresh}
             disabled={refreshing}
-            aria-label="Refresh"
+            aria-label={t('common.refresh')}
             className="btn-ghost px-2"
           >
             <RefreshCw className={cn('h-5 w-5', refreshing && 'animate-spin')} aria-hidden />
           </button>
         </div>
       </div>
+
+      {voiceNotice ? <Notice tone="warn">{voiceNotice}</Notice> : null}
 
       {cacheAge ? (
         <Notice tone="warn">

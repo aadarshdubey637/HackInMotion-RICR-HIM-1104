@@ -13,11 +13,20 @@ interface AuthState {
   /** True until the initial session check finishes. */
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (input: { email: string; password: string; name: string; phone?: string }) => Promise<void>;
+  register: (input: {
+    email: string;
+    password: string;
+    name: string;
+    phone?: string;
+    /** Language chosen on the sign-up screen, saved with the account. */
+    language?: string;
+  }) => Promise<void>;
   logout: () => void;
   selectFarm: (farmId: string) => void;
   /** Re-fetch farms after creating or editing one. */
   refreshFarms: () => Promise<Farm[]>;
+  /** Replace the cached profile after the settings page saves a change. */
+  setUser: (user: User) => void;
 }
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -91,7 +100,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const register = useCallback(
-    async (input: { email: string; password: string; name: string; phone?: string }) => {
+    async (input: {
+      email: string;
+      password: string;
+      name: string;
+      phone?: string;
+      language?: string;
+    }) => {
       await afterAuth(await api.auth.register(input));
     },
     [afterAuth],
@@ -124,7 +139,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, farms, currentFarm, loading, login, register, logout, selectFarm, refreshFarms: loadFarms }}
+      value={{
+        user,
+        farms,
+        currentFarm,
+        loading,
+        login,
+        register,
+        logout,
+        selectFarm,
+        refreshFarms: loadFarms,
+        setUser,
+      }}
     >
       {children}
     </AuthContext.Provider>

@@ -17,7 +17,8 @@ import type {
   Diagnosis,
   HealthLog,
   PriceTrend,
-  AlertItem,
+  AlertFeed,
+  Severity,
   RecommendationResult,
   CropPlan,
   FertilizerPlan,
@@ -163,7 +164,13 @@ export const api = {
         anonymous: true,
       }),
 
-    register: (input: { email: string; password: string; name: string; phone?: string }) =>
+    register: (input: {
+      email: string;
+      password: string;
+      name: string;
+      phone?: string;
+      language?: string;
+    }) =>
       request<{ user: User; tokens: AuthTokens }>('/auth/register', {
         method: 'POST',
         body: input,
@@ -171,6 +178,15 @@ export const api = {
       }),
 
     me: () => request<{ user: User }>('/auth/me'),
+
+    updateProfile: (input: { name?: string; phone?: string; language?: string }) =>
+      request<{ user: User }>('/auth/me', { method: 'PATCH', body: input }),
+
+    changePassword: (currentPassword: string, newPassword: string) =>
+      request<{ message: string }>('/auth/change-password', {
+        method: 'POST',
+        body: { currentPassword, newPassword },
+      }),
 
     logout: (refreshToken: string) =>
       request<{ message: string }>('/auth/logout', { method: 'POST', body: { refreshToken } }),
@@ -246,12 +262,23 @@ export const api = {
 
     create: (
       farmId: string,
-      input: { cropId: string; description: string; observationType: string; image?: File | null },
+      input: {
+        cropId: string;
+        description: string;
+        observationType: string;
+        image?: File | null;
+        /**
+         * The language the farmer is reading right now. Sent per-observation
+         * because the picker changes instantly while the saved profile may lag.
+         */
+        language?: string;
+      },
     ) => {
       const form = new FormData();
       form.append('cropId', input.cropId);
       form.append('description', input.description);
       form.append('observationType', input.observationType);
+      if (input.language) form.append('language', input.language);
       if (input.image) form.append('image', input.image);
 
       return request<{ log: HealthLog; diagnosis: Diagnosis; imageStored: boolean; warning?: string }>(
@@ -298,11 +325,19 @@ export const api = {
   },
 
   alerts: {
-    list: (farmId: string) =>
-      request<{
-        alerts: AlertItem[];
-        counts: { total: number; unread: number; critical: number; high: number };
-      }>(`/alerts/${farmId}`),
+    list: (
+      farmId: string,
+      options: { unreadOnly?: boolean; severity?: Severity; limit?: number } = {},
+      signal?: AbortSignal,
+    ) => {
+      const search = new URLSearchParams();
+      if (options.unreadOnly) search.set('unreadOnly', 'true');
+      if (options.severity) search.set('severity', options.severity);
+      if (options.limit) search.set('limit', String(options.limit));
+      const qs = search.toString();
+
+      return request<AlertFeed>(`/alerts/${farmId}${qs ? `?${qs}` : ''}`, { signal });
+    },
 
     markRead: (alertId: string) =>
       request<{ message: string }>(`/alerts/item/${alertId}/read`, { method: 'PATCH' }),

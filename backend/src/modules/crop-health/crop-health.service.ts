@@ -16,77 +16,17 @@
 import type { Prisma, HealthSeverity } from '@prisma/client';
 import { prisma } from '../../common/prisma';
 import { logger } from '../../common/logger';
-import { config } from '../../config';
 import { NotFoundError } from '../../common/errors';
 import { upsertWithoutTransaction } from '../../common/upsert';
 import { resolveCrop } from '../../domain/crops';
 import { getWeatherForFarm } from '../weather/weather.service';
+import { assessPlantHealth } from './plant-id';
 import { diagnose, buildWeatherContext, type Diagnosis, type WeatherContext } from './diagnosis';
 import type {
   CreateObservationInput,
   UpdateObservationInput,
   ListObservationsQuery,
 } from './crop-health.schema';
-
-// ─────────────────────── Plant.id (optional) ───────────────────────
-
-interface PlantIdFinding {
-  name: string;
-  probability: number;
-}
-
-/**
- * Call Plant.id health assessment. Returns null on any failure — the rule
- * engine runs regardless, so this is a pure enhancement.
- */
-async function analyseImageWithPlantId(
-  imageBase64: string,
-  cropName: string,
-): Promise<PlantIdFinding[] | null> {
-  if (!config.PLANT_ID_API_KEY) return null;
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 15_000);
-
-  try {
-    const response = await fetch('https://plant.id/api/v3/health_assessment', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Api-Key': config.PLANT_ID_API_KEY,
-      },
-      body: JSON.stringify({
-        images: [imageBase64],
-        similar_images: false,
-      }),
-      signal: controller.signal,
-    });
-
-    if (!response.ok) {
-      logger.warn({ status: response.status, cropName }, 'Plant.id request failed');
-      return null;
-    }
-
-    const body = (await response.json()) as {
-      result?: {
-        disease?: { suggestions?: Array<{ name: string; probability: number }> };
-      };
-    };
-
-    const suggestions = body.result?.disease?.suggestions;
-    if (!Array.isArray(suggestions) || suggestions.length === 0) return null;
-
-    return suggestions
-      .filter((s) => typeof s.name === 'string' && typeof s.probability === 'number')
-      .map((s) => ({ name: s.name, probability: s.probability }))
-      .slice(0, 5);
-  } catch (err) {
-    logger.warn({ err }, 'Plant.id analysis unavailable; using rule engine alone');
-    return null;
-  } finally {
-    clearTimeout(timeout);
-  }
-}
 
 // ─────────────────────── Weather context ───────────────────────
 
@@ -127,10 +67,25 @@ export async function createObservation(
 
   const { crop, isKnown } = resolveCrop(cropRecord.cropName);
 
+  // The language the farmer is using, so image-analysis descriptions come back
+  // in it where Plant.id has them. Falls back to the stored profile language.
+  const user = await prisma.user
+    .findUnique({ where: { id: userId }, select: { language: true } })
+    .catch(() => null);
+  const language = input.language ?? user?.language ?? 'en';
+
   // Weather context and image analysis are independent — run them together.
-  const [weather, externalFindings] = await Promise.all([
+  const [weather, external] = await Promise.all([
     weatherContextForFarm(farmId, farm.latitude, farm.longitude),
-    image ? analyseImageWithPlantId(image.base64, cropRecord.cropName) : Promise.resolve(null),
+    image
+      ? assessPlantHealth(image.base64, {
+          language,
+          // Regional priors: the same symptoms mean different things in
+          // Punjab in January and in Kerala in July.
+          latitude: farm.latitude,
+          longitude: farm.longitude,
+        })
+      : Promise.resolve(null),
   ]);
 
   const diagnosis = diagnose({
@@ -139,7 +94,7 @@ export async function createObservation(
     description: input.description,
     weather,
     hasImage: Boolean(image),
-    externalFindings: externalFindings ?? undefined,
+    external,
   });
 
   const top = diagnosis.candidates[0];
@@ -162,6 +117,7 @@ export async function createObservation(
         method: diagnosis.method,
         limitations: diagnosis.limitations,
         weatherContext: weather,
+        image: diagnosis.image,
         candidates: diagnosis.candidates.map((c) => ({
           kind: c.kind,
           name: c.name,
@@ -169,6 +125,8 @@ export async function createObservation(
           severity: c.severity,
           evidence: c.evidence,
           explanation: c.explanation,
+          source: c.source,
+          details: c.details,
           signals: c.signals,
         })),
       } as unknown as Prisma.InputJsonValue,

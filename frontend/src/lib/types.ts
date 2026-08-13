@@ -225,6 +225,18 @@ export interface Forecast {
   provider: string;
 }
 
+/** Extra material from Plant.id image analysis, shown alongside a candidate. */
+export interface CandidateDetails {
+  scientificName?: string;
+  description?: string;
+  cause?: string;
+  /** e.g. ["Fungi"] — tells a pathogen apart from a deficiency. */
+  classification?: string[];
+  treatment?: { chemical: string[]; biological: string[]; prevention: string[] };
+  /** Reference photos to compare the affected plant against. */
+  similarImages?: string[];
+}
+
 export interface DiagnosisCandidate {
   kind: 'disease' | 'pest';
   name: string;
@@ -233,6 +245,19 @@ export interface DiagnosisCandidate {
   evidence: string[];
   actions: string[];
   explanation: string;
+  /**
+   * `image` means only the photo model proposed it — it is not in our curated
+   * list for this crop, so the UI labels it as uncorroborated.
+   */
+  source: 'rules' | 'rules+image' | 'image';
+  details?: CandidateDetails;
+  signals?: {
+    symptomScore: number;
+    weatherScore: number;
+    matchedKeywords: string[];
+    weatherFavourable: boolean;
+    imageProbability?: number;
+  };
 }
 
 export interface Diagnosis {
@@ -241,8 +266,16 @@ export interface Diagnosis {
   summary: string;
   nextSteps: string[];
   confidence: number;
-  method: string;
+  method: 'rule-engine' | 'rule-engine+plant-id' | string;
   limitations: string[];
+  /** Present only when a photo was actually analysed. */
+  image?: {
+    isPlant: boolean;
+    looksHealthy: boolean;
+    language: string;
+    /** True when the farmer's language has no Plant.id content and English was used. */
+    languageFellBack: boolean;
+  };
 }
 
 export interface HealthLog {
@@ -414,7 +447,23 @@ export interface AlertItem {
   title: string;
   message: string;
   action: string | null;
+  /** Which engine raised it — "irrigation", "weather", "health". */
+  source: string | null;
   crop: { id: string; cropName: string } | null;
   isRead: boolean;
   createdAt: string;
+  /** Time-limited alerts (a frost warning) stop being shown after this. */
+  expiresAt: string | null;
+}
+
+export interface AlertCounts {
+  total: number;
+  unread: number;
+  critical: number;
+  high: number;
+}
+
+export interface AlertFeed {
+  alerts: AlertItem[];
+  counts: AlertCounts;
 }

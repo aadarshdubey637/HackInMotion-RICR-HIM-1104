@@ -81,7 +81,7 @@ sorted together, so the farmer opens the app and immediately knows what matters.
 | **Fertilizer & resource planning** | Converts N-P-K requirements into bags of urea, DAP and MOP with a split-dose schedule. Adjusts for soil test values (±25% by nutrient level), adds 10% on sandy soil for leaching, and correctly **subtracts DAP's 18% nitrogen from the urea requirement** — skipping that step over-applies nitrogen. Stages already passed are marked done. |
 | **Yield prediction** | Transparent stress-factor model: `attainable × water × heat × health × management`. Each factor is derived from data actually held (water balance, logged weather, health observations) and returned with its reason and loss percentage. Uncertainty narrows as the season progresses. |
 | **Pest/disease outbreak alerts** | Anonymous aggregation of severe reports from farms within 50 km over 21 days, surfaced on the dashboard and health page. Individual farms are never identified. |
-| **Voice interface** | Web Speech API read-aloud. One button composes a spoken briefing that leads with what needs acting on, in Hindi when the user's profile is Hindi *and* the browser actually has a Hindi voice installed. Degrades silently where unsupported. |
+| **Voice interface** | Two-way, in six languages. **Output:** one button composes a spoken briefing that leads with what needs acting on. **Input:** a mic button takes spoken commands ("मंडी भाव बताओ" → prices) and dictates symptom descriptions straight into the crop-health form. Both follow the selected language, and the spoken language is auto-detected — see below. |
 | **Offline-first support** | Successful dashboard reads are cached in `localStorage`; when the network fails the cached copy is served with a visible "saved N hours ago" banner. Cache is cleared on sign-out so data cannot leak between accounts on a shared phone. |
 
 **On offline support specifically:** we deliberately did *not* use a service
@@ -91,9 +91,42 @@ than none at all. The localStorage approach covers the case that actually
 matters — *"I opened the app in a field with no signal and still need to know
 whether to irrigate."*
 
-**On voice specifically:** output only. Speech *recognition* is Chrome-only,
-needs a network round-trip, and handles Indian-accented regional languages
-poorly — shipping it would promise more than it delivers.
+### Language and voice
+
+The interface ships in **six languages** — English, Hindi, Punjabi, Telugu,
+Marathi and Bengali — switchable from any screen, including the sign-in page
+(a farmer handed a phone in the wrong language cannot navigate to a settings
+page to fix it). The choice is saved to the account, so it follows the farmer
+to another device.
+
+**Voice input and language detection.** The Web Speech API has no language
+auto-detection: `recognition.lang` must be set *before* listening, and the
+recogniser forces whatever it hears into that language. So detection is done
+in two layers instead:
+
+1. Listen in the language the app is set to — right the vast majority of the time.
+2. Match the transcript against the command vocabulary of **every** language at
+   once. Only the Punjabi list contains "ਮੰਡੀ ਭਾਅ", so matching it both resolves
+   the intent (open prices) *and* proves the farmer is speaking Punjabi. The app
+   switches to Punjabi and answers in Punjabi. Script ranges catch the same case
+   for dictated text; Hindi and Marathi share Devanagari and are separated by
+   function words.
+
+If neither fires, recognition is retried across the other locales before giving
+up. Command matching ranks by **specificity, not phrase length** — "मेरी फसल में
+बीमारी है" contains both "मेरी फसल" (crop list) and "बीमारी" (disease), and the
+longer phrase is the less informative one.
+
+**Dictated symptoms actually reach the diagnosis engine.** The rule engine
+scores against an English symptom vocabulary, so "पत्तों पर पीले धब्बे" would
+otherwise share no substring with "yellow patches" and score zero.
+`crop-health/symptom-lexicon.ts` maps 43 regional symptom groups — Devanagari,
+Gurmukhi, Bengali, Telugu and romanised spellings — onto the canonical English
+keywords before scoring, so speaking Hindi or Punjabi diagnoses exactly as well
+as typing English.
+
+Recognition is Chrome/Edge/Safari only; Firefox has none. Everything degrades to
+the typed input that was always there.
 
 ---
 

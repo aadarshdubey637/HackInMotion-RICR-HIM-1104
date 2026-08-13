@@ -1,11 +1,21 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { translations, type Language } from './translations';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { translations, LANGUAGES, type Language, type LanguageMeta } from './translations';
+
+const STORAGE_KEY = 'sf_language';
 
 interface LanguageContextType {
   language: Language;
+  /** Label and speech locale for the active language. */
+  languageMeta: LanguageMeta;
   setLanguage: (lang: Language) => void;
+  /**
+   * Adopt the language saved on the farmer's account, but only when this
+   * device has no choice of its own. A picker tap is a deliberate act on the
+   * phone in hand and must not be overwritten by a stale profile value.
+   */
+  syncFromProfile: (lang: string | null | undefined) => void;
   t: (path: string, variables?: Record<string, string | number>) => string;
   tCrop: (name: string) => string;
   tStage: (stage: string) => string;
@@ -14,23 +24,39 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
+/** Narrow an arbitrary string to a language the app actually ships. */
+function asLanguage(value: string | null | undefined): Language | null {
+  if (!value) return null;
+  const base = value.toLowerCase().split(/[-_]/)[0];
+  return base in translations ? (base as Language) : null;
+}
+
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguageState] = useState<Language>('en');
 
   // Load language from localStorage if available
   useEffect(() => {
-    const saved = localStorage.getItem('sf_language');
-    if (saved && saved in translations) {
-      setLanguageState(saved as Language);
+    const saved = asLanguage(localStorage.getItem(STORAGE_KEY));
+    if (saved) {
+      setLanguageState(saved);
+      document.documentElement.lang = saved;
     }
   }, []);
 
-  const setLanguage = (lang: Language) => {
+  const setLanguage = useCallback((lang: Language) => {
     setLanguageState(lang);
-    localStorage.setItem('sf_language', lang);
+    localStorage.setItem(STORAGE_KEY, lang);
     // Update HTML lang attribute dynamically
     document.documentElement.lang = lang;
-  };
+  }, []);
+
+  const syncFromProfile = useCallback((lang: string | null | undefined) => {
+    if (localStorage.getItem(STORAGE_KEY)) return;
+    const resolved = asLanguage(lang);
+    if (!resolved) return;
+    setLanguageState(resolved);
+    document.documentElement.lang = resolved;
+  }, []);
 
   const t = (path: string, variables?: Record<string, string | number>): string => {
     const keys = path.split('.');
@@ -162,7 +188,18 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, t, tCrop, tStage, tNarrative }}>
+    <LanguageContext.Provider
+      value={{
+        language,
+        languageMeta: LANGUAGES[language],
+        setLanguage,
+        syncFromProfile,
+        t,
+        tCrop,
+        tStage,
+        tNarrative,
+      }}
+    >
       {children}
     </LanguageContext.Provider>
   );
