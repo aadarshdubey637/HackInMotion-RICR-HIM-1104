@@ -51,16 +51,23 @@ function MarketContent() {
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedMarket, setSelectedMarket] = useState<string>('');
+  const [availableMarkets, setAvailableMarkets] = useState<string[]>([]);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (marketVal?: string) => {
     if (!currentFarm) return;
     setError(null);
     setLoading(true);
 
     try {
-      const result = await api.market.farmTrends(currentFarm.id);
+      const result = await api.market.farmTrends(currentFarm.id, marketVal || undefined);
       setTrends(result.trends);
       setMessage(result.message);
+
+      if (!marketVal) {
+        const uniqueMarkets = Array.from(new Set(result.trends.flatMap((t) => t.markets)));
+        setAvailableMarkets(uniqueMarkets);
+      }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not load market prices.');
     } finally {
@@ -69,22 +76,45 @@ function MarketContent() {
   }, [currentFarm]);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    void load(selectedMarket);
+  }, [load, selectedMarket]);
 
   if (!currentFarm) return null;
 
   if (error && trends.length === 0) {
-    return <ErrorState message={error} onRetry={() => void load()} />;
+    return <ErrorState message={error} onRetry={() => void load(selectedMarket)} />;
   }
 
   return (
     <div className="space-y-5 animate-fade-up">
-      <div>
-        <h1 className="text-xl font-bold text-slate-900">{t('prices.title')}</h1>
-        <p className="text-sm text-slate-600">
-          {t('prices.subtitle')}
-        </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-slate-900">{t('prices.title')}</h1>
+          <p className="text-sm text-slate-600">
+            {t('prices.subtitle')}
+          </p>
+        </div>
+
+        {availableMarkets.length > 0 ? (
+          <div className="flex items-center gap-2">
+            <label htmlFor="market-select" className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              {t('prices.selectMandi')}:
+            </label>
+            <select
+              id="market-select"
+              value={selectedMarket}
+              onChange={(e) => setSelectedMarket(e.target.value)}
+              className="rounded-xl border border-soil-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 outline-none shadow-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all cursor-pointer"
+            >
+              <option value="">{t('prices.allMandis')}</option>
+              {availableMarkets.map((mkt) => (
+                <option key={mkt} value={mkt}>
+                  {mkt}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : null}
       </div>
 
       {loading ? (

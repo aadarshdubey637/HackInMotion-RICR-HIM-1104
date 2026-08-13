@@ -209,11 +209,20 @@ export interface PriceTrend {
  * Price trend for a commodity, with selling guidance.
  * Aggregates across markets by day (mean modal price) to smooth mandi-level noise.
  */
-export async function getPriceTrend(commodity: string, days = 60): Promise<PriceTrend> {
+export async function getPriceTrend(commodity: string, days = 60, marketName?: string): Promise<PriceTrend> {
   const since = new Date(Date.now() - days * 86_400_000);
 
+  const whereClause: Prisma.PriceHistoryWhereInput = {
+    commodity,
+    priceDate: { gte: since },
+  };
+
+  if (marketName) {
+    whereClause.marketName = marketName;
+  }
+
   const rows = await prisma.priceHistory.findMany({
-    where: { commodity, priceDate: { gte: since } },
+    where: whereClause,
     orderBy: { priceDate: 'asc' },
   });
 
@@ -406,7 +415,7 @@ function buildAdvice(
 // ─────────────────────── Farm-scoped queries ───────────────────────
 
 /** Price trends for every crop on a farm — powers the dashboard's market card. */
-export async function getFarmPriceTrends(farmId: string, userId: string) {
+export async function getFarmPriceTrends(farmId: string, userId: string, marketName?: string) {
   const farm = await prisma.farm.findFirst({
     where: { id: farmId, userId },
     include: { crops: { select: { id: true, cropName: true, status: true } } },
@@ -438,7 +447,7 @@ export async function getFarmPriceTrends(farmId: string, userId: string) {
   const trends = await Promise.all(
     [...commodities.entries()].map(async ([commodity, meta]) => ({
       ...meta,
-      ...(await getPriceTrend(commodity)),
+      ...(await getPriceTrend(commodity, 60, marketName)),
     })),
   );
 
@@ -504,6 +513,13 @@ export async function seedPriceHistory(days = 90): Promise<number> {
   const markets = [
     { marketName: 'Lucknow', state: 'Uttar Pradesh', district: 'Lucknow' },
     { marketName: 'Kanpur', state: 'Uttar Pradesh', district: 'Kanpur Nagar' },
+    { marketName: 'Jaipur', state: 'Rajasthan', district: 'Jaipur' },
+    { marketName: 'Nashik', state: 'Maharashtra', district: 'Nashik' },
+    { marketName: 'Bathinda', state: 'Punjab', district: 'Bathinda' },
+    { marketName: 'Kurnool', state: 'Andhra Pradesh', district: 'Kurnool' },
+    { marketName: 'Burdwan', state: 'West Bengal', district: 'Purba Bardhaman' },
+    { marketName: 'Indore', state: 'Madhya Pradesh', district: 'Indore' },
+    { marketName: 'Rajkot', state: 'Gujarat', district: 'Rajkot' },
   ];
 
   const today = new Date();
@@ -534,8 +550,9 @@ export async function seedPriceHistory(days = 90): Promise<number> {
       const spread = Math.round(modal * 0.06);
 
       for (const [m, market] of markets.entries()) {
-        // Give each market a small persistent offset.
-        const offset = Math.round(modal * (m === 0 ? 0.01 : -0.015));
+        // Give each market a small unique persistent offset.
+        const offsetPct = 0.01 + ((m % 5) - 2) * 0.008; // unique offsets: -0.6%, +0.2%, +1%, +1.8%, +2.6%...
+        const offset = Math.round(modal * offsetPct);
         const marketModal = modal + offset;
 
         rows.push({

@@ -304,8 +304,10 @@ export const api = {
   },
 
   market: {
-    farmTrends: (farmId: string) =>
-      request<{ trends: PriceTrend[]; message: string | null }>(`/market/farm/${farmId}`),
+    farmTrends: (farmId: string, market?: string) =>
+      request<{ trends: PriceTrend[]; message: string | null }>(
+        `/market/farm/${farmId}${market ? `?market=${encodeURIComponent(market)}` : ''}`
+      ),
 
     commodity: (commodity: string, days = 60) =>
       request<PriceTrend>(`/market/commodity/${encodeURIComponent(commodity)}?days=${days}`),
