@@ -31,15 +31,42 @@ function asLanguage(value: string | null | undefined): Language | null {
   return base in translations ? (base as Language) : null;
 }
 
+/**
+ * The language the device itself is set to, if we ship it.
+ *
+ * This is the bottom of the precedence chain — a starting guess for a farmer
+ * who has never touched the picker, not a decision. `navigator.languages` is
+ * ordered by preference and may list several ("mr-IN", "hi-IN", "en-IN"), so a
+ * phone whose primary locale we do not ship still lands on a language the
+ * farmer reads rather than defaulting to English.
+ */
+function detectFromDevice(): Language | null {
+  if (typeof navigator === 'undefined') return null;
+  const preferences = [...(navigator.languages ?? []), navigator.language];
+  for (const preference of preferences) {
+    const resolved = asLanguage(preference);
+    if (resolved) return resolved;
+  }
+  return null;
+}
+
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguageState] = useState<Language>('en');
 
-  // Load language from localStorage if available
+  /**
+   * Resolve the opening language: a saved choice on this device wins, then the
+   * device locale. Rendering starts in English because the server has no access
+   * to either, so this runs on mount.
+   *
+   * Nothing is written to localStorage here — that key means "the farmer chose
+   * this", and a device guess must stay overridable by the language saved on
+   * their account (see `syncFromProfile`).
+   */
   useEffect(() => {
-    const saved = asLanguage(localStorage.getItem(STORAGE_KEY));
-    if (saved) {
-      setLanguageState(saved);
-      document.documentElement.lang = saved;
+    const initial = asLanguage(localStorage.getItem(STORAGE_KEY)) ?? detectFromDevice();
+    if (initial) {
+      setLanguageState(initial);
+      document.documentElement.lang = initial;
     }
   }, []);
 

@@ -22,6 +22,11 @@ import { LANGUAGES, type Language } from './translations';
  *     below. A Gurmukhi transcript, or a phrase that only exists in the Punjabi
  *     vocabulary, is decisive evidence the farmer is speaking Punjabi — so the
  *     app switches to Punjabi and answers in it.
+ *  3. When the transcript comes back in Latin script — which is what happens
+ *     whenever the recogniser was set to English, the common case on a phone
+ *     nobody has configured — the romanised marker sets below decide. This is
+ *     what lets a Telugu or Marathi speaker be recognised on their very first
+ *     utterance, rather than only after they have found the language picker.
  *
  * Note there is deliberately **no** "retry in the other locales" loop. Speech
  * recognition cannot re-analyse audio it has already discarded, so retrying
@@ -248,14 +253,167 @@ const MARATHI_MARKERS = [
 ];
 
 /**
- * Best guess at which language a piece of text is written in.
+ * Marker words as an `en-IN` recogniser renders them — the case that actually
+ * matters in the field.
  *
- * Returns null for Latin script: romanised Hindi and English are genuinely
- * ambiguous from characters alone ("mera khet" vs "my field"), and guessing
- * wrong would switch the farmer's whole interface on a false positive. The
- * command vocabulary handles that case instead, where a match is real evidence.
+ * A farmer opening the app for the first time gets whatever language the device
+ * is set to, which across rural India is very often `en-IN`. They then speak
+ * Hindi, or Marathi, or Telugu. The recogniser, told to expect English, returns
+ * *Latin* text — so the script ranges above find nothing, and until this layer
+ * existed only Hindi and Punjabi were identifiable, purely because those two
+ * were the only ones with romanised entries in the command vocabulary.
+ *
+ * Two tiers, because these languages share a great deal of vocabulary once
+ * romanised:
+ *
+ *  - `strong`: distinctive to this language. One is enough.
+ *  - `weak`:   real but shared ("mandi", "bhav", "paani") or short. Two are
+ *              needed, or one alongside a strong marker.
+ *
+ * Shared words are listed as `weak` under *every* language that uses them, not
+ * just the first. Otherwise a Marathi speaker saying "bajar bhav sanga" would
+ * lose to Hindi on the two shared words and win only on the one Marathi verb.
+ *
+ * Function words are what carry the signal, not farming nouns — "aahe", "kavali"
+ * and "kothay" appear in almost any sentence in their language, whereas the
+ * farmer may never say the word for "market" at all.
+ *
+ * English needs no markers: it scores zero, falls below the threshold, and the
+ * interface is left alone. That is deliberate — a false positive rewrites the
+ * whole screen into a script the farmer may not read, which is far worse than
+ * failing to detect and leaving them on the picker.
  */
-export function detectLanguage(text: string): Language | null {
+const ROMANISED: Array<{ language: Language; strong: string[]; weak: string[] }> = [
+  {
+    // Hindi first: it wins an exact tie, being the most widely understood.
+    language: 'hi',
+    strong: [
+      'mera', 'meri', 'kya', 'kitna', 'kitne', 'batao', 'bataiye', 'bataye',
+      'chahiye', 'dikhao', 'kaise', 'kaunsi', 'faslein', 'paidawar', 'upaj',
+      'daam', 'barish', 'mein', 'hua',
+    ],
+    weak: [
+      'hai', 'aaj', 'kal', 'nahi', 'bolo', 'bajar', 'bazar', 'bhav', 'mandi',
+      'paani', 'pani', 'khet', 'fasal', 'khaad', 'mausam', 'sinchai', 'bimari',
+      'rog', 'keet', 'keede', 'sunao', 'keemat', 'karna', 'samasya', 'mere',
+      'tha', 'thi',
+    ],
+  },
+  {
+    language: 'pa',
+    strong: [
+      'dasso', 'kithe', 'kadon', 'kinna', 'kinne', 'jhaar', 'meenh', 'tuhanu',
+      'saanu', 'sanu', 'changa', 'bhaa', 'ajj', 'vekho', 'pind', 'ki karna',
+    ],
+    weak: [
+      'hai', 'mandi', 'paani', 'khet', 'fasal', 'khaad', 'mausam', 'sinchai',
+      'bimari', 'keede', 'sunao', 'keemat', 'karna', 'mera khet', 'meri fasal',
+    ],
+  },
+  {
+    language: 'mr',
+    strong: [
+      'aahe', 'aahet', 'majhe', 'maza', 'majhya', 'dakhva', 'dakhava', 'sanga',
+      'pahije', 'karaycha', 'karayche', 'kuthe', 'kadhi', 'kiti', 'pik', 'pike',
+      'havaman', 'paus', 'sinchan', 'utpadan', 'khat', 'kida', 'kide',
+      'aarogya', 'mala',
+    ],
+    weak: ['kay', 'nahi', 'tumhi', 'ani', 'bhav', 'bajar', 'samasya', 'rog'],
+  },
+  {
+    language: 'te',
+    strong: [
+      'cheppu', 'cheppandi', 'kavali', 'ekkada', 'eppudu', 'emiti', 'panta',
+      'pantalu', 'neeru', 'neeti', 'vatavaranam', 'vaatavaranam', 'varsham',
+      'digubadi', 'naaku', 'ee roju', 'teliyadu', 'baagundi', 'ledu', 'vyadhi',
+      'tegulu', 'purugu', 'aarogyam', 'eruvu', 'retu',
+    ],
+    weak: ['enti', 'emi', 'naa', 'undi', 'ela', 'dhara', 'roju'],
+  },
+  {
+    language: 'bn',
+    strong: [
+      'amar', 'kothay', 'kobe', 'dekhao', 'dekhan', 'abohawa', 'abohaoya',
+      'brishti', 'folon', 'jol', 'sech', 'koto', 'tomar', 'hocche', 'bolun',
+      'sasthya', 'poka',
+    ],
+    weak: ['bolo', 'dam', 'bajar', 'sar', 'roga'],
+  },
+];
+
+/** Points a match is worth, and the score a language must reach to be believed. */
+const STRONG_POINTS = 2;
+const WEAK_POINTS = 1;
+const CONFIDENCE_THRESHOLD = 2;
+
+/** Lowercase, drop punctuation, collapse spaces. */
+function normalise(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Count markers present in the transcript.
+ *
+ * Single words are matched as whole tokens, never substrings — "kal" must not
+ * fire inside "calcium", and "sar" must not fire inside "sarson". Multi-word
+ * markers are matched against the padded string, where the padding makes the
+ * first and last token addressable by the same ` word ` test.
+ */
+function countMarkers(tokens: Set<string>, padded: string, markers: string[]): number {
+  let hits = 0;
+  for (const marker of markers) {
+    if (marker.includes(' ')) {
+      if (padded.includes(` ${marker} `)) hits += 1;
+    } else if (tokens.has(marker)) {
+      hits += 1;
+    }
+  }
+  return hits;
+}
+
+/**
+ * Identify a romanised Indian language, or null when the evidence is too thin
+ * — which is the correct answer for plain English.
+ */
+export function detectRomanisedLanguage(text: string): Language | null {
+  const normalised = normalise(text);
+  if (!normalised) return null;
+
+  const tokens = new Set(normalised.split(' '));
+  const padded = ` ${normalised} `;
+
+  let best: Language | null = null;
+  let bestScore = 0;
+
+  for (const entry of ROMANISED) {
+    const score =
+      countMarkers(tokens, padded, entry.strong) * STRONG_POINTS +
+      countMarkers(tokens, padded, entry.weak) * WEAK_POINTS;
+
+    // Strictly greater, so an exact tie keeps the earlier (more widely
+    // understood) language rather than the last one checked.
+    if (score > bestScore) {
+      bestScore = score;
+      best = entry.language;
+    }
+  }
+
+  return bestScore >= CONFIDENCE_THRESHOLD ? best : null;
+}
+
+/**
+ * The language of the text's *script*, or null when it is written in Latin.
+ *
+ * Kept separate from the romanised guess because callers need to weigh the two
+ * differently: an Indian script is near-proof, whereas romanised markers are a
+ * balance of probabilities. Null here is the signal "this came back in Latin,
+ * so the recogniser was listening in English".
+ */
+export function detectScriptLanguage(text: string): Language | null {
   if (!text) return null;
 
   const script = SCRIPTS.find((s) => s.pattern.test(text));
@@ -266,4 +424,16 @@ export function detectLanguage(text: string): Language | null {
   }
 
   return script.language;
+}
+
+/**
+ * Best guess at which language a piece of text is written in.
+ *
+ * Script is decisive where it applies. Failing that — i.e. Latin text, which is
+ * what an English recogniser returns no matter what it hears — fall back to the
+ * romanised markers. English lands on null, leaving the interface untouched.
+ */
+export function detectLanguage(text: string): Language | null {
+  if (!text) return null;
+  return detectScriptLanguage(text) ?? detectRomanisedLanguage(text);
 }

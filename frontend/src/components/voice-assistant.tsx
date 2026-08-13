@@ -4,7 +4,11 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Mic, X, Loader2 } from 'lucide-react';
 import { useTranslation } from '@/lib/language-context';
-import { useSpeechRecognition, detectLanguage } from '@/lib/speech';
+import {
+  useSpeechRecognition,
+  detectScriptLanguage,
+  detectRomanisedLanguage,
+} from '@/lib/speech';
 import { useVoice } from '@/lib/voice';
 import { matchCommand, commandExamples, type VoiceIntent } from '@/lib/voice-commands';
 import { LANGUAGES, translations, type Language } from '@/lib/translations';
@@ -131,9 +135,23 @@ export function VoiceAssistant({ onReadAloud }: { onReadAloud?: () => void }) {
 
     const match = matchCommand(transcript);
 
-    // Precedence: a vocabulary hit is stronger evidence than script detection,
-    // because the recogniser may have transliterated into the wrong script.
-    const spokenIn = match?.language ?? detectLanguage(transcript) ?? language;
+    // Which language was spoken, from two kinds of evidence weighted by script.
+    //
+    // Indian script: a vocabulary hit outranks the script, because the
+    // recogniser may have transliterated into the wrong one — Devanagari alone
+    // cannot separate Hindi from Marathi, but a phrase from the Marathi list
+    // can.
+    //
+    // Latin script (the recogniser was listening in English): the marker sets
+    // outrank the vocabulary, because romanised command words are shared —
+    // "mandi", "bhav" and "paani" sit in both the Hindi and Punjabi lists, so a
+    // hit names an intent reliably but a language only by accident of ordering.
+    // The markers weigh a whole sentence instead. The intent still comes from
+    // the vocabulary either way.
+    const script = detectScriptLanguage(transcript);
+    const spokenIn = script
+      ? (match?.language ?? script)
+      : (detectRomanisedLanguage(transcript) ?? match?.language ?? language);
 
     // Speaking a different language than the interface is set to *is* the
     // request to switch — the farmer should not also have to find the picker.

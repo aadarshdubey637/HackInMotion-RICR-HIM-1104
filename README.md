@@ -262,12 +262,20 @@ Node 20+, and MongoDB **running as a replica set**.
 > **Why a replica set?** Prisma's MongoDB connector wraps writes in transactions
 > for emulated referential integrity, and MongoDB only supports transactions on a
 > replica set. A default standalone `mongod` fails every write with `P2031`.
-> MongoDB Atlas is a replica set out of the box. For a local single-node set:
+> MongoDB Atlas is a replica set out of the box. On Windows, where MongoDB is
+> installed as a service on port 27017, convert that service in place — run
+> `setup-mongo-replicaset.ps1` from an **Administrator** PowerShell once.
+>
+> To run a throwaway single-node set instead (foreground; dies with the terminal,
+> so `DATABASE_URL` must match the port you choose):
 >
 > ```bash
-> mongod --port 27018 --dbpath .mongodb/data --replSet rs0 --bind_ip 127.0.0.1
-> mongosh --port 27018 --eval 'rs.initiate({_id:"rs0",members:[{_id:0,host:"127.0.0.1:27018"}]})'
+> mongod --port 27017 --dbpath .mongodb/data --replSet rs0 --bind_ip 127.0.0.1
+> mongosh --port 27017 --eval 'rs.initiate({_id:"rs0",members:[{_id:0,host:"127.0.0.1:27017"}]})'
 > ```
+>
+> Either way, `DATABASE_URL` needs the replica-set params:
+> `mongodb://127.0.0.1:27017/smart_farm?replicaSet=rs0&directConnection=true`
 
 ### Setup
 
