@@ -265,7 +265,7 @@ function WeatherContent() {
 
           <div className="h-56 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={chartData} margin={{ top: 5, right: 5, left: -22, bottom: 0 }}>
+              <ComposedChart data={chartData} margin={{ top: 8, right: 6, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e3d9c9" vertical={false} />
                 <XAxis
                   dataKey="day"
@@ -277,8 +277,12 @@ function WeatherContent() {
                   tick={{ fontSize: 11, fill: '#64748b' }}
                   axisLine={false}
                   tickLine={false}
-                  unit="mm"
-                  width={52}
+                  width={46}
+                  tickFormatter={(v: number) => `${v}mm`}
+                  // The irrigation trigger line is the point of this chart, so the
+                  // axis must always include it — otherwise it renders off-canvas
+                  // and the caption refers to a line the farmer cannot see.
+                  domain={[0, (dataMax: number) => Math.ceil(Math.max(dataMax, wb.readilyAvailableWaterMm) * 1.12)]}
                 />
                 <Tooltip
                   contentStyle={{

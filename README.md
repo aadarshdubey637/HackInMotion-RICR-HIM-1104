@@ -1,201 +1,383 @@
 # Smart Farm Decision Support System
 
-A full-stack web application that helps farmers make data-driven decisions about irrigation, crop selection, and land management — powered by real-time weather data and a rule-based AI engine.
+**HackInMotion — Team RICR-HIM-1104**
 
-Built for **HackInMotion — RICR-HIM-1104**.
+A web application that turns weather, agronomy and market data into clear,
+specific advice for a farmer: *should I irrigate today, is this leaf spot
+serious, and is now a good time to sell?*
 
----
-
-## Features
-
-### Core
-- **JWT Authentication** — signup, login, protected routes
-- **Farm Profile Management** — create and manage multiple farm profiles per user
-
-### Multi-Crop System (new)
-- **Multiple crops per farm** — add as many crops as your land allows, each with its own land allocation
-- **Crop navigation** — tab between crops on the dashboard; each crop shows its own status and details
-- **Land allocation tracker** — visual bar shows how your land is divided across all active crops; prevents over-allocation
-- **Crop lifecycle** — cycle crops through `planning → active → harvested` with one click
-
-### AI Crop Suggestions
-- **Weather-aware recommendations** — analyses the 7-day forecast (temperature, rainfall) from [Open-Meteo](https://open-meteo.com)
-- **Soil-aware scoring** — matches crops to your soil type
-- **0–100 suitability score** — every crop gets a score with a plain-language explanation the farmer can read and trust
-- **Smart land-division plan** — suggests how to split your available land across the top recommended crops, proportional to suitability score
-- **12 crops in the knowledge base** — Wheat, Rice, Maize, Cotton, Soybean, Chickpea, Sugarcane, Tomato, Onion, Mustard, Groundnut, Turmeric
-
-### Irrigation Guidance
-- **Real-time weather-based guidance** — tells you whether to irrigate today based on the next 2 days of forecast
-- **Risk alerts** — extreme heat, heavy rain, high wind, and frost warnings
-- **History** — last 20 irrigation recommendations stored per farm
+> *"Because a farmer's biggest risk isn't hard work — it's making the wrong
+> decision at the wrong time."*
 
 ---
 
-## Tech Stack
+## The problem we're solving
 
-| Layer | Technology |
-|-------|-----------|
-| Backend | Python 3.13, FastAPI, SQLAlchemy, Pydantic v2 |
-| Auth | JWT (python-jose), bcrypt (passlib) |
-| Database | SQLite (local dev) / PostgreSQL (production) |
-| Weather API | [Open-Meteo](https://open-meteo.com) — free, no API key |
-| Frontend | React 19, Vite 8, Tailwind CSS v4 |
-| HTTP client | Axios |
-| Routing | React Router v7 |
+The information a farmer needs already exists — forecasts, agronomic thresholds,
+mandi prices — but it is scattered, raw, and rarely phrased as a decision. A
+7-day forecast is not advice. "32°C, 70% humidity" does not tell you whether to
+irrigate.
+
+This app does the interpretation. Every screen answers a question a farmer would
+actually ask, and every recommendation explains *why*, so it can be trusted or
+overruled.
 
 ---
 
-## Project Structure
+## What it does
+
+### 1. Accounts and farm profiles
+Email/password sign-up with JWT auth. Every query is scoped by user id, so one
+farmer can never see another's data. A profile captures location, land size,
+soil type and crops — and that profile drives everything else. Nothing in the app
+is generic advice.
+
+### 2. Irrigation guidance — the core engine
+Rather than reacting to "did it rain", the app maintains a **running soil water
+balance** for the root zone, following FAO Irrigation & Drainage Paper 56:
 
 ```
-smart-farm-starter/
-├── backend/
-│   ├── app/
-│   │   ├── core/
-│   │   │   ├── config.py        # Settings from .env
-│   │   │   ├── database.py      # SQLAlchemy engine + session
-│   │   │   ├── deps.py          # JWT auth dependency
-│   │   │   └── security.py      # Password hashing, token creation
-│   │   ├── models/
-│   │   │   └── models.py        # User, FarmProfile, Crop, IrrigationLog, ...
-│   │   ├── routers/
-│   │   │   ├── auth.py          # POST /api/auth/signup, /login, GET /me
-│   │   │   ├── farms.py         # CRUD /api/farms
-│   │   │   ├── crops.py         # CRUD /api/farms/{id}/crops + suggestions
-│   │   │   └── irrigation.py    # GET /api/farms/{id}/irrigation
-│   │   ├── schemas/
-│   │   │   ├── auth_schemas.py
-│   │   │   ├── farm_schemas.py
-│   │   │   └── crop_schemas.py
-│   │   ├── services/
-│   │   │   ├── weather_service.py          # Open-Meteo integration
-│   │   │   └── crop_suggestion_service.py  # AI crop scoring engine
-│   │   └── main.py
-│   ├── .env.example
-│   └── requirements.txt
-└── frontend/
-    └── src/
-        ├── pages/
-        │   ├── Dashboard.jsx       # Main dashboard with crop tabs
-        │   ├── CropManager.jsx     # Add / edit / delete crops
-        │   ├── CropSuggestions.jsx # AI recommendations + land plan
-        │   ├── FarmSetup.jsx
-        │   ├── Login.jsx
-        │   └── Signup.jsx
-        ├── components/
-        │   ├── ErrorBanner.jsx
-        │   ├── RequireAuth.jsx
-        │   └── RiskBadge.jsx
-        ├── context/AuthContext.jsx
-        └── api/client.js
+depletion(t) = depletion(t-1) + ETc(t) − Pe(t) − irrigation(t)
+
+  ETc = ET₀ × Kc      crop water use (reference ET × crop coefficient)
+  Pe                  effective rainfall — what actually reaches the roots
 ```
+
+Irrigation is advised when depletion reaches the crop's **Readily Available
+Water** — the point at which the plant starts working to extract moisture and
+yield begins to suffer.
+
+This is what lets the app say *"hold off, Thursday's rain will cover you"*
+instead of just showing a forecast. Inputs are crop-specific (rice tolerates
+~20% depletion; wheat, with 1.2 m roots, tolerates ~55%) and soil-specific
+(sandy soil holds 70 mm/m of available water, clay 180 mm/m).
+
+It also issues risk alerts — heat stress, frost, heavy rain, dry spells, high
+wind — each with a specific action, not just a warning.
+
+### 3. Crop health monitoring
+The farmer describes what they see and optionally attaches a photo. The engine
+returns a **ranked differential diagnosis** with confidence scores, evidence, and
+what to check next. Approach and justification in
+[Crop health](#3-crop-health-analysis-rule-based-engine) below.
+
+### 4. Market price insights
+Recent mandi price trends per crop, with 7/30-day movement, volatility, and a
+plain-language sell/hold signal that compares today's price against the recent
+range.
+
+### 5. Unified dashboard
+Everything collapses into one ranked list: **what to act on today**. Irrigation,
+weather risks, health flags and price opportunities are scored by urgency and
+sorted together, so the farmer opens the app and immediately knows what matters.
 
 ---
 
-## Running Locally
+## Bonus challenges — all six implemented
+
+| Challenge | How it works |
+|---|---|
+| **Crop recommendation engine** | Scores every crop on five weighted dimensions — climate 30%, season 25%, soil 20%, water 15%, market 10% — using **real historical climate** for the farm's exact coordinates (Open-Meteo archive, 3-year average over the coming 120-day window), not a forecast. Every dimension returns a plain-language reason. |
+| **Fertilizer & resource planning** | Converts N-P-K requirements into bags of urea, DAP and MOP with a split-dose schedule. Adjusts for soil test values (±25% by nutrient level), adds 10% on sandy soil for leaching, and correctly **subtracts DAP's 18% nitrogen from the urea requirement** — skipping that step over-applies nitrogen. Stages already passed are marked done. |
+| **Yield prediction** | Transparent stress-factor model: `attainable × water × heat × health × management`. Each factor is derived from data actually held (water balance, logged weather, health observations) and returned with its reason and loss percentage. Uncertainty narrows as the season progresses. |
+| **Pest/disease outbreak alerts** | Anonymous aggregation of severe reports from farms within 50 km over 21 days, surfaced on the dashboard and health page. Individual farms are never identified. |
+| **Voice interface** | Web Speech API read-aloud. One button composes a spoken briefing that leads with what needs acting on, in Hindi when the user's profile is Hindi *and* the browser actually has a Hindi voice installed. Degrades silently where unsupported. |
+| **Offline-first support** | Successful dashboard reads are cached in `localStorage`; when the network fails the cached copy is served with a visible "saved N hours ago" banner. Cache is cleared on sign-out so data cannot leak between accounts on a shared phone. |
+
+**On offline support specifically:** we deliberately did *not* use a service
+worker. `next-pwa` is unreliable with the Next.js 14 App Router, and a
+half-working service worker that serves stale JavaScript is worse for a farmer
+than none at all. The localStorage approach covers the case that actually
+matters — *"I opened the app in a field with no signal and still need to know
+whether to irrigate."*
+
+**On voice specifically:** output only. Speech *recognition* is Chrome-only,
+needs a network round-trip, and handles Indian-accented regional languages
+poorly — shipping it would promise more than it delivers.
+
+---
+
+## Third-party data sources — what we chose and why
+
+This was treated as a real engineering decision, not a default.
+
+### 1. Weather: **Open-Meteo**
+
+`https://api.open-meteo.com/v1/forecast` — no API key, no account.
+
+| Option | Verdict |
+|---|---|
+| **Open-Meteo** ✅ | No key, no card. Publishes `et0_fao_evapotranspiration` directly. Modelled soil moisture at depth. `past_days` returns history in the same call. |
+| OpenWeatherMap One Call 3.0 | ❌ The only tier exposing the agronomic fields we need **requires a credit card on file** even inside the free allowance. Unacceptable single point of failure for a graded demo. |
+| WeatherAPI.com | ❌ Generous free tier, but no FAO-56 reference ET. We would have to derive ET₀ ourselves from temperature alone — markedly less accurate than a full Penman-Monteith computation. |
+
+**Why it mattered most:** Open-Meteo publishes ET₀ computed by the FAO-56
+Penman-Monteith equation from the full radiation/humidity/wind stack. That single
+field is the input our irrigation engine is built on. Deriving it from a
+general-purpose weather API would have measurably degraded every recommendation.
+
+`past_days=7` also gives the water balance a history to converge on and the
+disease rules their 7-day lookback — in one request.
+
+**Integration:** `backend/src/modules/weather/openmeteo.ts`. 12s timeout,
+1-hour cache in MongoDB, and on failure the service falls back to the last stored
+bundle with a visible "data is N hours old" warning rather than an error screen.
+
+*Licence: free for non-commercial use, CC-BY-4.0.*
+
+### 2. Market prices: **AGMARKNET via data.gov.in**
+
+Resource `9ef84268-d588-465a-a308-a864a43d0070` — *Current Daily Price of Various
+Commodities from Various Markets (Mandi)*.
+
+| Option | Verdict |
+|---|---|
+| **AGMARKNET / data.gov.in** ✅ | Authoritative Government of India mandi-level data, 300+ commodities, free, key issued instantly. |
+| Scraping agmarknet.gov.in | ❌ No official API; brittle HTML, and hammering a government site during a hackathon is not defensible. |
+| FAO FPMA / World Bank Pink Sheet | ❌ International commodity prices. Useless to a farmer choosing which mandi to sell at this week. |
+
+**The honest limitation, and how we handled it:** that endpoint serves *only the
+current day*. It has no history endpoint — so it cannot produce a trend on its
+own. We therefore:
+
+1. ingest daily snapshots and accumulate our own time series in MongoDB, which
+   becomes genuinely real history the longer the app runs; and
+2. ship a **seeded baseline series** so charts and trend analysis work from day
+   one on a fresh database.
+
+Seeded rows are tagged `source: 'seed'` and the API returns an `isSeeded` flag —
+the UI shows *"Includes baseline data"* rather than passing generated numbers off
+as observations. Seed values use approximate 2024-25 modal rates with real
+seasonal structure (harvest gluts depress prices; lean months lift them), and are
+deterministic so a rehearsed demo reproduces exactly.
+
+**Integration:** `backend/src/modules/market/market.service.ts`.
+Without a key the app serves stored history and stays fully functional.
+
+### 3. Crop health analysis: **rule-based engine** (with optional Plant.id)
+
+**We deliberately did not train an image classifier**, and did not want to claim
+a photo model we could not validate. Instead the engine performs an
+**evidence-weighted differential diagnosis** over three independent signals:
+
+| Signal | What it contributes |
+|---|---|
+| **Symptoms** | Keyword matching of the farmer's description against a curated symptom vocabulary per disease. Multi-word phrases score higher — *"water soaked"* is far more diagnostic than *"spot"*. |
+| **Epidemiology** | Whether recent weather at *that farm* actually favours the candidate. Late blight needs cool wet weather with leaf wetness; flagging it during a dry spell would be wrong regardless of symptoms. |
+| **Host** | Which diseases affect this specific crop at all. |
+
+Scores combine at 65% symptom / 35% weather, and the output is a *ranked
+differential with explicit confidence*, not a single confident answer.
+
+**Why this beats a naive image model here:**
+
+- **Explainable.** The farmer sees exactly which words matched and which weather
+  conditions applied.
+- **It degrades honestly.** Vague input yields low confidence, not a confident guess.
+- **It cannot hallucinate.** It will never flag a disease that is impossible for
+  the crop, or one the weather actively contradicts. An image classifier can and does.
+
+Verified behaviour:
+
+| Input | Crop | Result |
+|---|---|---|
+| *"Diamond shaped lesions with grey centre and brown border"* | Rice | Rice Blast, 74%, SEVERE |
+| *"Dark water soaked patches, white fuzz underneath, fruit rotting"* | Tomato | Late Blight, 66%, CRITICAL |
+| *"Tiny white insects fly up when I shake the plant, sticky leaves"* | Tomato | Whitefly 56%, Aphids 37% (ranked differential) |
+| *"The plants do not look very healthy"* | Rice | No diagnosis, 20% — asks for detail |
+
+Findings are framed as *"go and check this"*, never *"your crop has X"*, and
+every result carries its own limitations.
+
+**Optional upgrade:** if `PLANT_ID_API_KEY` is set, Plant.id image analysis runs
+and is folded in as an additional weighted signal — it never replaces the
+reasoning above. Without a key, everything still works.
+
+### 4. Agronomy data: curated knowledge base
+
+`backend/src/domain/crops.ts` — 12 crops (rice, wheat, maize, cotton, tomato,
+potato, sugarcane, soybean, onion, chickpea, mustard, groundnut) with crop
+coefficients and rooting depths from **FAO-56 Tables 12 and 22**, and
+disease/pest profiles from ICAR and state agricultural university advisories.
+
+Unrecognised crops are accepted — a farmer knows their land better than our
+database does — and fall back to conservative generic values, with the UI
+flagging the guidance as approximate.
+
+---
+
+## Tech stack
+
+| Layer | Technology | Why |
+|---|---|---|
+| Frontend | Next.js 14 (App Router), React 18, TypeScript | Mobile-first; App Router keeps bundles small on poor connections |
+| Styling | Tailwind CSS | Severity colour is a design token, consistent everywhere |
+| Charts | Recharts | Composable, responsive, small |
+| Backend | Node 20, Express 4, TypeScript | Shared types with the frontend; one runtime for the whole system |
+| Database | MongoDB + Prisma | Flexible for JSON-heavy weather/analysis payloads; type-safe access |
+| Auth | JWT + bcryptjs | Stateless, standard |
+| Validation | Zod | One schema definition, inferred types, farmer-readable error messages |
+| Uploads | Multer → local disk | No object-storage dependency; swap for S3 by changing one path |
+
+---
+
+## Running it locally
 
 ### Prerequisites
-- Python 3.10+
-- Node.js 18+
+Node 20+, and MongoDB **running as a replica set**.
 
-### Backend
+> **Why a replica set?** Prisma's MongoDB connector wraps writes in transactions
+> for emulated referential integrity, and MongoDB only supports transactions on a
+> replica set. A default standalone `mongod` fails every write with `P2031`.
+> MongoDB Atlas is a replica set out of the box. For a local single-node set:
+>
+> ```bash
+> mongod --port 27018 --dbpath .mongodb/data --replSet rs0 --bind_ip 127.0.0.1
+> mongosh --port 27018 --eval 'rs.initiate({_id:"rs0",members:[{_id:0,host:"127.0.0.1:27018"}]})'
+> ```
+
+### Setup
 
 ```bash
+git clone https://github.com/aadarshdubey637/HackInMotion-RICR-HIM-1104.git
+cd HackInMotion-RICR-HIM-1104
+
+# Backend
 cd backend
-python -m venv venv
+npm install
+cp ../.env.example .env        # then set DATABASE_URL and JWT_SECRET
+npx prisma generate
+npx prisma db push
+npm run db:seed                # demo farm + 90 days of price history
+npm run db:seed:community      # neighbouring farms, for outbreak alerts
+npm run dev                    # http://localhost:3001
 
-# Windows
-venv\Scripts\activate
-# macOS/Linux
-source venv/bin/activate
-
-pip install -r requirements.txt
-
-cp .env.example .env
-# Edit .env if needed — SQLite works out of the box, no setup required
-
-uvicorn app.main:app --reload --port 8000
-```
-
-API docs available at `http://localhost:8000/docs`
-
-### Frontend
-
-```bash
+# Frontend (separate terminal)
 cd frontend
 npm install
-npm run dev
+echo "NEXT_PUBLIC_API_URL=http://localhost:3001/api" > .env.local
+npm run dev                    # http://localhost:3000
 ```
 
-Runs at `http://localhost:5173` — all `/api` requests are proxied to the backend automatically.
+### Demo account
+
+```
+farmer@demo.com  /  demo1234
+```
+
+A 3.2 ha farm near Lucknow with rice (vegetative) and tomato (flowering),
+two plots, an irrigation record, and 90 days of price history across 12
+commodities.
+
+### Environment variables
+
+Only two are required.
+
+| Variable | Required | Notes |
+|---|---|---|
+| `DATABASE_URL` | ✅ | MongoDB connection string |
+| `JWT_SECRET` | ✅ | Minimum 32 characters |
+| `PLANT_ID_API_KEY` | — | Enables image analysis; rule engine used without it |
+| `DATA_GOV_IN_API_KEY` | — | Enables live mandi prices; seeded history used without it |
+| `FRONTEND_URL` | — | CORS origin, defaults to `http://localhost:3000` |
+
+**Weather needs no key.** By design — see above.
 
 ---
 
-## API Endpoints
+## Project structure
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/auth/signup` | Register a new user |
-| POST | `/api/auth/login` | Login, returns JWT |
-| GET | `/api/auth/me` | Current user info |
-| POST | `/api/farms` | Create a farm |
-| GET | `/api/farms` | List user's farms |
-| PATCH | `/api/farms/{id}` | Update farm |
-| DELETE | `/api/farms/{id}` | Delete farm |
-| POST | `/api/farms/{id}/crops` | Add a crop to a farm |
-| GET | `/api/farms/{id}/crops` | List crops on a farm |
-| PATCH | `/api/farms/{id}/crops/{crop_id}` | Update a crop |
-| DELETE | `/api/farms/{id}/crops/{crop_id}` | Remove a crop |
-| GET | `/api/farms/{id}/crops/suggestions/run` | Run AI crop suggestions |
-| GET | `/api/farms/{id}/crops/suggestions/latest` | Fetch cached suggestions |
-| GET | `/api/farms/{id}/irrigation` | Get irrigation guidance |
-| GET | `/api/farms/{id}/irrigation/history` | Last 20 irrigation logs |
-| GET | `/api/health` | Health check |
-
----
-
-## Third-Party APIs
-
-| API | Purpose | Key required? |
-|-----|---------|---------------|
-| [Open-Meteo](https://open-meteo.com) | 7-day weather forecast driving irrigation guidance and crop suggestions | No — completely free |
+```
+backend/
+  src/
+    config/           environment contract (Zod-validated, fail-fast)
+    common/           errors, error handler, validation, logging, uploads
+    domain/crops.ts   agronomy knowledge base — the system's reference data
+    modules/
+      auth/           JWT, sessions, password handling
+      farm/           farm profiles, plots, crops
+      weather/        openmeteo.ts (provider) + irrigation.ts (FAO-56 engine)
+      crop-health/    diagnosis.ts (differential engine) + service
+      market/         AGMARKNET ingestion, trend analysis, sell guidance
+      alerts/         alert feed
+      dashboard/      cross-cutting "what to do today" aggregation
+    prisma/           schema + seed
+frontend/
+  src/
+    app/              routes: login, register, onboarding, dashboard,
+                      weather, health, market, crops
+    components/       app shell + design system
+    lib/              typed API client, auth context, formatting
+legacy/               superseded implementations (see legacy/README.md)
+```
 
 ---
 
-## How the Crop Suggestion AI Works
+## Error handling
 
-The engine scores each crop in the knowledge base against three factors:
+Never leave the farmer with a blank or broken screen.
 
-1. **Temperature (40 pts)** — compares your location's average temperature against each crop's ideal range
-2. **Rainfall (35 pts)** — extrapolates the 7-day forecast to an annual estimate and checks it against the crop's water requirement
-3. **Soil type (25 pts)** — checks your farm's soil against each crop's preferred soils
+| Failure | Behaviour |
+|---|---|
+| Weather API down | Serve last stored forecast with a visible "N hours old" warning |
+| No weather history either | Dashboard renders; other sections unaffected; irrigation card explains why |
+| Market API down / no key | Serve stored history, labelled |
+| Image analysis unavailable | Rule engine runs alone; result states the photo was not analysed |
+| Photo too large / wrong type | Clean 400 with a plain-language message |
+| Photo fails to save | Observation is still recorded; response warns the photo was lost |
+| Unsupported crop | Accepted; generic agronomy used; UI flags guidance as approximate |
+| Invalid id in URL | 400 with a readable message, not a 500 |
+| Database unreachable | 503 with a retry message |
 
-Every penalty comes with a plain-English reason so farmers understand exactly why a crop scored the way it did.
-
-The land-division plan distributes available acreage proportionally by score, capped at 40% per crop to avoid monoculture, and respects each crop's minimum viable acreage.
-
----
-
-## Git Push — Steps Followed
-
-1. Set git identity: `git config user.name / user.email`
-2. Initialized repo: `git init`
-3. Created `.gitignore` (excluded `.env`, `venv/`, `node_modules/`, `*.db`)
-4. Staged all files: `git add .`
-5. Committed: `git commit -m "Initial commit: Smart Farm DSS with multi-crop system"`
-6. Added remote: `git remote add origin <repo-url>`
-7. Push rejected — remote had an existing commit (initial README by repo owner)
-8. Pulled with: `git pull origin main --allow-unrelated-histories --no-edit`
-9. Resolved 6 merge conflicts by keeping our version: `git checkout --ours <files>`
-10. Staged resolved files and committed merge: `git add . && git commit --no-edit`
-11. Pushed successfully: `git push -u origin main`
+Each dashboard section resolves independently via `Promise.allSettled`, so one
+failing upstream cannot blank the page.
 
 ---
 
-## Contributors
+## Design decisions worth calling out
 
-| Name | Role |
-|------|------|
-| Harsh Kumar Verma | Developer |
-| Aadarsh Dubey | Team Lead / Repo Owner |
+**Confidence is always shown.** Irrigation guidance reports its confidence and
+lists the assumptions it had to make ("soil type not recorded — assuming loamy").
+Health results carry their limitations. A farmer deciding whether to spend money
+on diesel deserves to know how sure the system is.
+
+**Colour means one thing.** Red only ever means *act now*. Severity is a single
+design token shared by alerts, badges and cards.
+
+**Mobile-first, genuinely.** 44px minimum tap targets, thumb-reachable bottom
+navigation, five destinations maximum, land size enterable in acres.
+
+**Every alert carries an action.** "Frost risk" is not useful on its own. "Frost
+risk — irrigate the evening before; wet soil holds heat and raises canopy
+temperature by 1–2°C" is.
+
+---
+
+## Future scope
+
+- **Voice input**, not just output — once regional-language recognition is
+  reliable enough to trust for data entry.
+- **Full offline write queue** — currently reads work offline; queuing
+  observations logged offline and syncing on reconnect is the natural next step.
+- **Real yield calibration** — the prediction model is transparent but
+  uncalibrated. Recording actual harvest weights would let it learn per-farm.
+- **Soil test integration** — the fertiliser engine already consumes N-P-K
+  levels; importing soil health card data directly would remove manual entry.
+- **SMS/WhatsApp alerts** for farmers who will not open an app daily.
+
+---
+
+## Documentation
+
+- [`api-documentation.md`](./api-documentation.md) — every endpoint
+- [`architecture/architecture-diagram.png`](./architecture/) — system architecture
+- [`docs/tech-stack-api-selection.md`](./docs/tech-stack-api-selection.md) — extended evaluation
+- [`legacy/README.md`](./legacy/README.md) — superseded implementations
+
+---
+
+## References
+
+Allen, R.G., Pereira, L.S., Raes, D. & Smith, M. (1998). *Crop
+evapotranspiration — Guidelines for computing crop water requirements.* FAO
+Irrigation and Drainage Paper 56.

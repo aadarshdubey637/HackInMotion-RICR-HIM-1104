@@ -20,10 +20,16 @@ import {
   CheckCircle2,
   Thermometer,
   RefreshCw,
+  Volume2,
+  Square,
+  Users,
 } from 'lucide-react';
 import { AppShell } from '@/components/app-shell';
 import { useAuth } from '@/lib/auth-context';
 import { api, ApiError } from '@/lib/api';
+import { readCache, writeCache, describeAge } from '@/lib/offline';
+import { useVoice, buildSpokenBriefing } from '@/lib/voice';
+import type { NearbyOutbreaks } from '@/lib/types';
 import type { Dashboard, ActionItem } from '@/lib/types';
 import {
   Card,
@@ -55,20 +61,39 @@ const WEATHER_ICONS = {
 } as const;
 
 function DashboardContent() {
-  const { currentFarm } = useAuth();
+  const { currentFarm, user } = useAuth();
   const [data, setData] = useState<Dashboard | null>(null);
   const [error, setError] = useState<{ message: string; offline: boolean } | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  /** Set when the view is being served from cache rather than the network. */
+  const [cacheAge, setCacheAge] = useState<string | null>(null);
+  const [nearby, setNearby] = useState<NearbyOutbreaks | null>(null);
+
+  const voice = useVoice();
 
   const load = useCallback(
     async (signal?: AbortSignal) => {
       if (!currentFarm) return;
       setError(null);
+      const cacheKey = `dashboard:${currentFarm.id}`;
 
       try {
-        setData(await api.dashboard.get(currentFarm.id, signal));
+        const fresh = await api.dashboard.get(currentFarm.id, signal);
+        setData(fresh);
+        setCacheAge(null);
+        writeCache(cacheKey, fresh);
       } catch (err) {
         if (err instanceof DOMException && err.name === 'AbortError') return;
+
+        // Offline or server unreachable — fall back to the last good copy so
+        // the farmer still sees today's guidance rather than an error page.
+        const cached = readCache<Dashboard>(cacheKey);
+        if (cached) {
+          setData(cached.data);
+          setCacheAge(describeAge(cached.ageMs));
+          return;
+        }
+
         setError({
           message:
             err instanceof ApiError
@@ -87,10 +112,37 @@ function DashboardContent() {
     return () => controller.abort();
   }, [load]);
 
+  // Community outbreak signal — supplementary, so failures stay silent.
+  useEffect(() => {
+    if (!currentFarm) return;
+    api.health
+      .nearby(currentFarm.id)
+      .then(setNearby)
+      .catch(() => setNearby(null));
+  }, [currentFarm]);
+
   async function refresh() {
     setRefreshing(true);
     await load();
     setRefreshing(false);
+  }
+
+  function readAloud() {
+    if (!data) return;
+    if (voice.speaking) {
+      voice.stop();
+      return;
+    }
+    const briefing = buildSpokenBriefing({
+      farmName: data.farm.name,
+      actions: data.actions,
+      irrigation: data.irrigation,
+      weather: data.weather,
+    });
+    // Use Hindi only when the browser actually has a Hindi voice installed —
+    // otherwise it reads English text with the wrong phonetics.
+    const wantsHindi = user?.language === 'hi' && voice.hasLanguage('hi');
+    voice.speak(briefing, wantsHindi ? 'hi-IN' : 'en-IN');
   }
 
   if (!currentFarm) return null;
@@ -133,17 +185,38 @@ function DashboardContent() {
             {data.farm.season} season · {data.farm.totalAreaHectares} ha
           </p>
         </div>
-        <button
-          type="button"
-          onClick={refresh}
-          disabled={refreshing}
-          aria-label="Refresh"
-          className="btn-ghost shrink-0 px-2"
-        >
-          <RefreshCw className={cn('h-5 w-5', refreshing && 'animate-spin')} aria-hidden />
-        </button>
+        <div className="flex shrink-0 items-center gap-1">
+          {voice.supported ? (
+            <button
+              type="button"
+              onClick={readAloud}
+              aria-label={voice.speaking ? 'Stop reading' : 'Read today’s guidance aloud'}
+              className={cn('btn-ghost px-2', voice.speaking && 'text-brand-700')}
+            >
+              {voice.speaking ? (
+                <Square className="h-5 w-5 fill-current" aria-hidden />
+              ) : (
+                <Volume2 className="h-5 w-5" aria-hidden />
+              )}
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={refresh}
+            disabled={refreshing}
+            aria-label="Refresh"
+            className="btn-ghost px-2"
+          >
+            <RefreshCw className={cn('h-5 w-5', refreshing && 'animate-spin')} aria-hidden />
+          </button>
+        </div>
       </div>
 
+      {cacheAge ? (
+        <Notice tone="warn">
+          Showing saved information from {cacheAge}. It will update when you are back online.
+        </Notice>
+      ) : null}
       {error ? <Notice tone="warn">{error.message}</Notice> : null}
       {data.weather.warning ? <Notice tone="warn">{data.weather.warning}</Notice> : null}
 
@@ -221,6 +294,38 @@ function DashboardContent() {
         )}
       </section>
 
+      {/* ── Community outbreak signal ── */}
+      {nearby && nearby.reports.length > 0 ? (
+        <section>
+          <SectionHeading icon={Users} title="Reported near you" />
+          <Card className="border-amber-200 bg-amber-50">
+            <p className="text-sm text-amber-900">
+              Farmers within {nearby.radiusKm} km have reported these in the last three weeks.
+              Worth checking your own crop.
+            </p>
+            <div className="mt-2.5 space-y-1.5">
+              {nearby.reports.slice(0, 3).map((report) => (
+                <div
+                  key={`${report.name}-${report.crop}`}
+                  className="flex items-center justify-between gap-2"
+                >
+                  <span className="min-w-0 truncate text-sm font-semibold text-amber-900">
+                    {report.name}
+                    <span className="font-normal"> on {cropLabel(report.crop)}</span>
+                  </span>
+                  <Badge tone="warn" className="shrink-0">
+                    {report.count} farm{report.count === 1 ? '' : 's'}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+            <Link href="/health" className="btn-secondary mt-3 w-full sm:w-auto">
+              Check my crop
+            </Link>
+          </Card>
+        </section>
+      ) : null}
+
       {/* ── Market ── */}
       <section>
         <SectionHeading
@@ -289,8 +394,41 @@ function DashboardContent() {
         )}
       </section>
 
+      {/* ── Planning shortcuts ── */}
+      <section>
+        <SectionHeading title="Plan ahead" />
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Link href="/recommendations">
+            <Card className="flex h-full items-start gap-3 transition hover:border-brand-300">
+              <Sprout className="mt-0.5 h-6 w-6 shrink-0 text-brand-600" aria-hidden />
+              <div className="min-w-0">
+                <p className="font-bold text-slate-800">What to plant</p>
+                <p className="text-sm text-slate-600">
+                  Crops ranked for your soil, season and local climate.
+                </p>
+              </div>
+              <ArrowRight className="mt-1 h-5 w-5 shrink-0 text-slate-400" aria-hidden />
+            </Card>
+          </Link>
+
+          <Link href="/planning">
+            <Card className="flex h-full items-start gap-3 transition hover:border-brand-300">
+              <Droplets className="mt-0.5 h-6 w-6 shrink-0 text-brand-600" aria-hidden />
+              <div className="min-w-0">
+                <p className="font-bold text-slate-800">Plan &amp; predict</p>
+                <p className="text-sm text-slate-600">
+                  Fertiliser to buy, when to apply it, and expected yield.
+                </p>
+              </div>
+              <ArrowRight className="mt-1 h-5 w-5 shrink-0 text-slate-400" aria-hidden />
+            </Card>
+          </Link>
+        </div>
+      </section>
+
       <p className="pb-2 text-center text-xs text-slate-400">
-        Updated {timeAgo(data.generatedAt)} · Weather from Open-Meteo
+        {cacheAge ? `Saved ${cacheAge}` : `Updated ${timeAgo(data.generatedAt)}`} · Weather from
+        Open-Meteo
       </p>
     </div>
   );

@@ -6,6 +6,8 @@ import { cropHealthRouter } from './modules/crop-health/crop-health.routes';
 import { marketRouter } from './modules/market/market.routes';
 import { alertsRouter } from './modules/alerts/alerts.routes';
 import { dashboardRouter } from './modules/dashboard/dashboard.routes';
+import { recommendationsRouter } from './modules/recommendations/recommendations.routes';
+import { planningRouter } from './modules/planning/planning.routes';
 
 /** All API routes, mounted under /api. */
 export const apiRouter = Router();
@@ -17,3 +19,5 @@ apiRouter.use('/crop-health', cropHealthRouter);
 apiRouter.use('/market', marketRouter);
 apiRouter.use('/alerts', alertsRouter);
 apiRouter.use('/dashboard', dashboardRouter);
+apiRouter.use('/recommendations', recommendationsRouter);
+apiRouter.use('/planning', planningRouter);

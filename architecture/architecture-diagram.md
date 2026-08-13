@@ -1,5 +1,20 @@
 # Smart Farm Decision Support System - Enhanced Architecture Diagram
 
+> ### ⚠️ Superseded — early design exploration
+>
+> This document describes an **earlier, more ambitious architecture** that was
+> scoped down before implementation. It references PostgreSQL/PostGIS,
+> TimescaleDB, Redis, MinIO, Celery, ONNX and a separate Python service — none
+> of which are in the delivered system.
+>
+> **The current architecture is
+> [`architecture-diagram.png`](./architecture-diagram.png)**, with the rationale
+> in the [main README](../README.md).
+>
+> Kept for reference: it shows the design space that was considered, and
+> several ideas here (community outbreak alerts, yield prediction) are tracked
+> as future scope.
+
 ## High-Level System Architecture (Enhanced with Multi-Crop & AI Optimization)
 
 ```mermaid

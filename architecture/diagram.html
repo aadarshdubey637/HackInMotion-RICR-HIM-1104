@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    width: 1560px;
+    padding: 40px 44px 34px;
+    background: #ffffff;
+    font-family: 'Inter', system-ui, sans-serif;
+    color: #1e293b;
+  }
+
+  /* ── Header ── */
+  header { margin-bottom: 26px; }
+  h1 { font-size: 27px; font-weight: 700; letter-spacing: -0.3px; }
+  .sub { font-size: 14px; color: #64748b; margin-top: 4px; }
+
+  /* ── Layer band ── */
+  .layer {
+    border: 1.5px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 15px 18px 18px;
+    margin-bottom: 15px;
+    position: relative;
+    background: #fcfcfd;
+  }
+  .layer-label {
+    position: absolute; top: -10px; left: 18px;
+    background: #ffffff; padding: 0 9px;
+    font-size: 11px; font-weight: 700; letter-spacing: 1.1px;
+    text-transform: uppercase; color: #94a3b8;
+  }
+
+  .row { display: flex; gap: 13px; align-items: stretch; }
+  .row + .row { margin-top: 13px; }
+
+  /* ── Generic box ── */
+  .box {
+    flex: 1;
+    border-radius: 11px;
+    padding: 13px 15px;
+    border: 1.5px solid;
+    min-width: 0;
+  }
+  .box h3 { font-size: 14.5px; font-weight: 700; margin-bottom: 3px; }
+  .box p  { font-size: 12px; line-height: 1.5; color: #475569; }
+  .box .tech {
+    font-size: 10.5px; font-weight: 600; color: #64748b;
+    margin-top: 7px; font-family: ui-monospace, monospace;
+  }
+
+  /* ── Palette by role ── */
+  .client  { background:#eff6ff; border-color:#bfdbfe; }
+  .client h3 { color:#1d4ed8; }
+
+  .api     { background:#f0fdf4; border-color:#bbf7d0; }
+  .api h3  { color:#15803d; }
+
+  .engine  { background:#fff7ed; border-color:#fed7aa; }
+  .engine h3 { color:#c2410c; }
+
+  .data    { background:#faf5ff; border-color:#e9d5ff; }
+  .data h3 { color:#7e22ce; }
+
+  .ext     { background:#f8fafc; border-color:#cbd5e1; }
+  .ext h3  { color:#475569; }
+
+  /* ── Emphasis for the core engine ── */
+  .core { border-width: 2.5px; border-color:#ea580c; box-shadow: 0 2px 10px rgba(234,88,12,.13); }
+  .core-tag {
+    display:inline-block; background:#ea580c; color:#fff;
+    font-size:9px; font-weight:700; letter-spacing:.6px;
+    padding:2px 7px; border-radius:5px; margin-left:7px; vertical-align:2px;
+  }
+
+  /* ── Arrows ── */
+  .flow {
+    text-align:center; font-size:17px; color:#94a3b8;
+    margin: -6px 0 7px; line-height:1;
+  }
+
+  /* ── Badges ── */
+  .badges { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+  .badge {
+    font-size:10px; font-weight:600; padding:2.5px 8px;
+    border-radius:20px; background:#ffffff; border:1px solid #cbd5e1; color:#475569;
+  }
+  .badge.ok   { background:#dcfce7; border-color:#86efac; color:#166534; }
+  .badge.opt  { background:#fef9c3; border-color:#fde047; color:#854d0e; }
+
+  /* ── Footer notes ── */
+  .notes {
+    display:flex; gap:26px; margin-top:16px;
+    padding-top:14px; border-top:1.5px solid #e2e8f0;
+  }
+  .note { flex:1; }
+  .note h4 { font-size:11px; font-weight:700; text-transform:uppercase;
+             letter-spacing:.8px; color:#94a3b8; margin-bottom:5px; }
+  .note p { font-size:11.5px; line-height:1.55; color:#475569; }
+  .note code {
+    font-family:ui-monospace,monospace; font-size:10.5px;
+    background:#f1f5f9; padding:1px 4px; border-radius:3px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Smart Farm Decision Support System — Architecture</h1>
+  <p class="sub">Team RICR-HIM-1104 &nbsp;·&nbsp; HackInMotion &nbsp;·&nbsp; Node + Express + MongoDB, Next.js 14</p>
+</header>
+
+<!-- ═══ CLIENT ═══ -->
+<div class="layer">
+  <span class="layer-label">Client</span>
+  <div class="row">
+    <div class="box client">
+      <h3>Farmer — mobile first</h3>
+      <p>Bottom-tab navigation, 44&nbsp;px tap targets, colour-coded severity. Most farmers reach this from a phone in the field.</p>
+      <div class="tech">Next.js 14 App Router · React 18 · TypeScript · Tailwind</div>
+    </div>
+    <div class="box client">
+      <h3>Screens</h3>
+      <p>Onboarding → Dashboard → Irrigation · Crop health · Market prices · Crops</p>
+      <div class="tech">Recharts · typed API client · JWT in localStorage</div>
+    </div>
+  </div>
+</div>
+
+<div class="flow">▼ &nbsp; HTTPS &nbsp;·&nbsp; JSON <code>{ success, data }</code> &nbsp;·&nbsp; Bearer JWT &nbsp; ▼</div>
+
+<!-- ═══ API ═══ -->
+<div class="layer">
+  <span class="layer-label">API — Express 4 / TypeScript</span>
+
+  <div class="row">
+    <div class="box api">
+      <h3>Middleware</h3>
+      <p>Helmet · CORS allow-list · rate limit · Zod validation · JWT auth · uniform error envelope</p>
+    </div>
+    <div class="box api">
+      <h3>Auth</h3>
+      <p>Register, login, refresh rotation. Every query scoped by user id — farm data is private per account.</p>
+    </div>
+    <div class="box api">
+      <h3>Farm profile</h3>
+      <p>Location, land size, soil type, plots and crops. Drives personalisation everywhere.</p>
+    </div>
+    <div class="box api">
+      <h3>Dashboard</h3>
+      <p>Aggregates all subsystems into one ranked <em>“what to do today”</em> list. Sections fail independently.</p>
+    </div>
+  </div>
+</div>
+
+<div class="flow">▼</div>
+
+<!-- ═══ ENGINES ═══ -->
+<div class="layer">
+  <span class="layer-label">Decision engines — where raw data becomes advice</span>
+
+  <div class="row">
+    <div class="box engine core">
+      <h3>Irrigation water balance<span class="core-tag">CORE</span></h3>
+      <p><strong>FAO-56 soil water balance.</strong> Tracks root-zone depletion daily:</p>
+      <p style="margin-top:5px;font-family:ui-monospace,monospace;font-size:10.5px;color:#9a3412">
+        depletion += (ET₀ × K<sub>c</sub>) − effective rain
+      </p>
+      <p style="margin-top:5px">Advises irrigation when depletion reaches Readily Available Water. Crop- and soil-specific, so it can say <em>“hold off, rain Thursday covers you.”</em></p>
+      <div class="badges"><span class="badge">Allen et al. 1998</span><span class="badge">Kc by growth stage</span></div>
+    </div>
+
+    <div class="box engine">
+      <h3>Crop health diagnosis</h3>
+      <p>Evidence-weighted <strong>differential diagnosis</strong> over three signals:</p>
+      <p style="margin-top:5px">① symptom keywords · ② whether recent weather actually favours the disease · ③ host crop</p>
+      <p style="margin-top:5px">Returns a ranked list with confidence — never a single confident guess. Cannot flag a disease the weather contradicts.</p>
+      <div class="badges"><span class="badge">explainable</span><span class="badge">degrades honestly</span></div>
+    </div>
+
+    <div class="box engine">
+      <h3>Market trend analysis</h3>
+      <p>Aggregates mandi prices by day, computes 7/30-day movement, volatility and position within the recent range.</p>
+      <p style="margin-top:5px">Emits a <strong>SELL / HOLD / WATCH</strong> signal comparing today against that range — explicitly not a forecast.</p>
+      <div class="badges"><span class="badge">seeded data flagged</span></div>
+    </div>
+
+    <div class="box engine">
+      <h3>Risk &amp; alert generation</h3>
+      <p>Heat stress, frost, heavy rain, dry spells, high wind — each thresholded against the specific crop's tolerance.</p>
+      <p style="margin-top:5px">Every alert carries a concrete action, deduplicated per farm/type/day.</p>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="box engine" style="flex:0 0 100%">
+      <h3>Agronomy knowledge base &nbsp;<span style="font-weight:500;font-size:12px;color:#9a3412">— shared reference data read by all four engines</span></h3>
+      <p>12 crops · crop coefficients &amp; rooting depths (FAO-56 Tables 12 &amp; 22) · soil available-water by texture · disease &amp; pest profiles with weather triggers and treatment actions (ICAR / state agricultural university advisories) · AGMARKNET commodity mapping</p>
+    </div>
+  </div>
+</div>
+
+<div class="flow">▼</div>
+
+<!-- ═══ DATA + EXTERNAL ═══ -->
+<div class="row">
+
+  <div class="layer" style="flex:1.05; margin-bottom:0">
+    <span class="layer-label">Persistence</span>
+    <div class="row">
+      <div class="box data">
+        <h3>MongoDB — Prisma ORM</h3>
+        <p><strong>users · farms · parcels · crops · cropVarieties</strong><br>
+           <strong>weatherData · irrigationLogs · healthLogs</strong><br>
+           <strong>priceHistory · alerts · recommendations</strong></p>
+        <div class="tech">ObjectId keys · type-safe access · unique-key dedupe</div>
+        <div class="badges">
+          <span class="badge">weather cached 1&nbsp;h</span>
+          <span class="badge">price history accumulates daily</span>
+        </div>
+      </div>
+      <div class="box data">
+        <h3>Local disk</h3>
+        <p>Uploaded crop photos, served statically. No object-storage dependency — swap for S3 by changing one path.</p>
+        <div class="tech">Multer · 8 MB limit · JPG/PNG/WebP</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="layer" style="flex:1; margin-bottom:0">
+    <span class="layer-label">External data sources</span>
+    <div class="row">
+      <div class="box ext">
+        <h3>Open-Meteo</h3>
+        <p>Forecast, 7-day history, and <strong>FAO-56 Penman-Monteith ET₀</strong> — the input the irrigation engine is built on. Modelled soil moisture at depth.</p>
+        <div class="badges"><span class="badge ok">no API key</span><span class="badge ok">no card</span></div>
+      </div>
+      <div class="box ext">
+        <h3>AGMARKNET</h3>
+        <p>Government of India mandi prices via the data.gov.in open-data API. Current-day only, so snapshots are accumulated locally into a real series.</p>
+        <div class="badges"><span class="badge opt">free key</span><span class="badge">seeded fallback</span></div>
+      </div>
+      <div class="box ext">
+        <h3>Plant.id</h3>
+        <p>Optional image analysis. Folded in as an <em>additional weighted signal</em> — it never replaces the rule engine.</p>
+        <div class="badges"><span class="badge opt">optional</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ NOTES ═══ -->
+<div class="notes">
+  <div class="note">
+    <h4>Graceful degradation</h4>
+    <p>Weather provider down → serve the last stored bundle with a visible “N hours old” warning. Market API down → stored history. No Plant.id key → rule engine alone. The dashboard resolves every section with <code>Promise.allSettled</code>, so one failing upstream never blanks the page.</p>
+  </div>
+  <div class="note">
+    <h4>Privacy &amp; isolation</h4>
+    <p>Every database query is scoped by the authenticated user id; another farmer's farm returns <code>404</code>, not <code>403</code>, so the API does not leak which ids exist. No personally identifying data is sent to any third party — only latitude, longitude and crop name.</p>
+  </div>
+  <div class="note">
+    <h4>Why one runtime</h4>
+    <p>An earlier design placed the engines in a separate Python service. Both the water balance and the diagnostic engine are deterministic rule systems needing no ML runtime, so folding them into Node removed a network hop, a deployment target and a failure mode.</p>
+  </div>
+</div>
+
+</body>
+</html>

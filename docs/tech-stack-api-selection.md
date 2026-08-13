@@ -1,5 +1,29 @@
 # Technology Stack & Third-Party API Selection
 
+> ### ⚠️ Planning document — records the evaluation, not the final build
+>
+> This is the **research and options analysis** carried out before implementation.
+> It deliberately surveys more candidates than were adopted, and several
+> components described here were evaluated and then **rejected** as
+> over-engineered for the problem.
+>
+> **What was actually built** is documented in the
+> [main README](../README.md) and shown in
+> [`architecture/architecture-diagram.png`](../architecture/architecture-diagram.png).
+>
+> Key decisions that changed after this document was written:
+>
+> | This document proposed | Shipped instead | Why |
+> |---|---|---|
+> | OpenWeatherMap One Call 3.0 (primary) | **Open-Meteo** | One Call 3.0 requires a credit card on file even on the free tier — an unacceptable failure point for a graded demo. Open-Meteo also publishes FAO-56 ET₀ directly. |
+> | PostgreSQL + PostGIS + TimescaleDB | **MongoDB** | PostGIS geometry types are unsupported by Prisma; a farm location only ever needs lat/lon. |
+> | Separate Python/FastAPI intelligence service | **Folded into Node** | The water balance and diagnostic engine are deterministic rule systems needing no ML runtime. Removed a network hop, a deployment target and a failure mode. |
+> | Plant.id as primary crop-health analysis | **Rule engine primary, Plant.id optional** | See the README for the full justification — explainability and honest degradation mattered more than a black-box classifier. |
+> | Redis, MinIO, Celery, ONNX, k3s | **Dropped** | Out of scope for the problem statement; each added operational risk without serving a must-have requirement. |
+>
+> The API evaluation sections below remain accurate and are the reasoning behind
+> the final choices.
+
 ## Technology Stack
 
 ### Frontend

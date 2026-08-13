@@ -191,7 +191,7 @@ function TrendCard({ trend }: { trend: PriceTrend }) {
       {chartData.length > 2 ? (
         <div className="h-44 w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -18, bottom: 0 }}>
+            <AreaChart data={chartData} margin={{ top: 8, right: 6, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id={`grad-${trend.commodity}`} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="#16a34a" stopOpacity={0.28} />
@@ -211,9 +211,9 @@ function TrendCard({ trend }: { trend: PriceTrend }) {
                 tick={{ fontSize: 10, fill: '#64748b' }}
                 axisLine={false}
                 tickLine={false}
-                width={52}
+                width={58}
                 domain={['dataMin - 100', 'dataMax + 100']}
-                tickFormatter={(v: number) => `₹${v}`}
+                tickFormatter={(v: number) => `₹${Math.round(v)}`}
               />
               <Tooltip
                 contentStyle={{ borderRadius: 12, border: '1px solid #e3d9c9', fontSize: 13 }}

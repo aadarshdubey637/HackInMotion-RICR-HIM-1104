@@ -541,7 +541,7 @@ function detectRisks(
       severity: extreme ? 'HIGH' : 'MEDIUM',
       title: extreme ? 'Extreme heat expected' : 'High temperatures expected',
       message:
-        `${worst.tempMaxC.toFixed(0)}°C forecast on ${formatDay(worst.date)}, above the ` +
+        `${worst.tempMaxC.toFixed(0)}°C forecast ${formatDay(worst.date)}, above the ` +
         `${crop.tempRangeC.max}°C comfort limit for ${crop.label.toLowerCase()}. ` +
         `${hotDays.length > 1 ? `${hotDays.length} hot days are expected in total.` : ''}`,
       action: extreme
@@ -560,7 +560,7 @@ function detectRisks(
       severity: worst.tempMinC <= crop.frostSensitiveBelowC - 2 ? 'CRITICAL' : 'HIGH',
       title: 'Frost risk',
       message:
-        `Temperature is forecast to drop to ${worst.tempMinC.toFixed(0)}°C on ${formatDay(worst.date)}. ` +
+        `Temperature is forecast to drop to ${worst.tempMinC.toFixed(0)}°C ${formatDay(worst.date)}. ` +
         `${crop.label} is damaged below ${crop.frostSensitiveBelowC}°C.`,
       action:
         'Irrigate the evening before — wet soil holds heat and raises the canopy temperature by 1-2°C. ' +
@@ -582,7 +582,7 @@ function detectRisks(
       severity: threeDayTotal >= 150 ? 'CRITICAL' : 'HIGH',
       title: 'Heavy rainfall expected',
       message: heavyDays.length
-        ? `${worst.rawRainMm.toFixed(0)} mm of rain forecast on ${formatDay(worst.date)}.`
+        ? `${worst.rawRainMm.toFixed(0)} mm of rain forecast ${formatDay(worst.date)}.`
         : `About ${threeDayTotal.toFixed(0)} mm of rain expected over the next 3 days.`,
       action: isPaddy
         ? 'Check bund heights and make sure the outlet is clear — paddy tolerates standing water but not submergence of the growing point.'
@@ -614,7 +614,7 @@ function detectRisks(
       type: 'WEATHER_RISK',
       severity: windyDay.windSpeedMaxKmh >= 55 ? 'HIGH' : 'MEDIUM',
       title: 'Strong winds expected',
-      message: `Winds up to ${windyDay.windSpeedMaxKmh.toFixed(0)} km/h forecast on ${formatDay(windyDay.date)}.`,
+      message: `Winds up to ${windyDay.windSpeedMaxKmh.toFixed(0)} km/h forecast ${formatDay(windyDay.date)}.`,
       action:
         'Do not spray — drift will waste chemical and can damage neighbouring crops. ' +
         'Stake tall or top-heavy plants. Tall cereals near harvest are at risk of lodging.',
@@ -655,6 +655,11 @@ function longestDryRun(days: DayProjection[]): number {
 
 // ─────────────────────────── Formatting ───────────────────────────
 
+/**
+ * Day reference for use after the preposition "on" — e.g. "forecast {X}".
+ * "today" and "tomorrow" read wrong with a preposition ("on today"), so they
+ * are returned bare and the caller's "on" is absorbed here.
+ */
 function formatDay(iso: string): string {
   const d = new Date(`${iso}T00:00:00`);
   const today = new Date();
@@ -664,9 +669,9 @@ function formatDay(iso: string): string {
   if (diff === 0) return 'today';
   if (diff === 1) return 'tomorrow';
   if (diff > 1 && diff < 7) {
-    return d.toLocaleDateString('en-IN', { weekday: 'long' });
+    return `on ${d.toLocaleDateString('en-IN', { weekday: 'long' })}`;
   }
-  return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+  return `on ${d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`;
 }
 
 function describeRelativeDay(iso: string, _all: DayProjection[]): string {

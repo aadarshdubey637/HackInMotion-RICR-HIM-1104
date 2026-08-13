@@ -284,6 +284,129 @@ export interface PriceTrend {
   lastUpdated: string | null;
 }
 
+// ─────────────────── Crop recommendations ───────────────────
+
+export interface DimensionScore {
+  score: number;
+  reason: string;
+}
+
+export interface CropRecommendation {
+  cropKey: string;
+  label: string;
+  commodity: string;
+  suitabilityScore: number;
+  rating: 'EXCELLENT' | 'GOOD' | 'FAIR' | 'POOR';
+  climate: DimensionScore;
+  season: DimensionScore;
+  soil: DimensionScore;
+  water: DimensionScore;
+  market: DimensionScore;
+  summary: string;
+  cautions: string[];
+  agronomy: {
+    growingDays: number;
+    waterRequirementMm: number;
+    expectedRainfallMm: number | null;
+    irrigationNeedMm: number | null;
+    seasons: string[];
+  };
+  economics: {
+    currentPrice: number | null;
+    unit: string;
+    estimatedIncomePerHa: number | null;
+    attainableYieldKgHa: number;
+  };
+}
+
+export interface ClimateWindow {
+  meanTempC: number;
+  meanMinTempC: number;
+  meanMaxTempC: number;
+  totalRainfallMm: number;
+  frostDays: number;
+  yearsSampled: number;
+  windowDays: number;
+}
+
+export interface RecommendationResult {
+  farm: {
+    id: string;
+    name: string;
+    soilType: string | null;
+    areaHectares: number;
+  };
+  season: string;
+  climate: ClimateWindow | null;
+  recommendations: CropRecommendation[];
+  warning?: string;
+  generatedAt: string;
+}
+
+// ─────────────────── Planning ───────────────────
+
+export interface FertilizerPlan {
+  crop: { key: string; label: string; isKnown: boolean };
+  areaHectares: number;
+  requirement: { nitrogenKg: number; phosphorusKg: number; potassiumKg: number };
+  products: Array<{
+    product: string;
+    totalKg: number;
+    bags: number;
+    bagSizeKg: number;
+    supplies: string;
+  }>;
+  schedule: Array<{
+    timing: string;
+    stage: string;
+    ureaKg: number;
+    dapKg: number;
+    mopKg: number;
+    passed: boolean;
+  }>;
+  adjustments: string[];
+  notes: string[];
+  basis: string;
+}
+
+export interface StressFactor {
+  name: string;
+  factor: number;
+  lossPercent: number;
+  reason: string;
+  severity: 'none' | 'mild' | 'moderate' | 'severe';
+}
+
+export interface YieldPrediction {
+  crop: { key: string; label: string; isKnown: boolean };
+  areaHectares: number;
+  attainableKgHa: number;
+  predictedKgHa: number;
+  predictedTotalKg: number;
+  rangeTotalKg: { low: number; high: number };
+  unit: string;
+  factors: StressFactor[];
+  confidence: number;
+  seasonProgress: number;
+  estimatedIncome: number | null;
+  improvements: string[];
+  limitations: string[];
+}
+
+export interface CropPlan {
+  cropId: string;
+  cropName: string;
+  status: string;
+  fertilizer: FertilizerPlan;
+  yieldPrediction: YieldPrediction;
+}
+
+export interface NearbyOutbreaks {
+  reports: Array<{ name: string; crop: string; count: number; latest: string }>;
+  farmsInArea: number;
+  radiusKm: number;
+}
+
 export interface AlertItem {
   id: string;
   alertType: string;

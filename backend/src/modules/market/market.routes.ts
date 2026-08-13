@@ -19,7 +19,7 @@ marketRouter.get(
   }),
 );
 
-/** GET /api/market/commodity/:commodity — trend for a single commodity. */
+/** GET /api/market/commodity/:commodity — trend for a single commodity.  */
 marketRouter.get(
   '/commodity/:commodity',
   validateParams(commodityParams),

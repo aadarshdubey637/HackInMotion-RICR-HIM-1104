@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, tokenStore, activeFarm, ApiError } from './api';
+import { clearCache } from './offline';
 import type { User, Farm } from './types';
 
 interface AuthState {
@@ -102,6 +103,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (refresh) void api.auth.logout(refresh).catch(() => undefined);
 
     tokenStore.clear();
+    // Cached dashboards are per-account; leaving them would show one farmer's
+    // data to the next person who signs in on a shared phone.
+    clearCache();
     setUser(null);
     setFarms([]);
     setCurrentFarm(null);

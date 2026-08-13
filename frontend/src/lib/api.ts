@@ -18,6 +18,10 @@ import type {
   HealthLog,
   PriceTrend,
   AlertItem,
+  RecommendationResult,
+  CropPlan,
+  FertilizerPlan,
+  YieldPrediction,
 } from './types';
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api';
@@ -276,6 +280,21 @@ export const api = {
 
     commodity: (commodity: string, days = 60) =>
       request<PriceTrend>(`/market/commodity/${encodeURIComponent(commodity)}?days=${days}`),
+  },
+
+  recommendations: {
+    get: (farmId: string) => request<RecommendationResult>(`/recommendations/${farmId}`),
+  },
+
+  planning: {
+    farm: (farmId: string) =>
+      request<{ crops: CropPlan[]; message: string | null }>(`/planning/${farmId}`),
+
+    fertilizer: (farmId: string, cropId: string) =>
+      request<FertilizerPlan>(`/planning/${farmId}/crops/${cropId}/fertilizer`),
+
+    yieldPrediction: (farmId: string, cropId: string) =>
+      request<YieldPrediction>(`/planning/${farmId}/crops/${cropId}/yield`),
   },
 
   alerts: {
