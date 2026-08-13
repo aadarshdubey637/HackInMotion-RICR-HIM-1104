@@ -34,6 +34,7 @@ import {
   Stat,
 } from '@/components/ui';
 import { cn, formatRupees, cropLabel, formatDay } from '@/lib/utils';
+import { useTranslation } from '@/lib/language-context';
 
 export default function MarketPage() {
   return (
@@ -45,6 +46,7 @@ export default function MarketPage() {
 
 function MarketContent() {
   const { currentFarm } = useAuth();
+  const { t } = useTranslation();
   const [trends, setTrends] = useState<PriceTrend[]>([]);
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -79,9 +81,9 @@ function MarketContent() {
   return (
     <div className="space-y-5 animate-fade-up">
       <div>
-        <h1 className="text-xl font-bold text-slate-900">Market prices</h1>
+        <h1 className="text-xl font-bold text-slate-900">{t('prices.title')}</h1>
         <p className="text-sm text-slate-600">
-          Recent mandi prices for your crops, and whether now looks like a good time to sell.
+          {t('prices.subtitle')}
         </p>
       </div>
 
@@ -93,8 +95,8 @@ function MarketContent() {
       ) : trends.length === 0 ? (
         <EmptyState
           icon={IndianRupee}
-          title="No price data yet"
-          message={message ?? 'Add a crop to your farm to start tracking its market price.'}
+          title={t('prices.emptyPrices')}
+          message="Market prices"
         />
       ) : (
         <div className="space-y-5">
@@ -119,6 +121,7 @@ function MarketContent() {
 }
 
 function TrendCard({ trend }: { trend: PriceTrend }) {
+  const { t, tCrop, tNarrative } = useTranslation();
   const { statistics: stats, advice } = trend;
 
   const TrendIcon =
@@ -149,9 +152,9 @@ function TrendCard({ trend }: { trend: PriceTrend }) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-lg font-bold text-slate-900">{trend.commodity}</h2>
+            <h2 className="text-lg font-bold text-slate-900">{tCrop(trend.commodity)}</h2>
             {trend.cropName ? (
-              <span className="text-sm text-slate-500">({cropLabel(trend.cropName)})</span>
+              <span className="text-sm text-slate-500">({tCrop(trend.cropName)})</span>
             ) : null}
           </div>
 
@@ -182,9 +185,15 @@ function TrendCard({ trend }: { trend: PriceTrend }) {
           ) : (
             <Minus className={cn('h-5 w-5', signalStyle.text)} aria-hidden />
           )}
-          <p className={cn('font-bold', signalStyle.text)}>{advice.headline}</p>
+          <p className={cn('font-bold', signalStyle.text)}>
+            {advice.signal === 'SELL'
+              ? t('prices.adviceSell')
+              : advice.signal === 'HOLD'
+                ? t('prices.adviceHold')
+                : t('prices.adviceNeutral')}
+          </p>
         </div>
-        <p className="mt-1 text-sm text-slate-700">{advice.reasoning}</p>
+        <p className="mt-1 text-sm text-slate-700">{tNarrative(advice.reasoning)}</p>
       </div>
 
       {/* Chart */}

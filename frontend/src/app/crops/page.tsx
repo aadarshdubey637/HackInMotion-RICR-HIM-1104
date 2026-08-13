@@ -17,6 +17,7 @@ import {
   SkeletonCard,
 } from '@/components/ui';
 import { cn, cropLabel, humanise, formatDate } from '@/lib/utils';
+import { useTranslation } from '@/lib/language-context';
 
 const CROP_STATUSES = [
   { value: 'PLANNED', label: 'Planned' },
@@ -36,6 +37,7 @@ export default function CropsPage() {
 
 function CropsContent() {
   const { currentFarm } = useAuth();
+  const { t, tCrop, tStage } = useTranslation();
   const [crops, setCrops] = useState<Crop[]>([]);
   const [supported, setSupported] = useState<Array<{ key: string; label: string }>>([]);
   const [loading, setLoading] = useState(true);
@@ -75,9 +77,9 @@ function CropsContent() {
   return (
     <div className="space-y-5 animate-fade-up">
       <div>
-        <h1 className="text-xl font-bold text-slate-900">Your farm</h1>
+        <h1 className="text-xl font-bold text-slate-900">{t('crops.title')}</h1>
         <p className="text-sm text-slate-600">
-          Your profile drives every recommendation the app makes.
+          {t('crops.subtitle')}
         </p>
       </div>
 
@@ -140,7 +142,7 @@ function CropsContent() {
       ) : (
         <button type="button" onClick={() => setShowForm(true)} className="btn-primary w-full">
           <Plus className="h-5 w-5" aria-hidden />
-          Add a crop
+          {t('crops.addCrop')}
         </button>
       )}
 
@@ -153,8 +155,8 @@ function CropsContent() {
         ) : crops.length === 0 ? (
           <EmptyState
             icon={Sprout}
-            title="No crops yet"
-            message="Add what you are growing — or planning to grow — to get irrigation guidance, health checks and price tracking for it."
+            title={t('crops.emptyCrops')}
+            message="Your crops"
           />
         ) : (
           <div className="space-y-3">
@@ -185,6 +187,7 @@ function AddCropForm({
   onCancel: () => void;
   onSuccess: () => void;
 }) {
+  const { t, tCrop } = useTranslation();
   const [cropName, setCropName] = useState('');
   const [customName, setCustomName] = useState('');
   const [status, setStatus] = useState<string>('GROWING');
@@ -219,7 +222,7 @@ function AddCropForm({
     <Card>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="font-bold text-slate-800">Add a crop</h2>
+          <h2 className="font-bold text-slate-800">{t('crops.addCrop')}</h2>
           <button type="button" onClick={onCancel} aria-label="Cancel" className="btn-ghost px-2">
             <X className="h-5 w-5" aria-hidden />
           </button>
@@ -228,7 +231,7 @@ function AddCropForm({
         {error ? <Notice tone="warn">{error}</Notice> : null}
 
         <div>
-          <span className="label">Which crop?</span>
+          <span className="label">{t('crops.cropSelect')}</span>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             {supported.map((crop) => (
               <button
@@ -243,7 +246,7 @@ function AddCropForm({
                     : 'border-soil-300 bg-white text-slate-700 hover:bg-soil-50',
                 )}
               >
-                {crop.label}
+                {tCrop(crop.label)}
               </button>
             ))}
             <button
@@ -283,7 +286,7 @@ function AddCropForm({
         ) : null}
 
         <div>
-          <span className="label">Stage</span>
+          <span className="label">{t('crops.statusSelect')}</span>
           <div className="flex flex-wrap gap-2">
             {CROP_STATUSES.map((option) => (
               <button
@@ -298,7 +301,7 @@ function AddCropForm({
                     : 'border-soil-300 bg-white text-slate-700',
                 )}
               >
-                {option.label}
+                {t(`stages.${option.value.toLowerCase()}`)}
               </button>
             ))}
           </div>
@@ -323,11 +326,11 @@ function AddCropForm({
 
         <div className="flex gap-3">
           <button type="button" onClick={onCancel} className="btn-secondary flex-1">
-            Cancel
+            {t('common.cancel')}
           </button>
           <button type="submit" disabled={submitting || !finalName} className="btn-primary flex-1">
             {submitting ? <Spinner className="h-5 w-5" /> : null}
-            {submitting ? 'Adding…' : 'Add crop'}
+            {submitting ? t('common.loading') : t('crops.addCrop')}
           </button>
         </div>
       </form>
@@ -346,6 +349,7 @@ function CropCard({
   recognised: boolean;
   onDeleted: () => void;
 }) {
+  const { t, tCrop, tStage } = useTranslation();
   const [deleting, setDeleting] = useState(false);
   const [confirming, setConfirming] = useState(false);
 
@@ -364,15 +368,15 @@ function CropCard({
     <Card className="flex items-start justify-between gap-3">
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
-          <h3 className="font-bold text-slate-800">{cropLabel(crop.cropName)}</h3>
+          <h3 className="font-bold text-slate-800">{tCrop(crop.cropName)}</h3>
           <Badge tone={crop.status === 'HARVESTED' ? 'neutral' : 'brand'}>
-            {humanise(crop.status)}
+            {tStage(crop.status)}
           </Badge>
           {!recognised ? <Badge tone="warn">Limited data</Badge> : null}
         </div>
 
         <div className="mt-1 space-y-0.5 text-xs text-slate-500">
-          {crop.growthStage ? <p>Stage: {humanise(crop.growthStage)}</p> : null}
+          {crop.growthStage ? <p>Stage: {tStage(crop.growthStage)}</p> : null}
           {crop.plantingDate ? <p>Planted {formatDate(crop.plantingDate)}</p> : null}
           {crop.expectedHarvestDate ? (
             <p>Expected harvest {formatDate(crop.expectedHarvestDate)}</p>
@@ -388,14 +392,14 @@ function CropCard({
             disabled={deleting}
             className="rounded-lg bg-red-600 px-2.5 py-1 text-xs font-semibold text-white"
           >
-            {deleting ? 'Removing…' : 'Confirm'}
+            {deleting ? t('common.loading') : t('common.success')}
           </button>
           <button
             type="button"
             onClick={() => setConfirming(false)}
             className="rounded-lg border border-soil-300 px-2.5 py-1 text-xs font-semibold text-slate-600"
           >
-            Cancel
+            {t('common.cancel')}
           </button>
         </div>
       ) : (

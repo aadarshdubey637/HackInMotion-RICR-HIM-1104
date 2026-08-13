@@ -27,6 +27,7 @@ import {
   healthSeverityStyles,
 } from '@/components/ui';
 import { cn, cropLabel, timeAgo, humanise } from '@/lib/utils';
+import { useTranslation } from '@/lib/language-context';
 
 const OBSERVATION_TYPES = [
   { value: 'DISEASE', label: 'Disease' },
@@ -47,6 +48,7 @@ export default function HealthPage() {
 
 function HealthContent() {
   const { currentFarm } = useAuth();
+  const { t, tCrop } = useTranslation();
   const [crops, setCrops] = useState<Crop[]>([]);
   const [logs, setLogs] = useState<HealthLog[]>([]);
   const [nearby, setNearby] = useState<{
@@ -96,9 +98,9 @@ function HealthContent() {
     <div className="space-y-5 animate-fade-up">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">Crop health</h1>
+          <h1 className="text-xl font-bold text-slate-900">{t('health.title')}</h1>
           <p className="text-sm text-slate-600">
-            Spotted something on your plants? Log it and get guidance on what to check.
+            {t('health.subtitle')}
           </p>
         </div>
       </div>
@@ -135,32 +137,32 @@ function HealthContent() {
           className="btn-primary w-full"
         >
           <Camera className="h-5 w-5" aria-hidden />
-          Check a plant
+          {t('health.logObservation')}
         </button>
       )}
 
       {crops.length === 0 && !loading ? (
         <Notice tone="warn">
-          Add a crop to your farm first — health checks are specific to what you are growing.
+          {t('health.cropSelect')} — {t('health.subtitle')}
         </Notice>
       ) : null}
 
       {/* ── Nearby outbreaks ── */}
       {nearby && nearby.reports.length > 0 ? (
         <section>
-          <SectionHeading icon={Users} title="Reported nearby" />
+          <SectionHeading icon={Users} title={t('health.nearbyTitle')} />
           <Card className="border-amber-200 bg-amber-50">
             <p className="mb-2 text-sm text-amber-900">
-              Farmers within 50 km have reported these recently. Worth checking your own crop.
+              {t('health.nearbySubtitle', { count: nearby.farmsInArea })}
             </p>
             <div className="space-y-1.5">
               {nearby.reports.slice(0, 4).map((report) => (
                 <div key={`${report.name}-${report.crop}`} className="flex items-center justify-between gap-2">
                   <span className="text-sm font-semibold text-amber-900">
-                    {report.name} <span className="font-normal">on {cropLabel(report.crop)}</span>
+                    {report.name} <span className="font-normal">on {tCrop(report.crop)}</span>
                   </span>
                   <Badge tone="warn">
-                    {report.count} report{report.count === 1 ? '' : 's'}
+                    {report.count} reports
                   </Badge>
                 </div>
               ))}
@@ -171,20 +173,20 @@ function HealthContent() {
 
       {/* ── History ── */}
       <section>
-        <SectionHeading icon={ClipboardCheck} title="Your records" />
+        <SectionHeading icon={ClipboardCheck} title={t('health.observationHistory')} />
 
         {loading ? (
           <Card>
             <div className="flex items-center gap-2 text-slate-500">
               <Spinner className="h-4 w-4" />
-              <span className="text-sm">Loading…</span>
+              <span className="text-sm">{t('common.loading')}</span>
             </div>
           </Card>
         ) : logs.length === 0 ? (
           <EmptyState
             icon={Stethoscope}
-            title="No records yet"
-            message="When you notice spots, insects, wilting or anything unusual, log it here. You will get specific guidance and a record you can track over time."
+            title={t('health.emptyLogs')}
+            message="Observe crop issues, diagnose pests, and log actions."
           />
         ) : (
           <div className="space-y-3">
@@ -216,6 +218,7 @@ function ObservationForm({
   onCancel: () => void;
   onSuccess: (diagnosis: Diagnosis, warning?: string) => void;
 }) {
+  const { t, tCrop } = useTranslation();
   const fileInput = useRef<HTMLInputElement>(null);
   const [cropId, setCropId] = useState(crops[0]?.id ?? '');
   const [description, setDescription] = useState('');
@@ -275,7 +278,7 @@ function ObservationForm({
     <Card>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="font-bold text-slate-800">Check a plant</h2>
+          <h2 className="font-bold text-slate-800">{t('health.formTitle')}</h2>
           <button type="button" onClick={onCancel} aria-label="Cancel" className="btn-ghost px-2">
             <X className="h-5 w-5" aria-hidden />
           </button>
@@ -285,7 +288,7 @@ function ObservationForm({
 
         <div>
           <label htmlFor="crop" className="label">
-            Which crop?
+            {t('health.cropSelect')}
           </label>
           <div className="relative">
             <select
@@ -297,7 +300,7 @@ function ObservationForm({
             >
               {crops.map((crop) => (
                 <option key={crop.id} value={crop.id}>
-                  {cropLabel(crop.cropName)}
+                  {tCrop(crop.cropName)}
                 </option>
               ))}
             </select>
@@ -309,30 +312,40 @@ function ObservationForm({
         </div>
 
         <div>
-          <span className="label">What kind of problem?</span>
+          <span className="label">{t('health.issueType')}</span>
           <div className="flex flex-wrap gap-2">
-            {OBSERVATION_TYPES.map((type) => (
-              <button
-                key={type.value}
-                type="button"
-                onClick={() => setObservationType(type.value)}
-                aria-pressed={observationType === type.value}
-                className={cn(
-                  'rounded-full border px-3 py-1.5 text-sm font-semibold transition',
-                  observationType === type.value
-                    ? 'border-brand-600 bg-brand-600 text-white'
-                    : 'border-soil-300 bg-white text-slate-700',
-                )}
-              >
-                {type.label}
-              </button>
-            ))}
+            {OBSERVATION_TYPES.map((type) => {
+              const translatedLabel = {
+                DISEASE: t('health.diseaseLabel'),
+                PEST: t('health.pestLabel'),
+                NUTRIENT: t('health.nutrientLabel'),
+                GROWTH: t('health.growthLabel'),
+                WEATHER_DAMAGE: t('health.weatherLabel'),
+                OTHER: t('health.otherLabel'),
+              }[type.value];
+              return (
+                <button
+                  key={type.value}
+                  type="button"
+                  onClick={() => setObservationType(type.value)}
+                  aria-pressed={observationType === type.value}
+                  className={cn(
+                    'rounded-full border px-3 py-1.5 text-sm font-semibold transition',
+                    observationType === type.value
+                      ? 'border-brand-600 bg-brand-600 text-white'
+                      : 'border-soil-300 bg-white text-slate-700',
+                  )}
+                >
+                  {translatedLabel}
+                </button>
+              );
+            })}
           </div>
         </div>
 
         <div>
           <label htmlFor="description" className="label">
-            What do you see?
+            {t('health.description')}
           </label>
           <textarea
             id="description"
@@ -342,16 +355,12 @@ function ObservationForm({
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             className="field py-3"
-            placeholder="e.g. Brown spots with yellow edges on the lower leaves, starting to spread upward. Some leaves have dropped."
+            placeholder={t('health.description')}
           />
-          <p className="mt-1 text-xs text-slate-500">
-            The more detail, the better the guidance. Mention colour, shape, which leaves, and
-            whether it is spreading.
-          </p>
         </div>
 
         <div>
-          <span className="label">Photo (optional)</span>
+          <span className="label">{t('health.photo')}</span>
           {preview ? (
             <div className="relative overflow-hidden rounded-xl border border-soil-300">
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -372,8 +381,7 @@ function ObservationForm({
               className="flex min-h-[96px] w-full flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-soil-300 bg-soil-50 text-slate-500 transition hover:border-brand-400 hover:bg-brand-50"
             >
               <Camera className="h-6 w-6" aria-hidden />
-              <span className="text-sm font-semibold">Take or choose a photo</span>
-              <span className="text-xs">Helps, but not required</span>
+              <span className="text-sm font-semibold">{t('health.photo')}</span>
             </button>
           )}
           <input
@@ -388,11 +396,11 @@ function ObservationForm({
 
         <div className="flex gap-3">
           <button type="button" onClick={onCancel} className="btn-secondary flex-1">
-            Cancel
+            {t('common.cancel')}
           </button>
           <button type="submit" disabled={submitting || !cropId} className="btn-primary flex-1">
             {submitting ? <Spinner className="h-5 w-5" /> : null}
-            {submitting ? 'Checking…' : 'Get guidance'}
+            {submitting ? t('common.loading') : t('health.submit')}
           </button>
         </div>
       </form>
@@ -521,6 +529,7 @@ function HealthLogCard({
   farmId: string;
   onStatusChange: () => void;
 }) {
+  const { t, tCrop } = useTranslation();
   const [updating, setUpdating] = useState(false);
   const style = healthSeverityStyles[log.severity];
   const problem = log.diseaseDetected ?? log.pestDetected;
@@ -555,10 +564,10 @@ function HealthLogCard({
             </span>
             {log.crop ? (
               <span className="text-sm font-semibold text-slate-800">
-                {cropLabel(log.crop.cropName)}
+                {tCrop(log.crop.cropName)}
               </span>
             ) : null}
-            {resolved ? <Badge tone="success">{humanise(log.status)}</Badge> : null}
+            {resolved ? <Badge tone="success">{t('common.success')}</Badge> : null}
           </div>
 
           {problem ? <p className="mt-1 font-semibold text-slate-800">{problem}</p> : null}

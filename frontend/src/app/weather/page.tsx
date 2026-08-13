@@ -39,6 +39,7 @@ import {
   severityStyles,
 } from '@/components/ui';
 import { cn, formatDay, cropLabel, humanise } from '@/lib/utils';
+import { useTranslation } from '@/lib/language-context';
 
 export default function WeatherPage() {
   return (
@@ -50,6 +51,7 @@ export default function WeatherPage() {
 
 function WeatherContent() {
   const { currentFarm } = useAuth();
+  const { t, tCrop, tNarrative } = useTranslation();
   const [guidance, setGuidance] = useState<IrrigationGuidance | null>(null);
   const [crops, setCrops] = useState<Crop[]>([]);
   const [selectedCropId, setSelectedCropId] = useState<string>('');
@@ -144,9 +146,9 @@ function WeatherContent() {
   return (
     <div className="space-y-5 animate-fade-up">
       <div>
-        <h1 className="text-xl font-bold text-slate-900">Water &amp; weather</h1>
+        <h1 className="text-xl font-bold text-slate-900">{t('water.title')}</h1>
         <p className="text-sm text-slate-600">
-          Irrigation guidance from a soil water balance for your crop and soil.
+          {t('water.subtitle')}
         </p>
       </div>
 
@@ -172,7 +174,7 @@ function WeatherContent() {
                   : 'border-soil-300 bg-white text-slate-700',
               )}
             >
-              {cropLabel(crop.cropName)}
+              {tCrop(crop.cropName)}
             </button>
           ))}
         </div>
@@ -183,12 +185,12 @@ function WeatherContent() {
         <div className="flex items-start gap-3">
           <Droplets className={cn('mt-0.5 h-7 w-7 shrink-0', urgencyStyle.text)} aria-hidden />
           <div className="min-w-0 flex-1">
-            <h2 className={cn('text-lg font-bold', urgencyStyle.text)}>{guidance.headline}</h2>
-            <p className="mt-1 text-sm text-slate-700">{guidance.reason}</p>
+            <h2 className={cn('text-lg font-bold', urgencyStyle.text)}>{tNarrative(guidance.headline)}</h2>
+            <p className="mt-1 text-sm text-slate-700">{tNarrative(guidance.reason)}</p>
 
             {guidance.recommendation ? (
               <div className="mt-3 grid grid-cols-2 gap-3 rounded-xl bg-white/70 p-3 sm:grid-cols-3">
-                <Stat label="Apply" value={guidance.recommendation.depthMm} unit="mm" />
+                <Stat label={t('water.amountNeeded')} value={guidance.recommendation.depthMm} unit="mm" />
                 <Stat
                   label="Total water"
                   value={guidance.recommendation.totalCubicMetres.toLocaleString('en-IN')}
@@ -206,7 +208,7 @@ function WeatherContent() {
               logged ? (
                 <div className="mt-3">
                   <Notice tone="success">
-                    Irrigation recorded. The water balance has been updated.
+                    {t('water.logSuccess')}
                   </Notice>
                 </div>
               ) : (
@@ -217,7 +219,7 @@ function WeatherContent() {
                   className="btn-primary mt-3 w-full sm:w-auto"
                 >
                   {logging ? <Spinner className="h-5 w-5" /> : <Check className="h-5 w-5" />}
-                  {logging ? 'Saving…' : 'I have irrigated'}
+                  {logging ? t('water.logging') : t('water.logButton')}
                 </button>
               )
             ) : null}
@@ -228,14 +230,14 @@ function WeatherContent() {
       {/* ── Risk alerts ── */}
       {guidance.alerts.length > 0 ? (
         <section>
-          <SectionHeading icon={AlertTriangle} title="Weather risks" />
+          <SectionHeading icon={AlertTriangle} title={t('dashboard.alertsTitle')} />
           <div className="space-y-2">
             {guidance.alerts.map((alert, i) => {
               const style = severityStyles[alert.severity];
               return (
                 <Card key={`${alert.type}-${i}`} className={cn('border-l-4', style.bg, style.border)}>
                   <div className="flex items-start justify-between gap-2">
-                    <h3 className={cn('font-bold', style.text)}>{alert.title}</h3>
+                    <h3 className={cn('font-bold', style.text)}>{tNarrative(alert.title)}</h3>
                     <span
                       className={cn(
                         'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase text-white',
@@ -245,8 +247,8 @@ function WeatherContent() {
                       {style.label}
                     </span>
                   </div>
-                  <p className="mt-1 text-sm text-slate-700">{alert.message}</p>
-                  <p className={cn('mt-2 text-sm font-semibold', style.text)}>{alert.action}</p>
+                  <p className="mt-1 text-sm text-slate-700">{tNarrative(alert.message)}</p>
+                  <p className={cn('mt-2 text-sm font-semibold', style.text)}>{tNarrative(alert.action)}</p>
                 </Card>
               );
             })}
@@ -256,11 +258,10 @@ function WeatherContent() {
 
       {/* ── Water balance chart ── */}
       <section>
-        <SectionHeading icon={Beaker} title="Soil water over the next week" />
+        <SectionHeading icon={Beaker} title={t('water.chartTitle')} />
         <Card>
           <p className="mb-3 text-xs text-slate-500">
-            The line shows how much water the soil has lost. When it crosses the dashed line, your
-            crop starts to feel stress and needs irrigating. Bars show expected rain.
+            {tNarrative("The line shows how much water the soil has lost. When it crosses the dashed line, your crop starts to feel stress and needs irrigating. Bars show expected rain.")}
           </p>
 
           <div className="h-56 w-full">
@@ -293,9 +294,9 @@ function WeatherContent() {
                   formatter={(value: number, name: string) => [
                     `${value} mm`,
                     name === 'depletion'
-                      ? 'Soil water used'
+                      ? t('water.moisture')
                       : name === 'rain'
-                        ? 'Rain'
+                        ? t('water.rainfall')
                         : 'Crop water use',
                   ]}
                 />
@@ -304,7 +305,7 @@ function WeatherContent() {
                   stroke="#ea580c"
                   strokeDasharray="5 4"
                   label={{
-                    value: 'Irrigate',
+                    value: t('water.logButton'),
                     position: 'insideTopRight',
                     fontSize: 10,
                     fill: '#ea580c',
@@ -326,12 +327,12 @@ function WeatherContent() {
 
           <div className="mt-3 grid grid-cols-2 gap-3 border-t border-soil-200 pt-3 sm:grid-cols-4">
             <Stat
-              label="Water used"
+              label={t('water.moisture')}
               value={wb.currentDepletionMm}
               unit="mm"
               tone={wb.depletionPercent >= 100 ? 'danger' : 'default'}
             />
-            <Stat label="Irrigate at" value={wb.readilyAvailableWaterMm} unit="mm" />
+            <Stat label={t('water.logButton')} value={wb.readilyAvailableWaterMm} unit="mm" />
             <Stat label="Soil can hold" value={wb.totalAvailableWaterMm} unit="mm" />
             <Stat label="Root depth" value={wb.rootDepthM} unit="m" />
           </div>
@@ -381,7 +382,7 @@ function WeatherContent() {
           </p>
 
           <div className="flex flex-wrap gap-2">
-            <Badge tone="neutral">Crop: {guidance.crop.label}</Badge>
+            <Badge tone="neutral">Crop: {tCrop(guidance.crop.label)}</Badge>
             <Badge tone="neutral">Soil: {humanise(wb.soilType)}</Badge>
             <Badge tone="neutral">Crop coefficient: {wb.cropCoefficient}</Badge>
             <Badge tone={guidance.crop.isKnown ? 'success' : 'warn'}>
