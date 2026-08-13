@@ -41,10 +41,12 @@ export interface UserResponse {
 }
 
 function generateTokens(payload: TokenPayload): AuthTokens {
-  const accessToken = jwt.sign(payload, config.JWT_SECRET, {
-    expiresIn: config.JWT_EXPIRES_IN,
-  });
-  
+  // JWT_EXPIRES_IN is a free-form env string ("7d", "12h"); the library types
+  // it as a narrow literal union, so it is asserted rather than widened here.
+  const accessOptions = { expiresIn: config.JWT_EXPIRES_IN } as jwt.SignOptions;
+
+  const accessToken = jwt.sign(payload, config.JWT_SECRET, accessOptions);
+
   const refreshToken = jwt.sign(
     { ...payload, type: 'refresh' },
     config.JWT_SECRET,

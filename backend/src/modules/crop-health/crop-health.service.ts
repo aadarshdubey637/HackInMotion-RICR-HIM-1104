@@ -18,6 +18,7 @@ import { prisma } from '../../common/prisma';
 import { logger } from '../../common/logger';
 import { config } from '../../config';
 import { NotFoundError } from '../../common/errors';
+import { upsertWithoutTransaction } from '../../common/upsert';
 import { resolveCrop } from '../../domain/crops';
 import { getWeatherForFarm } from '../weather/weather.service';
 import { diagnose, buildWeatherContext, type Diagnosis, type WeatherContext } from './diagnosis';
@@ -199,7 +200,7 @@ async function raiseAlertIfSerious(
   if (!top || top.confidence < 0.35) return;
 
   try {
-    await prisma.alert.upsert({
+    await upsertWithoutTransaction(prisma.alert, {
       where: { dedupeKey: `${farmId}:HEALTH:${logId}` },
       create: {
         farmId,

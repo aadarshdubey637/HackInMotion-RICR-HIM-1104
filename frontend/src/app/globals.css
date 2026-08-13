@@ -1,0 +1,72 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-soil-50 text-slate-900 antialiased;
+    /* Room for the fixed bottom navigation on mobile. */
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Larger default tap targets — this app is used outdoors, often one-handed. */
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    @apply outline-none;
+  }
+
+  :focus-visible {
+    @apply ring-2 ring-brand-600 ring-offset-2 ring-offset-soil-50;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-2xl border border-soil-200/70 bg-white shadow-sm;
+  }
+
+  .btn {
+    @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl px-4
+           text-base font-semibold transition active:scale-[0.98]
+           disabled:pointer-events-none disabled:opacity-50;
+  }
+
+  .btn-primary {
+    @apply btn bg-brand-600 text-white hover:bg-brand-700;
+  }
+
+  .btn-secondary {
+    @apply btn border border-soil-300 bg-white text-slate-700 hover:bg-soil-100;
+  }
+
+  .btn-ghost {
+    @apply btn text-slate-600 hover:bg-soil-100;
+  }
+
+  .field {
+    @apply min-h-[48px] w-full rounded-xl border border-soil-300 bg-white px-4 text-base
+           placeholder:text-slate-400 focus:border-brand-600 focus:ring-1 focus:ring-brand-600;
+  }
+
+  .label {
+    @apply mb-1.5 block text-sm font-semibold text-slate-700;
+  }
+
+  /* Loading placeholder */
+  .skeleton {
+    @apply relative overflow-hidden rounded-lg bg-soil-200/60;
+  }
+
+  .skeleton::after {
+    @apply absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r
+           from-transparent via-white/60 to-transparent;
+    content: '';
+  }
+}

@@ -30,7 +30,7 @@
  */
 
 import type { HealthSeverity } from '@prisma/client';
-import type { CropProfile, DiseaseProfile, PestProfile } from '../../domain/crops';
+import type { CropProfile, DiseaseProfile, PestProfile, WeatherTriggers } from '../../domain/crops';
 import type { DailyWeather } from '../weather/openmeteo';
 
 // ─────────────────────────── Types ───────────────────────────
@@ -172,7 +172,7 @@ interface WeatherVerdict {
  * drought.
  */
 function scoreWeather(
-  favouredBy: DiseaseProfile['favouredBy'] | PestProfile['favouredBy'],
+  favouredBy: WeatherTriggers | undefined,
   ctx: WeatherContext,
 ): WeatherVerdict {
   if (!favouredBy) return { score: 0.5, favourable: false, reasons: [] };
@@ -207,21 +207,21 @@ function scoreWeather(
       contradiction: `temperatures have averaged ${ctx.avgTempC}°C, warmer than this usually tolerates`,
     });
   }
-  if ('minRecentRainMm' in favouredBy && favouredBy.minRecentRainMm !== undefined) {
+  if (favouredBy.minRecentRainMm !== undefined) {
     checks.push({
       met: ctx.recentRainMm >= favouredBy.minRecentRainMm,
       reason: `${ctx.recentRainMm} mm of rain in the last week`,
       contradiction: `only ${ctx.recentRainMm} mm of rain in the last week, drier than this needs`,
     });
   }
-  if ('maxRecentRainMm' in favouredBy && favouredBy.maxRecentRainMm !== undefined) {
+  if (favouredBy.maxRecentRainMm !== undefined) {
     checks.push({
       met: ctx.recentRainMm <= favouredBy.maxRecentRainMm,
       reason: `dry conditions recently (${ctx.recentRainMm} mm), which this favours`,
       contradiction: `${ctx.recentRainMm} mm of rain recently — wetter than this favours`,
     });
   }
-  if ('minWetDays' in favouredBy && favouredBy.minWetDays !== undefined) {
+  if (favouredBy.minWetDays !== undefined) {
     checks.push({
       met: ctx.wetDays >= favouredBy.minWetDays,
       reason: `${ctx.wetDays} days of leaf wetness in the last week`,

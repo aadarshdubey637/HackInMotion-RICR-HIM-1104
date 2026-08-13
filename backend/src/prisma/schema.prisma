@@ -248,6 +248,7 @@ model Crop {
   irrigationLogs IrrigationLog[]
   healthLogs     HealthLog[]
   priceHistory   PriceHistory[]
+  alerts         Alert[]
 
   @@index([farmId])
   @@index([parcelId])
@@ -426,7 +427,8 @@ model Alert {
   // Lets the engine re-run on every refresh without duplicating alerts.
   dedupeKey String @unique @map("dedupe_key")
 
-  farm Farm @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  farm Farm  @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  crop Crop? @relation(fields: [cropId], references: [id], onDelete: SetNull)
 
   @@index([farmId, createdAt])
   @@index([farmId, isRead])

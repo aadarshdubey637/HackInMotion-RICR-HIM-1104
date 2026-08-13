@@ -24,6 +24,7 @@ import { prisma } from '../../common/prisma';
 import { logger } from '../../common/logger';
 import { config } from '../../config';
 import { NotFoundError } from '../../common/errors';
+import { upsertWithoutTransaction } from '../../common/upsert';
 import { findCrop, CROPS } from '../../domain/crops';
 
 const DATA_GOV_RESOURCE = '9ef84268-d588-465a-a308-a864a43d0070';
@@ -87,14 +88,12 @@ export async function syncCommodityPrices(
       if (!parsed) continue;
 
       try {
-        await prisma.priceHistory.upsert({
+        await upsertWithoutTransaction(prisma.priceHistory, {
           where: {
-            commodity_priceDate_marketName_unit: {
-              commodity: parsed.commodity,
-              priceDate: parsed.priceDate,
-              marketName: parsed.marketName,
-              unit: parsed.unit,
-            },
+            commodity: parsed.commodity,
+            priceDate: parsed.priceDate,
+            marketName: parsed.marketName,
+            unit: parsed.unit,
           },
           create: parsed,
           update: {
@@ -507,9 +506,10 @@ export async function seedPriceHistory(days = 90): Promise<number> {
     { marketName: 'Kanpur', state: 'Uttar Pradesh', district: 'Kanpur Nagar' },
   ];
 
-  let created = 0;
   const today = new Date();
   today.setUTCHours(0, 0, 0, 0);
+
+  const rows: Prisma.PriceHistoryCreateManyInput[] = [];
 
   for (const crop of CROPS) {
     const commodity = crop.commodity;
@@ -538,39 +538,27 @@ export async function seedPriceHistory(days = 90): Promise<number> {
         const offset = Math.round(modal * (m === 0 ? 0.01 : -0.015));
         const marketModal = modal + offset;
 
-        try {
-          await prisma.priceHistory.upsert({
-            where: {
-              commodity_priceDate_marketName_unit: {
-                commodity,
-                priceDate: date,
-                marketName: market.marketName,
-                unit: crop.priceUnit,
-              },
-            },
-            // Only create — never clobber a real AGMARKNET row with seed data.
-            create: {
-              commodity,
-              priceDate: date,
-              minPrice: marketModal - spread,
-              maxPrice: marketModal + spread,
-              modalPrice: marketModal,
-              unit: crop.priceUnit,
-              source: 'seed',
-              ...market,
-            },
-            update: {},
-          });
-          created += 1;
-        } catch (err) {
-          logger.debug({ err, commodity }, 'Skipped seed price row');
-        }
+        rows.push({
+          commodity,
+          priceDate: date,
+          minPrice: marketModal - spread,
+          maxPrice: marketModal + spread,
+          modalPrice: marketModal,
+          unit: crop.priceUnit,
+          source: 'seed',
+          ...market,
+        });
       }
     }
   }
 
-  logger.info({ created }, 'Seeded price history');
-  return created;
+  // Replace any previous seed run wholesale. Real AGMARKNET rows are matched
+  // on `source` and left untouched, so live data is never clobbered.
+  await prisma.priceHistory.deleteMany({ where: { source: 'seed' } });
+  const result = await prisma.priceHistory.createMany({ data: rows });
+
+  logger.info({ created: result.count }, 'Seeded price history');
+  return result.count;
 }
 
 // ─────────────────────────── Utils ───────────────────────────

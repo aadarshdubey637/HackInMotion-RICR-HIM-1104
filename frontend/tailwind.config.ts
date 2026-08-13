@@ -1,29 +1,19 @@
-/** @type {import('tailwindcss').Config} */
-module.exports = {
-  darkMode: ['class'],
-  content: [
-    './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
-    './src/components/**/*.{js,ts,jsx,tsx,mdx}',
-    './src/app/**/*.{js,ts,jsx,tsx,mdx}'
-  ],
+import type { Config } from 'tailwindcss';
+
+/**
+ * Design tokens.
+ *
+ * Colour carries meaning in this app: a farmer should be able to glance at the
+ * screen and know whether something needs attention. Severity colours are kept
+ * deliberately few and consistent — red only ever means "act now".
+ */
+const config: Config = {
+  content: ['./src/**/*.{ts,tsx}'],
   theme: {
-    container: {
-      center: true,
-      padding: '2rem',
-      screens: {
-        '2xl': '1400px'
-      }
-    },
     extend: {
       colors: {
-        border: 'hsl(var(--border))',
-        input: 'hsl(var(--input))',
-        ring: 'hsl(var(--ring))',
-        background: 'hsl(var(--background))',
-        foreground: 'hsl(var(--foreground))',
-        primary: {
-          DEFAULT: 'hsl(var(--primary))',
-          foreground: 'hsl(var(--primary-foreground))',
+        // Brand — the green of a healthy crop.
+        brand: {
           50: '#f0fdf4',
           100: '#dcfce7',
           200: '#bbf7d0',
@@ -34,94 +24,46 @@ module.exports = {
           700: '#15803d',
           800: '#166534',
           900: '#14532d',
-          950: '#052e16'
         },
-        secondary: {
-          DEFAULT: 'hsl(var(--secondary))',
-          foreground: 'hsl(var(--secondary-foreground))'
+        // Earth tones for surfaces, so the UI feels agricultural not clinical.
+        soil: {
+          50: '#faf8f5',
+          100: '#f2ede5',
+          200: '#e3d9c9',
+          300: '#cdbca3',
+          400: '#b39a78',
+          500: '#9c7f5c',
+          600: '#856a4c',
+          700: '#6d5540',
+          800: '#5a4738',
+          900: '#4a3b30',
         },
-        destructive: {
-          DEFAULT: 'hsl(var(--destructive))',
-          foreground: 'hsl(var(--destructive-foreground))'
-        },
-        muted: {
-          DEFAULT: 'hsl(var(--muted))',
-          foreground: 'hsl(var(--muted-foreground))'
-        },
-        accent: {
-          DEFAULT: 'hsl(var(--accent))',
-          foreground: 'hsl(var(--accent-foreground))'
-        },
-        popover: {
-          DEFAULT: 'hsl(var(--popover))',
-          foreground: 'hsl(var(--popover-foreground))'
-        },
-        card: {
-          DEFAULT: 'hsl(var(--card))',
-          foreground: 'hsl(var(--card-foreground))'
-        },
-        success: {
-          DEFAULT: 'hsl(var(--success))',
-          foreground: 'hsl(var(--success-foreground))'
-        },
-        warning: {
-          DEFAULT: 'hsl(var(--warning))',
-          foreground: 'hsl(var(--warning-foreground))'
-        },
-        info: {
-          DEFAULT: 'hsl(var(--info))',
-          foreground: 'hsl(var(--info-foreground))'
-        }
-      },
-      borderRadius: {
-        lg: 'var(--radius)',
-        md: 'calc(var(--radius) - 2px)',
-        sm: 'calc(var(--radius) - 4px)'
+        // Severity scale — used by alerts, health flags and action cards.
+        critical: '#dc2626',
+        high: '#ea580c',
+        medium: '#d97706',
+        low: '#0891b2',
+        info: '#4b5563',
       },
       fontFamily: {
-        sans: ['var(--font-inter)', 'system-ui', 'sans-serif'],
-        mono: ['var(--font-jetbrains-mono)', 'monospace']
+        sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
       },
       keyframes: {
-        'accordion-down': {
-          from: { height: '0' },
-          to: { height: 'var(--radix-accordion-content-height)' }
+        'fade-up': {
+          from: { opacity: '0', transform: 'translateY(6px)' },
+          to: { opacity: '1', transform: 'translateY(0)' },
         },
-        'accordion-up': {
-          from: { height: 'var(--radix-accordion-content-height)' },
-          to: { height: '0' }
+        shimmer: {
+          '100%': { transform: 'translateX(100%)' },
         },
-        'fade-in': {
-          from: { opacity: '0' },
-          to: { opacity: '1' }
-        },
-        'fade-out': {
-          from: { opacity: '1' },
-          to: { opacity: '0' }
-        },
-        'slide-in-from-top': {
-          from: { transform: 'translateY(-100%)' },
-          to: { transform: 'translateY(0)' }
-        },
-        'slide-in-from-bottom': {
-          from: { transform: 'translateY(100%)' },
-          to: { transform: 'translateY(0)' }
-        },
-        'pulse-soft': {
-          '0%, 100%': { opacity: '1' },
-          '50%': { opacity: '0.7' }
-        }
       },
       animation: {
-        'accordion-down': 'accordion-down 0.2s ease-out',
-        'accordion-up': 'accordion-up 0.2s ease-out',
-        'fade-in': 'fade-in 0.2s ease-out',
-        'fade-out': 'fade-out 0.2s ease-out',
-        'slide-in-from-top': 'slide-in-from-top 0.3s ease-out',
-        'slide-in-from-bottom': 'slide-in-from-bottom 0.3s ease-out',
-        'pulse-soft': 'pulse-soft 2s ease-in-out infinite'
-      }
-    }
+        'fade-up': 'fade-up 0.25s ease-out',
+        shimmer: 'shimmer 1.6s infinite',
+      },
+    },
   },
-  plugins: [require('tailwindcss-animate')]
+  plugins: [],
 };
+
+export default config;

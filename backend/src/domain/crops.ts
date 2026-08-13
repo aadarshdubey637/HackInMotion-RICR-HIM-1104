@@ -20,21 +20,31 @@ import type { GrowthStage, SoilType } from '@prisma/client';
 
 // ─────────────────────────── Types ───────────────────────────
 
+/**
+ * Weather conditions that favour a disease or pest.
+ *
+ * Shared by both profile kinds so the diagnostic engine can evaluate any
+ * candidate through one code path. Every field is optional — a profile
+ * specifies only the conditions that actually matter for it.
+ */
+export interface WeatherTriggers {
+  minHumidity?: number;
+  maxHumidity?: number;
+  minTempC?: number;
+  maxTempC?: number;
+  /** Millimetres of rain over the preceding 7 days. */
+  minRecentRainMm?: number;
+  /** Upper bound on recent rain — for pests that thrive in dry spells. */
+  maxRecentRainMm?: number;
+  /** Days in the last 7 with leaf-wetness-favourable conditions. */
+  minWetDays?: number;
+}
+
 export interface DiseaseProfile {
   name: string;
   /** Symptom keywords matched against the farmer's free-text description. */
   keywords: string[];
-  /** Weather conditions that favour this disease. Raises confidence when met. */
-  favouredBy?: {
-    minHumidity?: number;
-    maxHumidity?: number;
-    minTempC?: number;
-    maxTempC?: number;
-    /** Millimetres of rain over the preceding 7 days. */
-    minRecentRainMm?: number;
-    /** Consecutive leaf-wetness-favourable days. */
-    minWetDays?: number;
-  };
+  favouredBy?: WeatherTriggers;
   severity: 'MILD' | 'MODERATE' | 'SEVERE' | 'CRITICAL';
   /** What the farmer should do, in plain language, most urgent first. */
   actions: string[];
@@ -45,12 +55,7 @@ export interface DiseaseProfile {
 export interface PestProfile {
   name: string;
   keywords: string[];
-  favouredBy?: {
-    minTempC?: number;
-    maxTempC?: number;
-    minHumidity?: number;
-    maxRecentRainMm?: number;
-  };
+  favouredBy?: WeatherTriggers;
   severity: 'MILD' | 'MODERATE' | 'SEVERE' | 'CRITICAL';
   actions: string[];
   explanation: string;

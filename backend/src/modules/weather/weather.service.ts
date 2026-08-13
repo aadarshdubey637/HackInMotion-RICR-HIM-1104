@@ -11,10 +11,11 @@
  * erroring — a farmer must never see a blank dashboard.
  */
 
-import type { Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { prisma } from '../../common/prisma';
 import { logger } from '../../common/logger';
 import { NotFoundError, ExternalServiceError } from '../../common/errors';
+import { upsertWithoutTransaction } from '../../common/upsert';
 import { resolveCrop } from '../../domain/crops';
 import { fetchWeather, type WeatherBundle } from './openmeteo';
 import {
@@ -68,14 +69,18 @@ export async function getWeatherForFarm(
   } catch (err) {
     logger.warn({ farmId, err }, 'Weather provider failed; attempting stored fallback');
 
-    const lastKnown = await prisma.weatherData.findFirst({
-      where: { farmId, NOT: { rawData: { equals: Prisma.DbNull } } },
+    // Only the first row of each fetch carries the full bundle, so scan back
+    // through recent rows for one that has it.
+    const recent = await prisma.weatherData.findMany({
+      where: { farmId },
       orderBy: { createdAt: 'desc' },
+      take: 20,
     });
+    const lastKnown = recent.find((row) => row.rawData != null);
     const revived = lastKnown?.rawData ? reviveBundle(lastKnown.rawData) : null;
 
-    if (revived) {
-      const ageHours = Math.round((Date.now() - lastKnown!.createdAt.getTime()) / 3_600_000);
+    if (revived && lastKnown) {
+      const ageHours = Math.round((Date.now() - lastKnown.createdAt.getTime()) / 3_600_000);
       return {
         weather: revived,
         stale: true,
@@ -118,8 +123,8 @@ async function persistWeather(farmId: string, weather: WeatherBundle): Promise<v
     };
 
     try {
-      await prisma.weatherData.upsert({
-        where: { farmId_recordedAt: { farmId, recordedAt } },
+      await upsertWithoutTransaction(prisma.weatherData, {
+        where: { farmId, recordedAt },
         create: { farmId, recordedAt, ...row },
         update: row,
       });
@@ -283,7 +288,7 @@ async function persistAlerts(
     };
 
     try {
-      await prisma.alert.upsert({
+      await upsertWithoutTransaction(prisma.alert, {
         where: { dedupeKey },
         create: { ...payload, dedupeKey },
         // Refresh content but preserve the farmer's read/dismissed state.
