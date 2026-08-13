@@ -36,6 +36,7 @@ import {
   healthSeverityStyles,
 } from '@/components/ui';
 import { cn, formatDay, formatRupees, cropLabel, humanise, weatherIcon, timeAgo } from '@/lib/utils';
+import { useTranslation } from '@/lib/language-context';
 
 export default function DashboardPage() {
   return (
@@ -56,6 +57,7 @@ const WEATHER_ICONS = {
 
 function DashboardContent() {
   const { currentFarm } = useAuth();
+  const { t, tCrop, tStage, tNarrative } = useTranslation();
   const [data, setData] = useState<Dashboard | null>(null);
   const [error, setError] = useState<{ message: string; offline: boolean } | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -98,7 +100,7 @@ function DashboardContent() {
   if (error && !data) {
     return (
       <ErrorState
-        title={error.offline ? 'No connection' : 'Could not load your dashboard'}
+        title={error.offline ? t('common.noConnection') : t('common.couldNotLoad')}
         message={error.message}
         offline={error.offline}
         onRetry={() => void load()}
@@ -116,7 +118,7 @@ function DashboardContent() {
     );
   }
 
-  const greeting = getGreeting();
+  const greeting = getGreeting(t);
 
   return (
     <div className="space-y-5 animate-fade-up">
@@ -126,11 +128,13 @@ function DashboardContent() {
           <p className="text-sm text-slate-500">{greeting}</p>
           <h1 className="text-xl font-bold text-slate-900">
             {data.actions.length === 0
-              ? 'Nothing needs your attention today'
-              : `${data.actions.length} thing${data.actions.length === 1 ? '' : 's'} to look at`}
+              ? t('dashboard.attentionNone')
+              : data.actions.length === 1
+                ? t('dashboard.attentionSingle')
+                : t('dashboard.attentionPlural', { count: data.actions.length })}
           </h1>
           <p className="mt-0.5 text-xs capitalize text-slate-500">
-            {data.farm.season} season · {data.farm.totalAreaHectares} ha
+            {t('dashboard.season', { season: data.farm.season })} · {t('dashboard.area', { area: data.farm.totalAreaHectares })}
           </p>
         </div>
         <button
@@ -144,13 +148,13 @@ function DashboardContent() {
         </button>
       </div>
 
-      {error ? <Notice tone="warn">{error.message}</Notice> : null}
-      {data.weather.warning ? <Notice tone="warn">{data.weather.warning}</Notice> : null}
+      {error ? <Notice tone="warn">{tNarrative(error.message)}</Notice> : null}
+      {data.weather.warning ? <Notice tone="warn">{tNarrative(data.weather.warning)}</Notice> : null}
 
       {/* ── Action list: the answer to "what do I do today?" ── */}
       {data.actions.length > 0 ? (
         <section>
-          <SectionHeading title="What to do today" />
+          <SectionHeading title={t('dashboard.actionsTitle')} />
           <div className="space-y-3">
             {data.actions.map((action) => (
               <ActionCard key={action.id} action={action} />
@@ -161,10 +165,7 @@ function DashboardContent() {
         <Card className="flex items-center gap-3 border-emerald-200 bg-emerald-50">
           <CheckCircle2 className="h-8 w-8 shrink-0 text-emerald-600" aria-hidden />
           <div>
-            <p className="font-bold text-emerald-900">All good for now</p>
-            <p className="text-sm text-emerald-800">
-              No irrigation due, no weather risks and no crop health flags. Check back tomorrow.
-            </p>
+            <p className="font-bold text-emerald-900">{t('dashboard.emptyActions')}</p>
           </div>
         </Card>
       )}
@@ -179,21 +180,20 @@ function DashboardContent() {
       <section>
         <SectionHeading
           icon={Stethoscope}
-          title="Crop health"
+          title={t('health.title')}
           action={
             <Link href="/health" className="text-sm font-semibold text-brand-700">
-              Log an issue
+              {t('health.logObservation')}
             </Link>
           }
         />
         {data.health.recent.length === 0 ? (
           <Card>
             <p className="text-sm text-slate-600">
-              No health issues logged. If you spot something on your plants, take a photo and log it —
-              you will get guidance on what to check.
+              {t('health.emptyLogs')}
             </p>
             <Link href="/health" className="btn-secondary mt-3 w-full sm:w-auto">
-              Check a plant
+              {t('health.logObservation')}
             </Link>
           </Card>
         ) : (
@@ -208,7 +208,7 @@ function DashboardContent() {
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-semibold text-slate-800">
-                        {cropLabel(issue.cropName)}
+                        {tCrop(issue.cropName)}
                       </p>
                       <p className="line-clamp-2 text-sm text-slate-600">{issue.summary}</p>
                       <p className="mt-0.5 text-xs text-slate-400">{timeAgo(issue.observedAt)}</p>
@@ -225,17 +225,17 @@ function DashboardContent() {
       <section>
         <SectionHeading
           icon={TrendingUp}
-          title="Market prices"
+          title={t('prices.title')}
           action={
             <Link href="/market" className="text-sm font-semibold text-brand-700">
-              See trends
+              {t('nav.prices')}
             </Link>
           }
         />
         {data.market.trends.length === 0 ? (
           <Card>
             <p className="text-sm text-slate-600">
-              {data.market.message ?? 'No price data for your crops yet.'}
+              {t('prices.emptyPrices')}
             </p>
           </Card>
         ) : (
@@ -251,18 +251,18 @@ function DashboardContent() {
       <section>
         <SectionHeading
           icon={Sprout}
-          title="Your crops"
+          title={t('crops.activeCrops')}
           action={
             <Link href="/crops" className="text-sm font-semibold text-brand-700">
-              Manage
+              {t('common.select')}
             </Link>
           }
         />
         {data.crops.length === 0 ? (
           <Card>
-            <p className="text-sm text-slate-600">No crops added yet.</p>
+            <p className="text-sm text-slate-600">{t('crops.emptyCrops')}</p>
             <Link href="/crops" className="btn-primary mt-3 w-full sm:w-auto">
-              Add your crop
+              {t('crops.addCrop')}
             </Link>
           </Card>
         ) : (
@@ -270,9 +270,9 @@ function DashboardContent() {
             {data.crops.map((crop) => (
               <Card key={crop.id} className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="truncate font-bold text-slate-800">{cropLabel(crop.cropName)}</p>
+                  <p className="truncate font-bold text-slate-800">{tCrop(crop.cropName)}</p>
                   <p className="text-xs text-slate-500">
-                    {humanise(crop.growthStage) || humanise(crop.status)}
+                    {tStage(crop.growthStage || '') || tStage(crop.status || '')}
                     {crop.daysToHarvest !== null && crop.daysToHarvest > 0
                       ? ` · ${crop.daysToHarvest} days to harvest`
                       : ''}
@@ -290,7 +290,7 @@ function DashboardContent() {
       </section>
 
       <p className="pb-2 text-center text-xs text-slate-400">
-        Updated {timeAgo(data.generatedAt)} · Weather from Open-Meteo
+        {t('prices.lastUpdated', { time: timeAgo(data.generatedAt) })} · Weather from Open-Meteo
       </p>
     </div>
   );
@@ -299,6 +299,7 @@ function DashboardContent() {
 // ─────────────────────────── Cards ───────────────────────────
 
 function ActionCard({ action }: { action: ActionItem }) {
+  const { tNarrative, tCrop } = useTranslation();
   const style = severityStyles[action.priority];
 
   const CategoryIcon = {
@@ -318,7 +319,7 @@ function ActionCard({ action }: { action: ActionItem }) {
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className={cn('font-bold', style.text)}>{action.title}</h3>
+            <h3 className={cn('font-bold', style.text)}>{tNarrative(action.title)}</h3>
             <span
               className={cn(
                 'rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white',
@@ -329,12 +330,12 @@ function ActionCard({ action }: { action: ActionItem }) {
             </span>
           </div>
 
-          <p className="mt-1 text-sm text-slate-700">{action.detail}</p>
+          <p className="mt-1 text-sm text-slate-700">{tNarrative(action.detail)}</p>
 
-          <p className={cn('mt-2 text-sm font-semibold', style.text)}>{action.action}</p>
+          <p className={cn('mt-2 text-sm font-semibold', style.text)}>{tNarrative(action.action)}</p>
 
           {action.cropName ? (
-            <p className="mt-1.5 text-xs text-slate-500">{cropLabel(action.cropName)}</p>
+            <p className="mt-1.5 text-xs text-slate-500">{tCrop(action.cropName)}</p>
           ) : null}
         </div>
 
@@ -365,14 +366,15 @@ function mapLink(category: ActionItem['category']): string {
 }
 
 function IrrigationCard({ data }: { data: Dashboard }) {
+  const { t, tNarrative } = useTranslation();
   const { irrigation } = data;
 
   if (!irrigation.available) {
     return (
       <Card>
-        <SectionHeading icon={Droplets} title="Water" />
+        <SectionHeading icon={Droplets} title={t('nav.water')} />
         <p className="text-sm text-slate-600">
-          {irrigation.warning ?? 'Irrigation guidance is unavailable right now.'}
+          {irrigation.warning ? tNarrative(irrigation.warning) : t('water.noIrrigation')}
         </p>
       </Card>
     );
@@ -384,18 +386,18 @@ function IrrigationCard({ data }: { data: Dashboard }) {
   return (
     <Link href="/weather">
       <Card className={cn('h-full transition hover:border-brand-300', urgent && 'border-orange-300 bg-orange-50')}>
-        <SectionHeading icon={Droplets} title="Water" />
+        <SectionHeading icon={Droplets} title={t('nav.water')} />
 
         <p className={cn('font-bold', urgent ? 'text-orange-900' : 'text-slate-800')}>
-          {irrigation.headline}
+          {tNarrative(irrigation.headline || '')}
         </p>
-        <p className="mt-1 line-clamp-3 text-sm text-slate-600">{irrigation.reason}</p>
+        <p className="mt-1 line-clamp-3 text-sm text-slate-600">{tNarrative(irrigation.reason || '')}</p>
 
         {/* Soil moisture depletion bar — how much of the crop's comfortable
             water range has been used up. */}
         <div className="mt-3">
           <div className="mb-1 flex items-center justify-between text-xs font-medium text-slate-600">
-            <span>Soil water used</span>
+            <span>{t('water.moisture')}</span>
             <span className="tabular-nums">{pct}%</span>
           </div>
           <div className="h-2.5 overflow-hidden rounded-full bg-soil-200">
@@ -411,7 +413,7 @@ function IrrigationCard({ data }: { data: Dashboard }) {
 
         {irrigation.depthMm ? (
           <p className="mt-2 text-sm font-semibold text-orange-900">
-            Apply about {irrigation.depthMm} mm
+            {tNarrative("Apply about " + irrigation.depthMm + " mm")}
           </p>
         ) : null}
       </Card>
@@ -420,14 +422,15 @@ function IrrigationCard({ data }: { data: Dashboard }) {
 }
 
 function WeatherCard({ data }: { data: Dashboard }) {
+  const { t, tNarrative } = useTranslation();
   const { weather } = data;
 
   if (!weather.available || !weather.upcoming?.length) {
     return (
       <Card>
-        <SectionHeading icon={CloudSun} title="Weather" />
+        <SectionHeading icon={CloudSun} title={tNarrative("Weather")} />
         <p className="text-sm text-slate-600">
-          {weather.warning ?? 'Weather data is unavailable right now.'}
+          {weather.warning ? tNarrative(weather.warning) : tNarrative("Weather data is unavailable right now.")}
         </p>
       </Card>
     );
@@ -438,7 +441,7 @@ function WeatherCard({ data }: { data: Dashboard }) {
   return (
     <Link href="/weather">
       <Card className="h-full transition hover:border-brand-300">
-        <SectionHeading icon={CloudSun} title="Weather" />
+        <SectionHeading icon={CloudSun} title={tNarrative("Weather")} />
 
         {today ? (
           <div className="mb-3 flex items-center gap-3">
@@ -452,10 +455,10 @@ function WeatherCard({ data }: { data: Dashboard }) {
               </p>
               <p className="text-xs text-slate-500">
                 {today.rainMm > 0
-                  ? `${today.rainMm.toFixed(0)} mm rain expected`
+                  ? tNarrative(today.rainMm.toFixed(0) + " mm rain expected")
                   : today.rainProbability !== null
-                    ? `${today.rainProbability}% chance of rain`
-                    : 'No rain expected'}
+                    ? tNarrative(today.rainProbability + "% chance of rain")
+                    : tNarrative("No rain expected")}
               </p>
             </div>
           </div>
@@ -488,6 +491,7 @@ function WeatherCard({ data }: { data: Dashboard }) {
 }
 
 function PriceCard({ trend }: { trend: Dashboard['market']['trends'][number] }) {
+  const { tCrop, tNarrative } = useTranslation();
   const TrendIcon =
     trend.direction === 'RISING' ? TrendingUp : trend.direction === 'FALLING' ? TrendingDown : Minus;
 
@@ -506,8 +510,8 @@ function PriceCard({ trend }: { trend: Dashboard['market']['trends'][number] }) 
       <Card className="h-full transition hover:border-brand-300">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <p className="truncate font-bold text-slate-800">{trend.commodity}</p>
-            <p className="text-xs text-slate-500">{cropLabel(trend.cropName)}</p>
+            <p className="truncate font-bold text-slate-800">{tCrop(trend.commodity)}</p>
+            <p className="text-xs text-slate-500">{tCrop(trend.cropName)}</p>
           </div>
           <Badge tone={signalTone as 'success' | 'warn' | 'neutral'}>{trend.signal}</Badge>
         </div>
@@ -524,15 +528,16 @@ function PriceCard({ trend }: { trend: Dashboard['market']['trends'][number] }) 
           ) : null}
         </div>
         <p className="text-xs text-slate-500">{trend.unit}</p>
-        <p className="mt-1.5 text-sm text-slate-600">{trend.headline}</p>
+        <p className="mt-1.5 text-sm text-slate-600">{tNarrative(trend.headline)}</p>
       </Card>
     </Link>
   );
 }
 
-function getGreeting(): string {
+function getGreeting(t: any): string {
   const hour = new Date().getHours();
-  if (hour < 12) return 'Good morning';
-  if (hour < 17) return 'Good afternoon';
-  return 'Good evening';
+  if (hour < 12) return t('dashboard.greetingMorning');
+  if (hour < 17) return t('dashboard.greetingAfternoon');
+  if (hour < 21) return t('dashboard.greetingEvening');
+  return t('dashboard.greetingNight');
 }

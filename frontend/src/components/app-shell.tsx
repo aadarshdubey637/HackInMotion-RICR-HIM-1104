@@ -12,8 +12,11 @@ import {
   LogOut,
   MapPin,
   ChevronDown,
+  Globe,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
+import { useTranslation } from '@/lib/language-context';
+import { LANGUAGES, type Language } from '@/lib/translations';
 import { cn } from '@/lib/utils';
 import { Spinner } from './ui';
 
@@ -35,6 +38,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const { user, loading, farms, currentFarm, selectFarm, logout } = useAuth();
+  const { language, setLanguage, t } = useTranslation();
 
   useEffect(() => {
     if (loading) return;
@@ -62,6 +66,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <nav className="flex-1 space-y-1 p-3">
           {NAV.map(({ href, label, icon: Icon }) => {
             const active = pathname === href;
+            const translatedLabel = t(`nav.${label.toLowerCase()}`);
             return (
               <Link
                 key={href}
@@ -73,19 +78,35 @@ export function AppShell({ children }: { children: ReactNode }) {
                 )}
               >
                 <Icon className="h-5 w-5" aria-hidden />
-                {label}
+                {translatedLabel}
               </Link>
             );
           })}
         </nav>
 
-        <div className="border-t border-soil-200 p-3">
-          <p className="px-3 text-sm font-semibold text-slate-700">{user.name}</p>
-          <p className="mb-2 px-3 text-xs text-slate-500">{user.email}</p>
-          <button type="button" onClick={logout} className="btn-ghost w-full justify-start text-sm">
-            <LogOut className="h-4 w-4" aria-hidden />
-            Sign out
-          </button>
+        <div className="border-t border-soil-200 p-3 space-y-3">
+          <div className="flex items-center gap-2 px-3 py-1 bg-soil-50 rounded-xl border border-soil-100">
+            <Globe className="h-4 w-4 text-slate-500" aria-hidden />
+            <select
+              value={language}
+              onChange={(e) => setLanguage(e.target.value as Language)}
+              className="bg-transparent text-sm font-semibold text-slate-600 focus:outline-none cursor-pointer w-full"
+            >
+              {Object.entries(LANGUAGES).map(([code, lang]) => (
+                <option key={code} value={code}>
+                  {lang.nativeLabel}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="border-t border-soil-100 pt-3">
+            <p className="px-3 text-sm font-semibold text-slate-700">{user.name}</p>
+            <p className="mb-2 px-3 text-xs text-slate-500">{user.email}</p>
+            <button type="button" onClick={logout} className="btn-ghost w-full justify-start text-sm">
+              <LogOut className="h-4 w-4" aria-hidden />
+              {t('nav.signOut')}
+            </button>
+          </div>
         </div>
       </aside>
 
@@ -129,14 +150,31 @@ export function AppShell({ children }: { children: ReactNode }) {
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={logout}
-              aria-label="Sign out"
-              className="btn-ghost shrink-0 px-2 lg:hidden"
-            >
-              <LogOut className="h-5 w-5" aria-hidden />
-            </button>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 border border-soil-200 rounded-lg px-2 py-1 bg-soil-50 lg:hidden">
+                <Globe className="h-3.5 w-3.5 text-slate-500" aria-hidden />
+                <select
+                  value={language}
+                  onChange={(e) => setLanguage(e.target.value as Language)}
+                  className="bg-transparent text-xs font-semibold text-slate-600 focus:outline-none cursor-pointer"
+                >
+                  {Object.entries(LANGUAGES).map(([code, lang]) => (
+                    <option key={code} value={code}>
+                      {lang.nativeLabel}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <button
+                type="button"
+                onClick={logout}
+                aria-label="Sign out"
+                className="btn-ghost shrink-0 px-2 lg:hidden"
+              >
+                <LogOut className="h-5 w-5" aria-hidden />
+              </button>
+            </div>
           </div>
         </header>
 
@@ -151,6 +189,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="mx-auto grid max-w-lg grid-cols-5">
             {NAV.map(({ href, label, icon: Icon }) => {
               const active = pathname === href;
+              const translatedLabel = t(`nav.${label.toLowerCase()}`);
               return (
                 <Link
                   key={href}
@@ -162,7 +201,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                   )}
                 >
                   <Icon className={cn('h-5 w-5', active && 'stroke-[2.5]')} aria-hidden />
-                  {label}
+                  {translatedLabel}
                 </Link>
               );
             })}
