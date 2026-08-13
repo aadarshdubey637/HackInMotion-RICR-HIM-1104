@@ -434,6 +434,37 @@ export interface CropPlan {
   yieldPrediction: YieldPrediction;
 }
 
+/** One stored run of the yield engine, for the season-long trend. */
+export interface YieldHistoryEntry {
+  id: string;
+  cropId: string;
+  cropName: string;
+  predictedAt: string;
+  predictedTotalKg: number;
+  predictedKgHa: number;
+  rangeLowKg: number;
+  rangeHighKg: number;
+  confidence: number;
+  seasonProgress: number;
+  estimatedIncome: number | null;
+  /** Set once the harvest has been recorded, so the estimate can be scored. */
+  actualYieldKg: number | null;
+}
+
+export interface RecordHarvestResult {
+  crop: {
+    id: string;
+    cropName: string;
+    status: string;
+    actualYieldKg: number | null;
+    expectedYieldKg: number | null;
+  };
+  lastPrediction: { predictedTotalKg: number; predictedAt: string } | null;
+  /** Signed percent the estimate was off by. Positive means it over-predicted. */
+  errorPercent: number | null;
+  withinPredictedRange: boolean | null;
+}
+
 export interface NearbyOutbreaks {
   reports: Array<{ name: string; crop: string; count: number; latest: string }>;
   farmsInArea: number;

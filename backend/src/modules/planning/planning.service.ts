@@ -4,6 +4,7 @@
  * Both features read the same farm/crop context, so they share a loader.
  */
 
+import type { Prisma } from '@prisma/client';
 import { prisma } from '../../common/prisma';
 import { logger } from '../../common/logger';
 import { NotFoundError } from '../../common/errors';
@@ -85,7 +86,7 @@ export async function getYieldPrediction(
     recentWeather(farmId, farm.latitude, farm.longitude),
   ]);
 
-  return predictYield({
+  const prediction = predictYield({
     crop,
     cropIsKnown: isKnown,
     areaHectares,
@@ -97,6 +98,204 @@ export async function getYieldPrediction(
     currentDepletionPercent: depletion,
     currentPrice: price,
   });
+
+  await storePrediction(farmId, cropId, prediction);
+
+  return prediction;
+}
+
+/**
+ * Keep a copy of the run, and mirror the headline figure onto
+ * `Crop.expectedYieldKg` so the dashboard and crop list can show it without
+ * going through this module.
+ *
+ * Rate-limited to one row per crop per 6 hours: a farmer opening the planning
+ * page five times should not produce five identical rows and make the history
+ * unreadable. The underlying weather is cached for hours anyway, so a rerun
+ * inside that window would produce the same number.
+ */
+const PREDICTION_DEDUPE_MS = 6 * 3_600_000;
+
+async function storePrediction(
+  farmId: string,
+  cropId: string,
+  prediction: YieldPrediction,
+): Promise<void> {
+  try {
+    const recent = await prisma.yieldPredictionLog.findFirst({
+      where: { cropId, predictedAt: { gte: new Date(Date.now() - PREDICTION_DEDUPE_MS) } },
+      select: { id: true },
+    });
+
+    if (!recent) {
+      await prisma.yieldPredictionLog.create({
+        data: {
+          farmId,
+          cropId,
+          predictedTotalKg: prediction.predictedTotalKg,
+          predictedKgHa: prediction.predictedKgHa,
+          rangeLowKg: prediction.rangeTotalKg.low,
+          rangeHighKg: prediction.rangeTotalKg.high,
+          areaHectares: prediction.areaHectares,
+          confidence: prediction.confidence,
+          seasonProgress: prediction.seasonProgress,
+          estimatedIncome: prediction.estimatedIncome,
+          factors: prediction.factors as unknown as Prisma.InputJsonValue,
+        },
+      });
+    }
+
+    await prisma.crop.update({
+      where: { id: cropId },
+      data: { expectedYieldKg: prediction.predictedTotalKg },
+    });
+  } catch (err) {
+    // Losing the stored copy is a nuisance, not a reason to fail the request —
+    // the farmer still gets their estimate.
+    logger.warn({ farmId, cropId, err }, 'Failed to store yield prediction');
+  }
+}
+
+// ─────────────────────── Prediction history ───────────────────────
+
+export interface YieldHistoryEntry {
+  id: string;
+  cropId: string;
+  cropName: string;
+  predictedAt: Date;
+  predictedTotalKg: number;
+  predictedKgHa: number;
+  rangeLowKg: number;
+  rangeHighKg: number;
+  confidence: number;
+  seasonProgress: number;
+  estimatedIncome: number | null;
+  /** Set once the harvest has been recorded, so the estimate can be scored. */
+  actualYieldKg: number | null;
+}
+
+/**
+ * Past estimates, newest first. This is what turns a single number into a story:
+ * the farmer sees the estimate climb after irrigating, or drop when a disease
+ * was logged.
+ */
+export async function getYieldHistory(
+  farmId: string,
+  userId: string,
+  options: { cropId?: string; limit: number },
+): Promise<YieldHistoryEntry[]> {
+  const farm = await prisma.farm.findFirst({
+    where: { id: farmId, userId },
+    select: { id: true },
+  });
+  if (!farm) throw new NotFoundError('Farm', farmId);
+
+  const rows = await prisma.yieldPredictionLog.findMany({
+    where: { farmId, ...(options.cropId ? { cropId: options.cropId } : {}) },
+    include: { crop: { select: { cropName: true, actualYieldKg: true } } },
+    orderBy: { predictedAt: 'desc' },
+    take: options.limit,
+  });
+
+  return rows.map((row) => ({
+    id: row.id,
+    cropId: row.cropId,
+    cropName: row.crop.cropName,
+    predictedAt: row.predictedAt,
+    predictedTotalKg: row.predictedTotalKg,
+    predictedKgHa: row.predictedKgHa,
+    rangeLowKg: row.rangeLowKg,
+    rangeHighKg: row.rangeHighKg,
+    confidence: row.confidence,
+    seasonProgress: row.seasonProgress,
+    estimatedIncome: row.estimatedIncome,
+    actualYieldKg: row.crop.actualYieldKg,
+  }));
+}
+
+// ─────────────────────── Actual harvest ───────────────────────
+
+export interface RecordHarvestResult {
+  crop: {
+    id: string;
+    cropName: string;
+    status: string;
+    actualYieldKg: number | null;
+    expectedYieldKg: number | null;
+  };
+  lastPrediction: { predictedTotalKg: number; predictedAt: Date } | null;
+  /** Signed percent the estimate was off by. Positive means it over-predicted. */
+  errorPercent: number | null;
+  /** True when the actual landed inside the estimate's stated range. */
+  withinPredictedRange: boolean | null;
+}
+
+/**
+ * Record what was actually harvested.
+ *
+ * `Crop.actualYieldKg` existed in the schema but nothing wrote to it, so the
+ * yield estimate could never be checked against reality. This closes that loop.
+ *
+ * The crop also moves to HARVESTED: recording a real weight is the farmer
+ * telling us the season is over, and leaving it active would keep it in the
+ * planning list being predicted for.
+ */
+export async function recordActualYield(
+  farmId: string,
+  cropId: string,
+  userId: string,
+  actualYieldKg: number,
+): Promise<RecordHarvestResult> {
+  const farm = await prisma.farm.findFirst({
+    where: { id: farmId, userId },
+    select: { id: true },
+  });
+  if (!farm) throw new NotFoundError('Farm', farmId);
+
+  const existing = await prisma.crop.findFirst({ where: { id: cropId, farmId } });
+  if (!existing) throw new NotFoundError('Crop', cropId);
+
+  // Read the last prediction before the update, so the comparison is against
+  // what we told the farmer rather than anything written afterwards.
+  const latest = await prisma.yieldPredictionLog.findFirst({
+    where: { cropId },
+    orderBy: { predictedAt: 'desc' },
+    select: { predictedTotalKg: true, predictedAt: true, rangeLowKg: true, rangeHighKg: true },
+  });
+
+  const updated = await prisma.crop.update({
+    where: { id: cropId },
+    data: { actualYieldKg, status: 'HARVESTED' },
+  });
+
+  const errorPercent =
+    latest && actualYieldKg > 0
+      ? Math.round((latest.predictedTotalKg / actualYieldKg - 1) * 100)
+      : null;
+
+  const withinPredictedRange = latest
+    ? actualYieldKg >= latest.rangeLowKg && actualYieldKg <= latest.rangeHighKg
+    : null;
+
+  logger.info(
+    { farmId, cropId, actualYieldKg, errorPercent, withinPredictedRange },
+    'Actual yield recorded',
+  );
+
+  return {
+    crop: {
+      id: updated.id,
+      cropName: updated.cropName,
+      status: updated.status,
+      actualYieldKg: updated.actualYieldKg,
+      expectedYieldKg: updated.expectedYieldKg,
+    },
+    lastPrediction: latest
+      ? { predictedTotalKg: latest.predictedTotalKg, predictedAt: latest.predictedAt }
+      : null,
+    errorPercent,
+    withinPredictedRange,
+  };
 }
 
 async function latestPrice(cropName: string): Promise<number | null> {
