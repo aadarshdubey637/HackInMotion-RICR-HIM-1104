@@ -23,6 +23,8 @@ import type {
   CropPlan,
   FertilizerPlan,
   YieldPrediction,
+  YieldHistoryEntry,
+  RecordHarvestResult,
 } from './types';
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api';
@@ -322,6 +324,18 @@ export const api = {
 
     yieldPrediction: (farmId: string, cropId: string) =>
       request<YieldPrediction>(`/planning/${farmId}/crops/${cropId}/yield`),
+
+    /** Past estimates for the farm, or for one crop. Newest first. */
+    yieldHistory: (farmId: string, cropId?: string) =>
+      request<{ predictions: YieldHistoryEntry[] }>(
+        `/planning/${farmId}/yield-history${cropId ? `?cropId=${cropId}` : ''}`,
+      ),
+
+    recordHarvest: (farmId: string, cropId: string, actualYieldKg: number) =>
+      request<RecordHarvestResult>(`/planning/${farmId}/crops/${cropId}/harvest`, {
+        method: 'PATCH',
+        body: { actualYieldKg },
+      }),
   },
 
   alerts: {

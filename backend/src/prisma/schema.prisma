@@ -184,13 +184,14 @@ model Farm {
   createdAt         DateTime   @default(now()) @map("created_at")
   updatedAt         DateTime   @updatedAt @map("updated_at")
 
-  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  parcels         Parcel[]
-  crops           Crop[]
-  weatherData     WeatherData[]
-  healthLogs      HealthLog[]
-  alerts          Alert[]
-  recommendations Recommendation[]
+  user             User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parcels          Parcel[]
+  crops            Crop[]
+  weatherData      WeatherData[]
+  healthLogs       HealthLog[]
+  alerts           Alert[]
+  recommendations  Recommendation[]
+  yieldPredictions YieldPredictionLog[]
 
   @@index([userId])
   @@index([status])
@@ -244,11 +245,12 @@ model Crop {
   parcel  Parcel?      @relation(fields: [parcelId], references: [id], onDelete: SetNull)
   variety CropVariety? @relation(fields: [varietyId], references: [id], onDelete: SetNull)
 
-  weatherData    WeatherData[]
-  irrigationLogs IrrigationLog[]
-  healthLogs     HealthLog[]
-  priceHistory   PriceHistory[]
-  alerts         Alert[]
+  weatherData      WeatherData[]
+  irrigationLogs   IrrigationLog[]
+  healthLogs       HealthLog[]
+  priceHistory     PriceHistory[]
+  alerts           Alert[]
+  yieldPredictions YieldPredictionLog[]
 
   @@index([farmId])
   @@index([parcelId])
@@ -457,4 +459,50 @@ model Recommendation {
   @@index([farmId, createdAt])
   @@index([farmId, season])
   @@map("recommendations")
+}
+
+/// A stored run of the yield engine.
+///
+/// The engine itself is stateless — it recomputes on every request. Keeping each
+/// run means a farmer can see how the estimate *moved*: a figure that climbed
+/// after they started irrigating, or fell when blast was found, argues for the
+/// advice far better than a single number ever does. It also lets the estimate
+/// be checked against `Crop.actualYieldKg` once the crop is in.
+///
+/// Named `YieldPredictionLog` rather than `YieldPrediction` because the engine
+/// already exports a type by that name (`modules/planning/yield.ts`), and having
+/// two different things called the same in one file is a trap. Follows the same
+/// convention as `HealthLog`, which is likewise a stored computed result.
+model YieldPredictionLog {
+  id     String @id @default(auto()) @map("_id") @db.ObjectId
+  farmId String @map("farm_id") @db.ObjectId
+  cropId String @map("crop_id") @db.ObjectId
+
+  predictedAt DateTime @default(now()) @map("predicted_at")
+
+  predictedTotalKg Float @map("predicted_total_kg")
+  predictedKgHa    Float @map("predicted_kg_ha")
+  rangeLowKg       Float @map("range_low_kg")
+  rangeHighKg      Float @map("range_high_kg")
+  areaHectares     Float @map("area_hectares")
+
+  /// 0-1. Rises as the season progresses and more real data accumulates.
+  confidence     Float
+  /// 0-1 fraction of the growing season elapsed when this run was made.
+  seasonProgress Float  @map("season_progress")
+  /// Gross income at the price of the day, if a price was available.
+  estimatedIncome Float? @map("estimated_income")
+
+  /// The stress factors, snapshotted so an old run stays explainable after the
+  /// weather and health records behind it have rolled on.
+  factors Json
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  farm Farm @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  crop Crop @relation(fields: [cropId], references: [id], onDelete: Cascade)
+
+  @@index([cropId, predictedAt])
+  @@index([farmId, predictedAt])
+  @@map("yield_prediction_logs")
 }
