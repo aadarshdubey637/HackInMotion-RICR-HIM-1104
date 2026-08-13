@@ -11,4 +11,10 @@ export const trendQuery = z.object({
   days: z.coerce.number().int().min(7).max(180).default(60),
 });
 
+export const farmTrendsQuery = z.object({
+  market: z.string().trim().max(100).optional(),
+});
+
 export type TrendQuery = z.infer<typeof trendQuery>;
+export type FarmTrendsQuery = z.infer<typeof farmTrendsQuery>;
+

@@ -236,6 +236,8 @@ export const translations = {
       emptyPrices: 'No price data available. Add crops to track prices.',
       lastUpdated: 'Updated {time}',
       priceHistoryChart: 'Price Trend (Last 30 Days)',
+      selectMandi: 'Select Mandi / Market',
+      allMandis: 'All Mandis (Average)',
     },
     crops: {
       title: 'Your farm profile',
@@ -548,6 +550,8 @@ export const translations = {
       emptyPrices: 'कोई भाव डेटा उपलब्ध नहीं है। भाव देखने के लिए फसलें जोड़ें।',
       lastUpdated: 'अपडेट किया गया {time}',
       priceHistoryChart: 'भाव रुझान (पिछले 30 दिन)',
+      selectMandi: 'मंडी / बाजार चुनें',
+      allMandis: 'सभी मंडियां (औसत)',
     },
     crops: {
       title: 'आपके खेत का प्रोफाइल',

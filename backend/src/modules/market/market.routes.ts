@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { handler, userId, ok } from '../../common/http';
 import { validateParams, validateQuery, params, query } from '../../common/validate';
 import { authenticate } from '../auth/auth.middleware';
-import { farmIdParams, commodityParams, trendQuery } from './market.schema';
+import { farmIdParams, commodityParams, trendQuery, farmTrendsQuery } from './market.schema';
 import * as service from './market.service';
 
 export const marketRouter = Router();
@@ -13,9 +13,11 @@ marketRouter.use(authenticate);
 marketRouter.get(
   '/farm/:farmId',
   validateParams(farmIdParams),
+  validateQuery(farmTrendsQuery),
   handler(async (req, res) => {
     const { farmId } = params(req, farmIdParams);
-    ok(res, await service.getFarmPriceTrends(farmId, userId(req)));
+    const { market } = query(req, farmTrendsQuery);
+    ok(res, await service.getFarmPriceTrends(farmId, userId(req), market));
   }),
 );
 
