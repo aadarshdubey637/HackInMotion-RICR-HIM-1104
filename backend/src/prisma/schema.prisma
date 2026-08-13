@@ -1,0 +1,458 @@
+// Smart Farm Decision Support System — Data Model
+//
+// Provider: MongoDB (via Prisma). Chosen for schema flexibility on the
+// JSON-heavy fields (weather payloads, analysis results, agronomy metadata)
+// and zero-setup hosting on Atlas.
+//
+// Notes for MongoDB provider:
+//  - Ids are ObjectId, mapped to the reserved `_id` field.
+//  - `Decimal` is unsupported on MongoDB — monetary/measurement values use Float.
+//  - Geospatial columns (PostGIS Point/Polygon) are unsupported — farm location
+//    is stored as plain latitude/longitude Floats, with an optional GeoJSON
+//    `boundary` blob for map rendering. No PostGIS dependency.
+//  - Referential actions run in Prisma's emulated mode (relationMode = "prisma"
+//    is implicit for MongoDB), so `onDelete` is honoured by the client, not the DB.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────── Enums ───────────────────────────────
+
+enum UserRole {
+  FARMER
+  ADVISOR
+  ADMIN
+}
+
+enum FarmStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum CropStatus {
+  PLANNED
+  PLANTED
+  GROWING
+  FLOWERING
+  FRUITING
+  HARVESTED
+  FAILED
+  FALLOW
+}
+
+enum GrowthStage {
+  SEED
+  GERMINATION
+  VEGETATIVE
+  FLOWERING
+  FRUIT_SET
+  RIPENING
+  HARVEST_READY
+}
+
+enum SoilType {
+  SANDY
+  LOAMY
+  CLAY
+  SILTY
+  PEATY
+  CHALKY
+  MIXED
+}
+
+enum IrrigationMethod {
+  DRIP
+  SPRINKLER
+  FLOOD
+  FURROW
+  SUBSURFACE
+  MANUAL
+  RAINFED
+}
+
+enum AlertType {
+  WEATHER_RISK
+  IRRIGATION_NEEDED
+  DISEASE_DETECTED
+  PEST_DETECTED
+  NUTRIENT_DEFICIENCY
+  HARVEST_WINDOW
+  PRICE_OPPORTUNITY
+  FROST_WARNING
+  HEAT_STRESS
+  FLOOD_RISK
+  DROUGHT_RISK
+}
+
+enum AlertSeverity {
+  INFO
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum HealthObservationType {
+  DISEASE
+  PEST
+  NUTRIENT
+  GROWTH
+  WEATHER_DAMAGE
+  OTHER
+}
+
+enum HealthSeverity {
+  MILD
+  MODERATE
+  SEVERE
+  CRITICAL
+}
+
+enum HealthStatus {
+  ACTIVE
+  MONITORING
+  TREATED
+  RESOLVED
+}
+
+// ─────────────────────────────── Models ──────────────────────────────
+
+model User {
+  id           String    @id @default(auto()) @map("_id") @db.ObjectId
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  name         String
+  phone        String?
+  language     String    @default("en")
+  role         UserRole  @default(FARMER)
+  avatarUrl    String?   @map("avatar_url")
+  preferences  Json?
+  isVerified   Boolean   @default(false) @map("is_verified")
+  lastLoginAt  DateTime? @map("last_login_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  farms    Farm[]
+  sessions Session[]
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @map("user_id") @db.ObjectId
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  userAgent String?  @map("user_agent")
+  ipAddress String?  @map("ip_address")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model Farm {
+  id     String @id @default(auto()) @map("_id") @db.ObjectId
+  userId String @map("user_id") @db.ObjectId
+  name   String
+
+  // Location. Plain lat/lon replaces the PostGIS Point — this is what the
+  // weather provider needs, and it keeps the stack free of a spatial extension.
+  latitude  Float
+  longitude Float
+  address   String?
+
+  // Optional GeoJSON polygon for drawing the farm outline on a map.
+  // Stored as an opaque document; never queried spatially.
+  boundary Json?
+
+  totalAreaHectares Float      @map("total_area_hectares")
+  soilTypePrimary   SoilType?  @map("soil_type_primary")
+  soilAnalysis      Json?      @map("soil_analysis")
+  status            FarmStatus @default(ACTIVE)
+  metadata          Json?
+  createdAt         DateTime   @default(now()) @map("created_at")
+  updatedAt         DateTime   @updatedAt @map("updated_at")
+
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parcels         Parcel[]
+  crops           Crop[]
+  weatherData     WeatherData[]
+  healthLogs      HealthLog[]
+  alerts          Alert[]
+  recommendations Recommendation[]
+
+  @@index([userId])
+  @@index([status])
+  @@map("farms")
+}
+
+/// An optional subdivision of a farm (a field / plot). Farms work fine with
+/// zero parcels — crops may attach directly to the farm.
+model Parcel {
+  id             String    @id @default(auto()) @map("_id") @db.ObjectId
+  farmId         String    @map("farm_id") @db.ObjectId
+  name           String
+  boundary       Json?
+  areaHectares   Float     @map("area_hectares")
+  soilType       SoilType?
+  soilProperties Json?     @map("soil_properties")
+  irrigationZone String?   @map("irrigation_zone")
+  microclimate   Json?
+  displayOrder   Int       @default(0) @map("display_order")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  farm           Farm            @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  crops          Crop[]
+  soilData       SoilData[]
+  weatherData    WeatherData[]
+  irrigationLogs IrrigationLog[]
+  healthLogs     HealthLog[]
+
+  @@index([farmId])
+  @@map("parcels")
+}
+
+model Crop {
+  id                  String       @id @default(auto()) @map("_id") @db.ObjectId
+  farmId              String       @map("farm_id") @db.ObjectId
+  parcelId            String?      @map("parcel_id") @db.ObjectId
+  cropName            String       @map("crop_name")
+  varietyId           String?      @map("variety_id") @db.ObjectId
+  plantingDate        DateTime?    @map("planting_date")
+  expectedHarvestDate DateTime?    @map("expected_harvest_date")
+  growthStage         GrowthStage? @map("growth_stage")
+  status              CropStatus   @default(PLANNED)
+  managementPlan      Json?        @map("management_plan")
+  expectedYieldKg     Float?       @map("expected_yield_kg")
+  actualYieldKg       Float?       @map("actual_yield_kg")
+  createdAt           DateTime     @default(now()) @map("created_at")
+  updatedAt           DateTime     @updatedAt @map("updated_at")
+
+  farm    Farm         @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  parcel  Parcel?      @relation(fields: [parcelId], references: [id], onDelete: SetNull)
+  variety CropVariety? @relation(fields: [varietyId], references: [id], onDelete: SetNull)
+
+  weatherData    WeatherData[]
+  irrigationLogs IrrigationLog[]
+  healthLogs     HealthLog[]
+  priceHistory   PriceHistory[]
+
+  @@index([farmId])
+  @@index([parcelId])
+  @@index([status])
+  @@index([cropName])
+  @@map("crops")
+}
+
+/// Agronomy reference data — seeded, not user-editable.
+/// Drives water requirements, planting windows and suitability scoring.
+model CropVariety {
+  id                  String   @id @default(auto()) @map("_id") @db.ObjectId
+  cropName            String   @map("crop_name")
+  varietyName         String   @map("variety_name")
+  climateRequirements Json     @map("climate_requirements")
+  soilRequirements    Json     @map("soil_requirements")
+  growingDays         Int      @map("growing_days")
+  waterRequirementMm  Float    @map("water_requirement_mm")
+  diseaseResistance   Json     @map("disease_resistance")
+  marketInfo          Json     @map("market_info")
+  plantingWindows     Json     @map("planting_windows")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  crops Crop[]
+
+  @@unique([cropName, varietyName])
+  @@index([cropName])
+  @@map("crop_varieties")
+}
+
+model WeatherData {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  farmId         String   @map("farm_id") @db.ObjectId
+  parcelId       String?  @map("parcel_id") @db.ObjectId
+  cropId         String?  @map("crop_id") @db.ObjectId
+  recordedAt     DateTime @map("recorded_at")
+  temperatureMin Float?   @map("temperature_min")
+  temperatureMax Float?   @map("temperature_max")
+  temperatureAvg Float?   @map("temperature_avg")
+  humidity       Float?
+  rainfall       Float?
+  windSpeed      Float?   @map("wind_speed")
+  solarRadiation Float?   @map("solar_radiation")
+  soilMoisture   Float?   @map("soil_moisture")
+  et0            Float?
+  rawData        Json?    @map("raw_data")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  farm   Farm    @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  parcel Parcel? @relation(fields: [parcelId], references: [id], onDelete: Cascade)
+  crop   Crop?   @relation(fields: [cropId], references: [id], onDelete: SetNull)
+
+  // One weather row per farm per timestamp — lets the fetcher upsert
+  // idempotently instead of relying on createMany+skipDuplicates,
+  // which MongoDB does not support.
+  @@unique([farmId, recordedAt])
+  @@index([parcelId, recordedAt])
+  @@index([recordedAt])
+  @@map("weather_data")
+}
+
+model SoilData {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  parcelId       String   @map("parcel_id") @db.ObjectId
+  sampledAt      DateTime @map("sampled_at")
+  ph             Float?
+  nitrogen       Float?
+  phosphorus     Float?
+  potassium      Float?
+  organicCarbon  Float?   @map("organic_carbon")
+  textureClass   String?  @map("texture_class")
+  bulkDensity    Float?   @map("bulk_density")
+  micronutrients Json?
+  latitude       Float?
+  longitude      Float?
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  parcel Parcel @relation(fields: [parcelId], references: [id], onDelete: Cascade)
+
+  @@index([parcelId])
+  @@map("soil_data")
+}
+
+model IrrigationLog {
+  id               String           @id @default(auto()) @map("_id") @db.ObjectId
+  cropId           String           @map("crop_id") @db.ObjectId
+  parcelId         String?          @map("parcel_id") @db.ObjectId
+  irrigatedAt      DateTime         @map("irrigated_at")
+  waterAmountMm    Float            @map("water_amount_mm")
+  irrigationMethod IrrigationMethod @map("irrigation_method")
+  guidanceSource   String           @map("guidance_source")
+  wasRecommended   Boolean          @default(false) @map("was_recommended")
+  weatherContext   Json?            @map("weather_context")
+  createdAt        DateTime         @default(now()) @map("created_at")
+
+  crop   Crop    @relation(fields: [cropId], references: [id], onDelete: Cascade)
+  parcel Parcel? @relation(fields: [parcelId], references: [id], onDelete: SetNull)
+
+  @@index([cropId, irrigatedAt])
+  @@index([parcelId, irrigatedAt])
+  @@map("irrigation_logs")
+}
+
+model HealthLog {
+  id                 String                @id @default(auto()) @map("_id") @db.ObjectId
+  farmId             String                @map("farm_id") @db.ObjectId
+  cropId             String                @map("crop_id") @db.ObjectId
+  parcelId           String?               @map("parcel_id") @db.ObjectId
+  observedAt         DateTime              @map("observed_at")
+  observationType    HealthObservationType @map("observation_type")
+  description        String
+  imageUrl           String?               @map("image_url")
+  analysisResult     Json?                 @map("analysis_result")
+  diseaseDetected    String?               @map("disease_detected")
+  pestDetected       String?               @map("pest_detected")
+  severity           HealthSeverity
+  status             HealthStatus          @default(ACTIVE)
+  recommendedActions Json?                 @map("recommended_actions")
+  createdAt          DateTime              @default(now()) @map("created_at")
+  updatedAt          DateTime              @updatedAt @map("updated_at")
+
+  farm   Farm    @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  crop   Crop    @relation(fields: [cropId], references: [id], onDelete: Cascade)
+  parcel Parcel? @relation(fields: [parcelId], references: [id], onDelete: SetNull)
+
+  @@index([cropId, observedAt])
+  @@index([farmId, observedAt])
+  @@index([parcelId, observedAt])
+  @@index([status])
+  @@map("health_logs")
+}
+
+model PriceHistory {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  cropId       String?  @map("crop_id") @db.ObjectId
+  commodity    String
+  priceDate    DateTime @map("price_date")
+  minPrice     Float    @map("min_price")
+  maxPrice     Float    @map("max_price")
+  modalPrice   Float    @map("modal_price")
+  marketName   String   @map("market_name")
+  state        String
+  district     String
+  unit         String
+  qualityGrade String?  @map("quality_grade")
+  source       String   @default("agmarknet")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  crop Crop? @relation(fields: [cropId], references: [id], onDelete: SetNull)
+
+  // Keyed on commodity rather than cropId so national price series can be
+  // ingested once and shared across every farmer growing that commodity.
+  @@unique([commodity, priceDate, marketName, unit])
+  @@index([commodity, priceDate])
+  @@index([cropId, priceDate])
+  @@index([priceDate])
+  @@map("price_history")
+}
+
+model Alert {
+  id          String        @id @default(auto()) @map("_id") @db.ObjectId
+  farmId      String        @map("farm_id") @db.ObjectId
+  parcelId    String?       @map("parcel_id") @db.ObjectId
+  cropId      String?       @map("crop_id") @db.ObjectId
+  alertType   AlertType     @map("alert_type")
+  severity    AlertSeverity
+  message     String
+  metadata    Json?
+  isRead      Boolean       @default(false) @map("is_read")
+  isDismissed Boolean       @default(false) @map("is_dismissed")
+  createdAt   DateTime      @default(now()) @map("created_at")
+  expiresAt   DateTime?     @map("expires_at")
+
+  // Stable natural key for a generated alert, e.g. "<farmId>:HEAT_STRESS:2026-08-13".
+  // Lets the engine re-run on every refresh without duplicating alerts.
+  dedupeKey String @unique @map("dedupe_key")
+
+  farm Farm @relation(fields: [farmId], references: [id], onDelete: Cascade)
+
+  @@index([farmId, createdAt])
+  @@index([farmId, isRead])
+  @@index([severity])
+  @@index([alertType])
+  @@map("alerts")
+}
+
+model Recommendation {
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  farmId           String   @map("farm_id") @db.ObjectId
+  cropName         String   @map("crop_name")
+  varietyName      String   @map("variety_name")
+  suitabilityScore Float    @map("suitability_score")
+  climateScore     Float    @map("climate_score")
+  soilScore        Float    @map("soil_score")
+  marketScore      Float    @map("market_score")
+  waterScore       Float    @map("water_score")
+  reasoning        Json?
+  expectedOutcomes Json?    @map("expected_outcomes")
+  season           String
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  farm Farm @relation(fields: [farmId], references: [id], onDelete: Cascade)
+
+  @@index([farmId, createdAt])
+  @@index([farmId, season])
+  @@map("recommendations")
+}

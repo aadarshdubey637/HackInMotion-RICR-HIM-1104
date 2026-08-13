@@ -1,0 +1,95 @@
+# ─── Dependencies ────────────────────────────────────────────
+node_modules/
+.pnp
+.pnp.js
+
+# ─── Build outputs ───────────────────────────────────────────
+dist/
+build/
+.next/
+out/
+*.js.map
+*.d.ts.map
+
+# ─── Environment & secrets ───────────────────────────────────
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+backend/.env
+intelligence/.env
+
+# ─── Logs ────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+logs/
+
+# ─── OS / editor ─────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/settings.json
+*.swp
+*.swo
+
+# ─── Test / coverage ─────────────────────────────────────────
+coverage/
+.nyc_output/
+.pytest_cache/
+htmlcov/
+*.cover
+.coverage
+
+# ─── Python ──────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+*.egg
+.venv/
+venv/
+env/
+.Python
+
+# ─── Docker ──────────────────────────────────────────────────
+docker/ssl/
+docker/certbot/
+
+# ─── Uploads / media ─────────────────────────────────────────
+uploads/
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.webp
+
+# ─── PWA generated files ─────────────────────────────────────
+public/sw.js
+public/workbox-*.js
+public/worker-*.js
+public/fallback-*.js
+public/sw.js.map
+public/workbox-*.js.map
+
+# ─── Prisma ──────────────────────────────────────────────────
+# Keep schema.prisma, ignore generated client if checked in separately
+# (Prisma client is regenerated via postinstall / db:generate)
+
+# ─── ML models / data ────────────────────────────────────────
+intelligence/models/*.pkl
+intelligence/models/*.joblib
+intelligence/models/*.onnx
+intelligence/data/raw/
+intelligence/data/processed/
+*.h5
+*.pt
+*.pth
+
+# ─── Misc ────────────────────────────────────────────────────
+*.tsbuildinfo
+.turbo/
+.cache/

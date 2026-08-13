@@ -1,0 +1,62 @@
+import 'dotenv/config';
+import { z } from 'zod';
+
+/**
+ * Environment contract.
+ *
+ * Only DATABASE_URL and JWT_SECRET are genuinely required — everything else
+ * has a working default. This is deliberate: a missing third-party key must
+ * degrade one feature, never prevent the server from booting.
+ */
+const envSchema = z.object({
+  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  PORT: z.coerce.number().default(3001),
+
+  DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
+
+  JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters'),
+  JWT_EXPIRES_IN: z.string().default('7d'),
+  BCRYPT_ROUNDS: z.coerce.number().default(10),
+
+  FRONTEND_URL: z.string().default('http://localhost:3000'),
+
+  // Where uploaded crop photos are written. Local disk keeps the demo
+  // dependency-free; swap for S3/Cloudinary by changing this one path.
+  UPLOAD_DIR: z.string().default('uploads'),
+  PUBLIC_URL: z.string().default('http://localhost:3001'),
+
+  // ── Optional third-party keys ──
+  // Weather needs NO key (Open-Meteo). These are upgrade paths only.
+  OPENWEATHER_API_KEY: z.string().optional(),
+  PLANT_ID_API_KEY: z.string().optional(),
+  DATA_GOV_IN_API_KEY: z.string().optional(),
+});
+
+export type EnvConfig = z.infer<typeof envSchema>;
+
+function loadConfig(): EnvConfig {
+  const result = envSchema.safeParse(process.env);
+
+  if (!result.success) {
+    const issues = result.error.flatten().fieldErrors;
+    console.error('\n  Invalid environment configuration:\n');
+    for (const [key, messages] of Object.entries(issues)) {
+      console.error(`   - ${key}: ${(messages ?? []).join(', ')}`);
+    }
+    console.error('\n  Copy .env.example to backend/.env and fill in the values.\n');
+    process.exit(1);
+  }
+
+  return result.data;
+}
+
+export const config = loadConfig();
+
+export const isDevelopment = config.NODE_ENV === 'development';
+export const isProduction = config.NODE_ENV === 'production';
+
+/** Feature availability, derived from which keys are actually present. */
+export const features = {
+  plantIdApi: Boolean(config.PLANT_ID_API_KEY),
+  dataGovIn: Boolean(config.DATA_GOV_IN_API_KEY),
+} as const;
