@@ -192,25 +192,25 @@ export default function OnboardingPage() {
     <div className="min-h-dvh bg-gradient-to-b from-brand-50 to-soil-50 pb-16">
       {/* Top cover banner */}
       <div 
-        className="h-44 w-full bg-cover bg-center relative flex items-end justify-center"
-        style={{ backgroundImage: 'linear-gradient(to bottom, rgba(15, 23, 42, 0.2), rgba(15, 23, 42, 0.75)), url("/images/smart_farm_hero.png")' }}
+        className="h-64 w-full bg-cover bg-center relative flex flex-col justify-between p-6"
+        style={{ backgroundImage: 'linear-gradient(to bottom, rgba(15, 23, 42, 0.15) 0%, rgba(15, 23, 42, 0.45) 50%, rgba(15, 23, 42, 0.85) 100%), url("/images/smart_farm_hero.png")' }}
       >
-        <div className="absolute top-4 left-4 flex items-center gap-2 text-white bg-slate-900/60 backdrop-blur-md py-1.5 px-3 rounded-xl border border-white/10">
+        <div className="flex items-center gap-2 text-white bg-slate-900/60 backdrop-blur-md py-1.5 px-3 rounded-xl border border-white/10 self-start">
           <Sprout className="h-4 w-4 text-emerald-400" />
-          <span className="text-[10px] font-extrabold tracking-wider">SMART ONBOARDING</span>
+          <span className="text-[10px] font-extrabold tracking-wider text-emerald-50">SMART ONBOARDING</span>
         </div>
-      </div>
 
-      <div className="mx-auto w-full max-w-lg px-4 -mt-10 relative z-10">
-        <div className="mb-6 text-center text-white">
-          <h1 className="text-2xl font-extrabold text-white drop-shadow-md">Set up your farm</h1>
-          <p className="mt-1 text-sm text-slate-200">
+        <div className="text-center text-white pb-2">
+          <h1 className="text-3xl font-extrabold text-white drop-shadow-md">Set up your farm</h1>
+          <p className="mt-2 text-sm text-slate-200 max-w-md mx-auto leading-relaxed font-medium">
             Everything the app tells you is based on this — so it is worth getting right.
           </p>
         </div>
+      </div>
 
+      <div className="mx-auto w-full max-w-lg px-4 mt-6 relative z-10">
         {/* Step indicator */}
-        <div className="mb-5 flex items-center justify-center gap-2">
+        <div className="mb-6 flex items-center justify-center gap-2">
           {[1, 2].map((n) => (
             <div key={n} className="flex items-center gap-2">
               <div
@@ -221,7 +221,7 @@ export default function OnboardingPage() {
               >
                 {step > n ? <Check className="h-4 w-4" /> : n}
               </div>
-              {n === 1 ? <div className="h-0.5 w-10 bg-white/20" /> : null}
+              {n === 1 ? <div className="h-0.5 w-10 bg-slate-300" /> : null}
             </div>
           ))}
         </div>
