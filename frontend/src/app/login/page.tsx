@@ -40,16 +40,7 @@ export default function LoginPage() {
       setError(err instanceof ApiError ? err.message : t('auth.serverError'));
     }
   }
-
-<<<<<<< ours
-=======
-  function useDemoAccount() {
-    setIdentifier('farmer');
-    setPassword('demo1234');
-    setError(null);
-  }
-
->>>>>>> theirs
+  
   return (
     <div className="relative min-h-dvh bg-slate-900 lg:grid lg:grid-cols-2">
       {/* Mobile background blurred image */}
