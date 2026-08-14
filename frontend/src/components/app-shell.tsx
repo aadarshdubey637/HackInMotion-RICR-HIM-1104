@@ -16,6 +16,7 @@ import {
   MoreHorizontal,
   X,
   WifiOff,
+  AlertTriangle,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { useOnlineStatus } from '@/lib/offline';
@@ -37,6 +38,7 @@ const PRIMARY = [
 const SECONDARY = [
   { href: '/recommendations', labelKey: 'nav.recommendations', icon: Sprout, hintKey: 'nav.recommendationsHint' },
   { href: '/planning', labelKey: 'nav.planning', icon: FlaskConical, hintKey: 'nav.planningHint' },
+  { href: '/community', labelKey: 'nav.community', icon: AlertTriangle, hintKey: 'nav.communityHint' },
   { href: '/crops', labelKey: 'nav.farm', icon: MapPin, hintKey: 'nav.farmHint' },
 ] as const;
 

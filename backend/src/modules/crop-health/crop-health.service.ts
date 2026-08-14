@@ -259,67 +259,233 @@ export async function deleteObservation(farmId: string, logId: string, userId: s
 
 // ─────────────────────── Community outbreak signal ───────────────────────
 
-/**
- * Nearby farms reporting the same problem in the last 21 days.
- *
- * Uses a simple bounding box rather than a geospatial query — MongoDB could do
- * a $geoNear, but Prisma does not expose it, and at this scale a box filter
- * over the farmer's own region is accurate enough to be useful.
- */
-export async function nearbyOutbreaks(farmId: string, userId: string, radiusKm = 50) {
+function getDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371; // Radius of the earth in km
+  const dLat = (lat2 - lat1) * (Math.PI / 180);
+  const dLon = (lon2 - lon1) * (Math.PI / 180);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * (Math.PI / 180)) *
+      Math.cos(lat2 * (Math.PI / 180)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+function getOutbreakGuidance(issueName: string, cropName: string): string[] {
+  const issue = issueName.toLowerCase();
+  if (issue.includes('blight')) {
+    return [
+      'Inspect leaves daily for water-soaked spots or dark lesions.',
+      'Avoid overhead watering and improve air circulation.',
+      'Remove and destroy infected plant debris immediately.',
+      'Consider applying preventive bio-fungicides.'
+    ];
+  }
+  if (issue.includes('blast')) {
+    return [
+      'Monitor plants for spindle-shaped lesions on leaves and neck rot.',
+      'Avoid excessive nitrogen fertilization.',
+      'Maintain proper water levels in the field.',
+      'Use certified disease-free seeds for future seasons.'
+    ];
+  }
+  if (issue.includes('borer') || issue.includes('caterpillar') || issue.includes('worm')) {
+    return [
+      'Inspect stems and leaves for boring holes or larval feeding signs.',
+      'Install pheromone traps to monitor adult moth populations.',
+      'Use neem-based sprays or biological control agents.',
+      'Remove and burn severely infested shoots.'
+    ];
+  }
+  if (issue.includes('aphid') || issue.includes('whitefly') || issue.includes('thrip')) {
+    return [
+      'Check the undersides of leaves for clusters of tiny sucking insects.',
+      'Use yellow sticky cards to trap flying insect vectors.',
+      'Spray with neem oil or insecticidal soap.',
+      'Encourage natural predators like ladybugs.'
+    ];
+  }
+  return [
+    `Inspect your ${cropName} crop daily for early signs of ${issueName}.`,
+    'Isolate or remove affected plants immediately.',
+    'Sanitize all farming tools after handling suspect plants.',
+    'Consult local agricultural extension services for control measures.'
+  ];
+}
+
+import { CreateCommunityReportInput } from './crop-health.schema';
+
+export async function createCommunityReport(
+  farmId: string,
+  userId: string,
+  input: CreateCommunityReportInput,
+  image: { url: string; base64: string } | null,
+) {
   const farm = await prisma.farm.findFirst({ where: { id: farmId, userId } });
   if (!farm) throw new NotFoundError('Farm', farmId);
 
-  // ~111 km per degree of latitude; longitude degrees shrink toward the poles.
+  let cropRecord: { id: string; cropName: string; parcelId: string | null } | null = null;
+
+  if (input.cropId) {
+    // Use the specific crop they selected
+    cropRecord = await prisma.crop.findFirst({
+      where: { id: input.cropId, farmId },
+      select: { id: true, cropName: true, parcelId: true },
+    });
+    if (!cropRecord) throw new NotFoundError('Crop', input.cropId);
+  } else {
+    // Custom crop name — anchor to first farm crop for DB integrity
+    const firstCrop = await prisma.crop.findFirst({
+      where: { farmId },
+      select: { id: true, cropName: true, parcelId: true },
+    });
+    if (!firstCrop) throw new NotFoundError('Crop', 'any crop on farm');
+    cropRecord = firstCrop;
+  }
+
+  // Prefer explicit custom name, else use registered crop name
+  const effectiveCropName = input.customCropName?.trim() || cropRecord.cropName;
+  const observedAt = input.observedAt ? new Date(input.observedAt) : new Date();
+
+  const log = await prisma.healthLog.create({
+    data: {
+      farmId,
+      cropId: cropRecord.id,
+      parcelId: cropRecord.parcelId,
+      observedAt,
+      observationType: input.issueType,
+      description: input.description,
+      imageUrl: image?.url ?? null,
+      severity: input.severity,
+      diseaseDetected: input.issueType === 'DISEASE' ? input.issueName : null,
+      pestDetected: input.issueType === 'PEST' ? input.issueName : null,
+      status: 'ACTIVE',
+      recommendedActions: getOutbreakGuidance(input.issueName, effectiveCropName),
+      analysisResult: {
+        isCommunityReport: true,
+        method: 'manual_report',
+        // Store the actual crop name so outbreak grouping uses the correct name
+        customCropName: input.customCropName ?? null,
+      } as any,
+    },
+  });
+
+  return log;
+}
+
+export async function nearbyOutbreaks(farmId: string, userId: string, radiusKm = 5) {
+  const farm = await prisma.farm.findFirst({ where: { id: farmId, userId } });
+  if (!farm) throw new NotFoundError('Farm', farmId);
+
+  // 1. Get bounding box to narrow query
   const latDelta = radiusKm / 111;
   const lonDelta = radiusKm / (111 * Math.max(0.1, Math.cos((farm.latitude * Math.PI) / 180)));
 
   const nearbyFarms = await prisma.farm.findMany({
     where: {
-      id: { not: farmId },
       latitude: { gte: farm.latitude - latDelta, lte: farm.latitude + latDelta },
       longitude: { gte: farm.longitude - lonDelta, lte: farm.longitude + lonDelta },
     },
     select: { id: true, latitude: true, longitude: true },
   });
 
-  if (nearbyFarms.length === 0) return { reports: [], farmsInArea: 0, radiusKm };
+  // Calculate actual distance and filter to within exact radius
+  const filteredFarms = nearbyFarms
+    .map((f) => ({
+      id: f.id,
+      distance: getDistanceKm(farm.latitude, farm.longitude, f.latitude, f.longitude),
+    }))
+    .filter((f) => f.distance <= radiusKm);
 
+  if (filteredFarms.length === 0) return { outbreaks: [], farmsInArea: 0, radiusKm };
+
+  // 2. Fetch reports in the last 7 days from these farms
   const logs = await prisma.healthLog.findMany({
     where: {
-      farmId: { in: nearbyFarms.map((f) => f.id) },
-      observedAt: { gte: new Date(Date.now() - 21 * 86_400_000) },
-      severity: { in: ['SEVERE', 'CRITICAL'] },
+      farmId: { in: filteredFarms.map((f) => f.id) },
+      observedAt: { gte: new Date(Date.now() - 7 * 86_400_000) },
     },
     select: {
+      farmId: true,
       diseaseDetected: true,
       pestDetected: true,
       severity: true,
       observedAt: true,
+      analysisResult: true,
       crop: { select: { cropName: true } },
     },
-    orderBy: { observedAt: 'desc' },
   });
 
-  // Aggregate by problem name so the farmer sees "5 nearby reports of blast",
-  // not five separate rows. Individual farms stay anonymous.
-  const counts = new Map<string, { name: string; crop: string; count: number; latest: Date }>();
+  // 3. Group by problem + crop, tracking unique farms
+  const groups = new Map<
+    string,
+    {
+      name: string;
+      crop: string;
+      farmIds: Set<string>;
+      latest: Date;
+      minDistance: number;
+      severities: string[];
+    }
+  >();
+
   for (const log of logs) {
     const name = log.diseaseDetected ?? log.pestDetected;
     if (!name) continue;
-    const key = `${name}|${log.crop.cropName}`;
-    const existing = counts.get(key);
+    // Use the stored customCropName if available (community reports with typed crop name)
+    const meta = log.analysisResult as any;
+    const cropName = meta?.customCropName?.trim() || log.crop.cropName;
+    const key = `${name.toLowerCase()}|${cropName.toLowerCase()}`;
+    const farmDist = filteredFarms.find((f) => f.id === log.farmId)?.distance ?? 0;
+
+    const existing = groups.get(key);
     if (existing) {
-      existing.count += 1;
+      existing.farmIds.add(log.farmId);
       if (log.observedAt > existing.latest) existing.latest = log.observedAt;
+      if (farmDist < existing.minDistance) existing.minDistance = farmDist;
+      existing.severities.push(log.severity);
     } else {
-      counts.set(key, { name, crop: log.crop.cropName, count: 1, latest: log.observedAt });
+      groups.set(key, {
+        name,
+        crop: cropName,  // use resolved name (custom or registered)
+        farmIds: new Set([log.farmId]),
+        latest: log.observedAt,
+        minDistance: farmDist,
+        severities: [log.severity],
+      });
     }
   }
 
+  // 4. Filter only groups with 3+ unique farmers (farms)
+  const outbreaks = [...groups.values()]
+    .filter((g) => g.farmIds.size >= 3)
+    .map((g) => {
+      // Determine dominant severity
+      const hasCritical = g.severities.includes('CRITICAL');
+      const hasSevere = g.severities.includes('SEVERE') || g.severities.includes('HIGH');
+      const severity = hasCritical ? 'CRITICAL' : hasSevere ? 'SEVERE' : 'MODERATE';
+
+      // Round distance to nearest 0.5 km for privacy, e.g., "Within 2.5 km"
+      const roundedDist = Math.max(0.5, Math.round(g.minDistance * 2) / 2);
+
+      return {
+        name: g.name,
+        crop: g.crop,
+        count: g.farmIds.size,
+        latest: g.latest,
+        approxDistanceKm: roundedDist,
+        severity,
+        guidance: getOutbreakGuidance(g.name, g.crop),
+      };
+    })
+    .sort((a, b) => b.count - a.count);
+
   return {
-    reports: [...counts.values()].sort((a, b) => b.count - a.count),
-    farmsInArea: nearbyFarms.length,
+    outbreaks,
+    farmsInArea: filteredFarms.length,
     radiusKm,
   };
 }
+

@@ -52,3 +52,25 @@ export const listObservationsQuery = z.object({
 export type CreateObservationInput = z.infer<typeof createObservationBody>;
 export type UpdateObservationInput = z.infer<typeof updateObservationBody>;
 export type ListObservationsQuery = z.infer<typeof listObservationsQuery>;
+
+export const createCommunityReportBody = z
+  .object({
+    cropId: objectId.optional(),
+    customCropName: z.string().trim().min(2, 'Please enter a crop name').max(100).optional(),
+    issueName: z.string().trim().min(3, 'Please specify the issue or disease name').max(100),
+    issueType: z.enum(['DISEASE', 'PEST']),
+    severity: z.enum(['MILD', 'MODERATE', 'SEVERE', 'CRITICAL']),
+    description: z.string().trim().min(5, 'Please add a brief description of the issue').max(2000),
+    observedAt: z
+      .string()
+      .refine((v) => !Number.isNaN(Date.parse(v)), 'Not a valid date')
+      .optional(),
+  })
+  .refine((d) => d.cropId || d.customCropName, {
+    message: 'Please select a crop or enter a crop name',
+    path: ['cropId'],
+  });
+
+export type CreateCommunityReportInput = z.infer<typeof createCommunityReportBody>;
+
+

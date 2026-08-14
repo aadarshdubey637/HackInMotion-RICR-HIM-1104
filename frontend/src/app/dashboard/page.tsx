@@ -333,26 +333,26 @@ function DashboardContent() {
       </section>
 
       {/* ── Community outbreak signal ── */}
-      {nearby && nearby.reports.length > 0 ? (
+      {nearby && nearby.outbreaks.length > 0 ? (
         <section>
           <SectionHeading icon={Users} title="Reported near you" />
           <Card className="border-amber-200 bg-amber-50">
             <p className="text-sm text-amber-900">
-              Farmers within {nearby.radiusKm} km have reported these in the last three weeks.
+              Farmers within {nearby.radiusKm} km have reported these in the last 7 days.
               Worth checking your own crop.
             </p>
             <div className="mt-2.5 space-y-1.5">
-              {nearby.reports.slice(0, 3).map((report) => (
+              {nearby.outbreaks.slice(0, 3).map((outbreak) => (
                 <div
-                  key={`${report.name}-${report.crop}`}
+                  key={`${outbreak.name}-${outbreak.crop}`}
                   className="flex items-center justify-between gap-2"
                 >
                   <span className="min-w-0 truncate text-sm font-semibold text-amber-900">
-                    {report.name}
-                    <span className="font-normal"> on {cropLabel(report.crop)}</span>
+                    {outbreak.name}
+                    <span className="font-normal"> on {cropLabel(outbreak.crop)}</span>
                   </span>
                   <Badge tone="warn" className="shrink-0">
-                    {report.count} farm{report.count === 1 ? '' : 's'}
+                    {outbreak.count} farm{outbreak.count === 1 ? '' : 's'}
                   </Badge>
                 </div>
               ))}

@@ -18,7 +18,7 @@ import { useAuth } from '@/lib/auth-context';
 import { api, ApiError } from '@/lib/api';
 import { useVoice, buildSpokenDiagnosis } from '@/lib/voice';
 import { useSpeechRecognition, detectLanguage } from '@/lib/speech';
-import type { Crop, HealthLog, Diagnosis, DiagnosisCandidate } from '@/lib/types';
+import type { Crop, HealthLog, Diagnosis, DiagnosisCandidate, NearbyOutbreaks } from '@/lib/types';
 import {
   Card,
   SectionHeading,
@@ -54,10 +54,7 @@ function HealthContent() {
   const { t, tCrop } = useTranslation();
   const [crops, setCrops] = useState<Crop[]>([]);
   const [logs, setLogs] = useState<HealthLog[]>([]);
-  const [nearby, setNearby] = useState<{
-    reports: Array<{ name: string; crop: string; count: number }>;
-    farmsInArea: number;
-  } | null>(null);
+  const [nearby, setNearby] = useState<NearbyOutbreaks | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -151,7 +148,7 @@ function HealthContent() {
       ) : null}
 
       {/* ── Nearby outbreaks ── */}
-      {nearby && nearby.reports.length > 0 ? (
+      {nearby && nearby.outbreaks.length > 0 ? (
         <section>
           <SectionHeading icon={Users} title={t('health.nearbyTitle')} />
           <Card className="border-amber-200 bg-amber-50">
@@ -159,15 +156,15 @@ function HealthContent() {
               {t('health.nearbySubtitle', { count: nearby.farmsInArea })}
             </p>
             <div className="space-y-1.5">
-              {nearby.reports.slice(0, 4).map((report) => (
-                <div key={`${report.name}-${report.crop}`} className="flex items-center justify-between gap-2">
+              {nearby.outbreaks.slice(0, 4).map((outbreak) => (
+                <div key={`${outbreak.name}-${outbreak.crop}`} className="flex items-center justify-between gap-2">
                   <span className="text-sm font-semibold text-amber-900">
-                    {report.name}{' '}
+                    {outbreak.name}{' '}
                     <span className="font-normal">
-                      {t('health.onCrop')} {tCrop(report.crop)}
+                      {t('health.onCrop')} {tCrop(outbreak.crop)}
                     </span>
                   </span>
-                  <Badge tone="warn">{t('health.reports', { count: report.count })}</Badge>
+                  <Badge tone="warn">{t('health.reports', { count: outbreak.count })}</Badge>
                 </div>
               ))}
             </div>

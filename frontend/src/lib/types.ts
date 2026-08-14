@@ -465,8 +465,18 @@ export interface RecordHarvestResult {
   withinPredictedRange: boolean | null;
 }
 
+export interface Outbreak {
+  name: string;
+  crop: string;
+  count: number;
+  latest: string;
+  approxDistanceKm: number;
+  severity: Severity;
+  guidance: string[];
+}
+
 export interface NearbyOutbreaks {
-  reports: Array<{ name: string; crop: string; count: number; latest: string }>;
+  outbreaks: Outbreak[];
   farmsInArea: number;
   radiusKm: number;
 }

@@ -11,6 +11,7 @@ import {
   createObservationBody,
   updateObservationBody,
   listObservationsQuery,
+  createCommunityReportBody,
 } from './crop-health.schema';
 import * as service from './crop-health.service';
 
@@ -138,7 +139,45 @@ cropHealthRouter.get(
   validateParams(farmIdParams),
   handler(async (req, res) => {
     const { farmId } = params(req, farmIdParams);
-    const radius = Number(req.query.radiusKm) || 50;
+    const radius = Number(req.query.radiusKm) || 5;
     ok(res, await service.nearbyOutbreaks(farmId, userId(req), Math.min(radius, 200)));
   }),
 );
+
+/**
+ * POST /api/crop-health/:farmId/community-reports
+ * Submit a manual crop health report for community alerts.
+ */
+cropHealthRouter.post(
+  '/:farmId/community-reports',
+  validateParams(farmIdParams),
+  uploadPhoto,
+  validateBody(createCommunityReportBody),
+  handler(async (req, res) => {
+    const { farmId } = params(req, farmIdParams);
+
+    let image = null;
+    if (req.file) {
+      try {
+        image = storeImage(req.file);
+      } catch {
+        image = null;
+      }
+    }
+
+    const log = await service.createCommunityReport(farmId, userId(req), req.body, image);
+
+    ok(
+      res,
+      {
+        log,
+        imageStored: Boolean(image),
+        ...(req.file && !image
+          ? { warning: 'Your report was saved, but the photo could not be stored.' }
+          : {}),
+      },
+      201,
+    );
+  }),
+);
+

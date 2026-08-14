@@ -25,6 +25,7 @@ import type {
   YieldPrediction,
   YieldHistoryEntry,
   RecordHarvestResult,
+  NearbyOutbreaks,
 } from './types';
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api';
@@ -311,11 +312,34 @@ export const api = {
       }),
 
     nearby: (farmId: string) =>
-      request<{
-        reports: Array<{ name: string; crop: string; count: number; latest: string }>;
-        farmsInArea: number;
-        radiusKm: number;
-      }>(`/crop-health/${farmId}/nearby`),
+      request<NearbyOutbreaks>(`/crop-health/${farmId}/nearby`),
+
+    submitCommunityReport: (
+      farmId: string,
+      input: {
+        cropId?: string;
+        customCropName?: string;
+        issueName: string;
+        issueType: 'DISEASE' | 'PEST';
+        severity: 'MILD' | 'MODERATE' | 'SEVERE' | 'CRITICAL';
+        description: string;
+        image?: File | null;
+      },
+    ) => {
+      const form = new FormData();
+      if (input.cropId) form.append('cropId', input.cropId);
+      if (input.customCropName) form.append('customCropName', input.customCropName);
+      form.append('issueName', input.issueName);
+      form.append('issueType', input.issueType);
+      form.append('severity', input.severity);
+      form.append('description', input.description);
+      if (input.image) form.append('image', input.image);
+
+      return request<{ log: HealthLog; imageStored: boolean; warning?: string }>(
+        `/crop-health/${farmId}/community-reports`,
+        { method: 'POST', formData: form },
+      );
+    },
   },
 
   market: {

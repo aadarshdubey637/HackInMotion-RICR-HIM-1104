@@ -40,6 +40,8 @@ export const translations = {
       recommendationsHint: 'Crops suited to your land',
       planningHint: 'Fertiliser and expected yield',
       farmHint: 'Profile and crops',
+      community: 'Community alerts',
+      communityHint: 'Pest and disease outbreak warning',
     },
     planning: {
       title: 'Plan & predict',
