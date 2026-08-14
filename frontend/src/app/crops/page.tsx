@@ -337,6 +337,13 @@ function AddCropForm({
     </Card>
   );
 }
+function getCropThumbnail(cropName: string): string {
+  const name = cropName.toLowerCase();
+  if (['rice', 'wheat', 'maize', 'cotton', 'tomato'].includes(name)) {
+    return `/images/crops/${name}.png`;
+  }
+  return '/images/crops/default_crop.png';
+}
 
 function CropCard({
   crop,
@@ -364,23 +371,43 @@ function CropCard({
     }
   }
 
+  const imageUrl = getCropThumbnail(crop.cropName);
+
   return (
-    <Card className="flex items-start justify-between gap-3">
-      <div className="min-w-0">
-        <div className="flex flex-wrap items-center gap-2">
-          <h3 className="font-bold text-slate-800">{tCrop(crop.cropName)}</h3>
-          <Badge tone={crop.status === 'HARVESTED' ? 'neutral' : 'brand'}>
-            {tStage(crop.status)}
-          </Badge>
-          {!recognised ? <Badge tone="warn">Limited data</Badge> : null}
+    <Card className="flex items-center justify-between gap-4 p-4 hover:shadow-md transition-shadow duration-300">
+      <div className="flex items-center gap-4 min-w-0 flex-1">
+        {/* Left Thumbnail with glassmorphism overlay for stage */}
+        <div className="relative w-20 h-20 shrink-0 rounded-2xl overflow-hidden shadow-inner border border-soil-100 bg-soil-50">
+          <img 
+            src={imageUrl} 
+            alt={crop.cropName} 
+            className="w-full h-full object-cover transition-transform duration-300 hover:scale-110" 
+          />
+          {/* Glassmorphism badge overlay at the bottom */}
+          <div className="absolute inset-x-0 bottom-0 bg-slate-900/60 backdrop-blur-[2px] py-0.5 px-1 text-center">
+            <span className="text-[9px] font-extrabold text-white uppercase tracking-wider truncate block">
+              {tStage(crop.growthStage || crop.status)}
+            </span>
+          </div>
         </div>
 
-        <div className="mt-1 space-y-0.5 text-xs text-slate-500">
-          {crop.growthStage ? <p>Stage: {tStage(crop.growthStage)}</p> : null}
-          {crop.plantingDate ? <p>Planted {formatDate(crop.plantingDate)}</p> : null}
-          {crop.expectedHarvestDate ? (
-            <p>Expected harvest {formatDate(crop.expectedHarvestDate)}</p>
-          ) : null}
+        {/* Details in the middle */}
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="font-extrabold text-base text-slate-800 truncate">{tCrop(crop.cropName)}</h3>
+            <Badge tone={crop.status === 'HARVESTED' ? 'neutral' : 'brand'} className="text-[10px] px-2 py-0.5 font-bold">
+              {tStage(crop.status)}
+            </Badge>
+            {!recognised ? <Badge tone="warn" className="text-[10px] px-2 py-0.5 font-bold">Limited data</Badge> : null}
+          </div>
+
+          <div className="mt-1 space-y-0.5 text-xs text-slate-500 font-medium">
+            {crop.growthStage ? <p>Stage: <span className="text-slate-700 font-semibold">{tStage(crop.growthStage)}</span></p> : null}
+            {crop.plantingDate ? <p>Planted <span className="text-slate-700 font-semibold">{formatDate(crop.plantingDate)}</span></p> : null}
+            {crop.expectedHarvestDate ? (
+              <p>Expected harvest <span className="text-slate-700 font-semibold">{formatDate(crop.expectedHarvestDate)}</span></p>
+            ) : null}
+          </div>
         </div>
       </div>
 
@@ -390,14 +417,14 @@ function CropCard({
             type="button"
             onClick={remove}
             disabled={deleting}
-            className="rounded-lg bg-red-600 px-2.5 py-1 text-xs font-semibold text-white"
+            className="rounded-xl bg-red-600 hover:bg-red-500 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition"
           >
             {deleting ? t('common.loading') : t('common.success')}
           </button>
           <button
             type="button"
             onClick={() => setConfirming(false)}
-            className="rounded-lg border border-soil-300 px-2.5 py-1 text-xs font-semibold text-slate-600"
+            className="rounded-xl border border-soil-300 px-3 py-1.5 text-xs font-bold text-slate-650 hover:bg-slate-50 transition"
           >
             {t('common.cancel')}
           </button>
@@ -407,7 +434,7 @@ function CropCard({
           type="button"
           onClick={() => setConfirming(true)}
           aria-label={`Remove ${crop.cropName}`}
-          className="btn-ghost shrink-0 px-2 text-slate-400 hover:text-red-600"
+          className="btn-ghost shrink-0 px-2.5 py-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors duration-200"
         >
           <Trash2 className="h-4 w-4" aria-hidden />
         </button>

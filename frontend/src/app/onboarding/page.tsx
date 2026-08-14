@@ -143,14 +143,22 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="min-h-dvh bg-gradient-to-b from-brand-50 to-soil-50 px-4 py-8">
-      <div className="mx-auto w-full max-w-lg">
-        <div className="mb-6 text-center">
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-600">
-            <Sprout className="h-7 w-7 text-white" aria-hidden />
-          </div>
-          <h1 className="text-2xl font-bold text-slate-900">Set up your farm</h1>
-          <p className="mt-1 text-sm text-slate-600">
+    <div className="min-h-dvh bg-gradient-to-b from-brand-50 to-soil-50 pb-16">
+      {/* Top cover banner */}
+      <div 
+        className="h-44 w-full bg-cover bg-center relative flex items-end justify-center"
+        style={{ backgroundImage: 'linear-gradient(to bottom, rgba(15, 23, 42, 0.2), rgba(15, 23, 42, 0.75)), url("/images/smart_farm_hero.png")' }}
+      >
+        <div className="absolute top-4 left-4 flex items-center gap-2 text-white bg-slate-900/60 backdrop-blur-md py-1.5 px-3 rounded-xl border border-white/10">
+          <Sprout className="h-4 w-4 text-emerald-400" />
+          <span className="text-[10px] font-extrabold tracking-wider">SMART ONBOARDING</span>
+        </div>
+      </div>
+
+      <div className="mx-auto w-full max-w-lg px-4 -mt-10 relative z-10">
+        <div className="mb-6 text-center text-white">
+          <h1 className="text-2xl font-extrabold text-white drop-shadow-md">Set up your farm</h1>
+          <p className="mt-1 text-sm text-slate-200">
             Everything the app tells you is based on this — so it is worth getting right.
           </p>
         </div>
@@ -161,13 +169,13 @@ export default function OnboardingPage() {
             <div key={n} className="flex items-center gap-2">
               <div
                 className={cn(
-                  'flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold',
-                  step >= n ? 'bg-brand-600 text-white' : 'bg-soil-200 text-slate-500',
+                  'flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold shadow-md transition-all duration-300',
+                  step >= n ? 'bg-brand-600 text-white scale-110' : 'bg-white text-slate-500 border border-soil-200',
                 )}
               >
                 {step > n ? <Check className="h-4 w-4" /> : n}
               </div>
-              {n === 1 ? <div className="h-0.5 w-10 bg-soil-200" /> : null}
+              {n === 1 ? <div className="h-0.5 w-10 bg-white/20" /> : null}
             </div>
           ))}
         </div>
@@ -180,16 +188,16 @@ export default function OnboardingPage() {
           ) : null}
 
           {step === 1 ? (
-            <Card className="space-y-5">
+            <Card className="space-y-5 rounded-3xl shadow-xl border border-soil-100 p-6">
               <div>
-                <label htmlFor="farm-name" className="label">
+                <label htmlFor="farm-name" className="label font-semibold text-slate-700">
                   Farm name
                 </label>
                 <input
                   id="farm-name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="field"
+                  className="field focus:ring-2 focus:ring-brand-500/20"
                   placeholder="e.g. Kumar Farm"
                   required
                 />
@@ -197,7 +205,7 @@ export default function OnboardingPage() {
 
               {/* ── Location ── */}
               <div>
-                <span className="label">Where is your farm?</span>
+                <span className="label font-semibold text-slate-700">Where is your farm?</span>
                 <p className="-mt-1 mb-2 text-xs text-slate-500">
                   We use this to get weather for your exact location.
                 </p>
@@ -206,12 +214,12 @@ export default function OnboardingPage() {
                   type="button"
                   onClick={detectLocation}
                   disabled={locating}
-                  className="btn-secondary w-full"
+                  className="btn-secondary w-full flex justify-center items-center gap-2 py-3 rounded-xl border border-soil-200 hover:bg-slate-50"
                 >
                   {locating ? (
                     <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
                   ) : (
-                    <MapPin className="h-5 w-5" aria-hidden />
+                    <MapPin className="h-5 w-5 text-brand-600" aria-hidden />
                   )}
                   {locating ? 'Finding you…' : 'Use my current location'}
                 </button>
@@ -244,7 +252,7 @@ export default function OnboardingPage() {
                       onChange={(e) =>
                         setCoords({ lat: Number(e.target.value), lon: coords?.lon ?? 0 })
                       }
-                      className="field"
+                      className="field focus:ring-2 focus:ring-brand-500/20"
                       placeholder="26.8467"
                     />
                   </div>
@@ -261,7 +269,7 @@ export default function OnboardingPage() {
                       onChange={(e) =>
                         setCoords({ lat: coords?.lat ?? 0, lon: Number(e.target.value) })
                       }
-                      className="field"
+                      className="field focus:ring-2 focus:ring-brand-500/20"
                       placeholder="80.9462"
                     />
                   </div>
@@ -275,7 +283,7 @@ export default function OnboardingPage() {
                     id="address"
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
-                    className="field"
+                    className="field focus:ring-2 focus:ring-brand-500/20"
                     placeholder="Mohanlalganj, Lucknow"
                   />
                 </div>
@@ -283,7 +291,7 @@ export default function OnboardingPage() {
 
               {/* ── Land size ── */}
               <div>
-                <label htmlFor="area" className="label">
+                <label htmlFor="area" className="label font-semibold text-slate-700">
                   Land size
                 </label>
                 <div className="flex gap-2">
@@ -295,19 +303,19 @@ export default function OnboardingPage() {
                     inputMode="decimal"
                     value={areaValue}
                     onChange={(e) => setAreaValue(e.target.value)}
-                    className="field flex-1"
+                    className="field flex-1 focus:ring-2 focus:ring-brand-500/20"
                     placeholder="5"
                     required
                   />
-                  <div className="flex shrink-0 rounded-xl border border-soil-300 bg-white p-1">
+                  <div className="flex shrink-0 rounded-xl border border-soil-200 bg-white p-1">
                     {(['acre', 'hectare'] as const).map((unit) => (
                       <button
                         key={unit}
                         type="button"
                         onClick={() => setAreaUnit(unit)}
                         className={cn(
-                          'rounded-lg px-3 text-sm font-semibold transition',
-                          areaUnit === unit ? 'bg-brand-600 text-white' : 'text-slate-600',
+                          'rounded-lg px-3 text-sm font-semibold transition-all duration-200',
+                          areaUnit === unit ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900',
                         )}
                       >
                         {unit === 'acre' ? 'Acres' : 'Hectares'}
@@ -327,28 +335,38 @@ export default function OnboardingPage() {
 
               {/* ── Soil ── */}
               <div>
-                <span className="label">Soil type (optional)</span>
+                <span className="label font-semibold text-slate-700">Soil type (optional)</span>
                 <p className="-mt-1 mb-2 text-xs text-slate-500">
                   This makes irrigation advice noticeably more accurate. Not sure? Skip it.
                 </p>
-                <div className="grid grid-cols-2 gap-2">
-                  {SOIL_TYPES.map((soil) => (
-                    <button
-                      key={soil.value}
-                      type="button"
-                      onClick={() => setSoilType(soilType === soil.value ? '' : soil.value)}
-                      aria-pressed={soilType === soil.value}
-                      className={cn(
-                        'rounded-xl border p-3 text-left transition',
-                        soilType === soil.value
-                          ? 'border-brand-600 bg-brand-50 ring-1 ring-brand-600'
-                          : 'border-soil-300 bg-white hover:bg-soil-50',
-                      )}
-                    >
-                      <p className="text-sm font-semibold text-slate-800">{soil.label}</p>
-                      <p className="text-xs leading-tight text-slate-500">{soil.hint}</p>
-                    </button>
-                  ))}
+                <div className="grid grid-cols-2 gap-3">
+                  {SOIL_TYPES.map((soil) => {
+                    const selected = soilType === soil.value;
+                    return (
+                      <button
+                        key={soil.value}
+                        type="button"
+                        onClick={() => setSoilType(selected ? '' : soil.value)}
+                        aria-pressed={selected}
+                        className={cn(
+                          'relative rounded-2xl border p-4 text-left transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-brand-500/20',
+                          selected
+                            ? 'border-brand-600 bg-brand-50/70 shadow-md shadow-brand-100 ring-1 ring-brand-600'
+                            : 'border-soil-200 bg-white hover:border-brand-300 hover:shadow-sm hover:bg-slate-50/50',
+                        )}
+                      >
+                        {selected && (
+                          <span className="absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded-full bg-brand-600 text-white animate-scale-in">
+                            <Check className="h-3 w-3" />
+                          </span>
+                        )}
+                        <p className={cn('text-sm font-bold transition-colors duration-200', selected ? 'text-brand-900' : 'text-slate-800')}>
+                          {soil.label}
+                        </p>
+                        <p className="mt-1 text-xs leading-tight text-slate-500">{soil.hint}</p>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -356,7 +374,7 @@ export default function OnboardingPage() {
                 type="button"
                 onClick={() => setStep(2)}
                 disabled={!step1Valid}
-                className="btn-primary w-full"
+                className="btn-primary w-full py-3 rounded-xl shadow-lg transition duration-200"
               >
                 Continue
               </button>
@@ -367,7 +385,7 @@ export default function OnboardingPage() {
               ) : null}
             </Card>
           ) : (
-            <Card className="space-y-5">
+            <Card className="space-y-5 rounded-3xl shadow-xl border border-soil-100 p-6">
               <div>
                 <h2 className="text-lg font-bold text-slate-800">What are you growing?</h2>
                 <p className="mt-1 text-sm text-slate-600">
@@ -383,10 +401,10 @@ export default function OnboardingPage() {
                     onClick={() => setSelectedCrop(selectedCrop === crop.key ? '' : crop.key)}
                     aria-pressed={selectedCrop === crop.key}
                     className={cn(
-                      'rounded-xl border p-3 text-sm font-semibold transition',
+                      'rounded-xl border p-3 text-sm font-semibold transition-all duration-300 transform active:scale-95',
                       selectedCrop === crop.key
-                        ? 'border-brand-600 bg-brand-50 text-brand-800 ring-1 ring-brand-600'
-                        : 'border-soil-300 bg-white text-slate-700 hover:bg-soil-50',
+                        ? 'border-brand-600 bg-brand-50 text-brand-800 ring-1 ring-brand-600 shadow-sm shadow-brand-100'
+                        : 'border-soil-300 bg-white text-slate-700 hover:bg-soil-50 hover:border-slate-400',
                     )}
                   >
                     {crop.label}
@@ -396,7 +414,7 @@ export default function OnboardingPage() {
 
               {selectedCrop ? (
                 <div>
-                  <label htmlFor="planting" className="label">
+                  <label htmlFor="planting" className="label font-semibold text-slate-700">
                     When did you plant it? (optional)
                   </label>
                   <input
@@ -405,7 +423,7 @@ export default function OnboardingPage() {
                     max={new Date().toISOString().slice(0, 10)}
                     value={plantingDate}
                     onChange={(e) => setPlantingDate(e.target.value)}
-                    className="field"
+                    className="field focus:ring-2 focus:ring-brand-500/20"
                   />
                   <p className="mt-1 text-xs text-slate-500">
                     Helps us work out the growth stage and water needs. Leave blank if not planted yet.
@@ -414,10 +432,10 @@ export default function OnboardingPage() {
               ) : null}
 
               <div className="flex gap-3">
-                <button type="button" onClick={() => setStep(1)} className="btn-secondary flex-1">
+                <button type="button" onClick={() => setStep(1)} className="btn-secondary flex-1 py-3 rounded-xl border border-soil-200">
                   Back
                 </button>
-                <button type="submit" disabled={submitting} className="btn-primary flex-1">
+                <button type="submit" disabled={submitting} className="btn-primary flex-1 py-3 rounded-xl shadow-lg transition duration-200">
                   {submitting ? <Spinner className="h-5 w-5" /> : null}
                   {submitting ? 'Saving…' : 'Finish'}
                 </button>

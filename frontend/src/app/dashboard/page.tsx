@@ -63,6 +63,14 @@ const WEATHER_ICONS = {
   snow: Snowflake,
 } as const;
 
+function getCropThumbnail(cropName: string): string {
+  const name = cropName.toLowerCase();
+  if (['rice', 'wheat', 'maize', 'cotton', 'tomato'].includes(name)) {
+    return `/images/crops/${name}.png`;
+  }
+  return '/images/crops/default_crop.png';
+}
+
 function DashboardContent() {
   const { currentFarm } = useAuth();
   const { t, tNarrative, language } = useTranslation();
@@ -402,24 +410,36 @@ function DashboardContent() {
           </Card>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2">
-            {data.crops.map((crop) => (
-              <Card key={crop.id} className="flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="truncate font-bold text-slate-800">{cropLabel(crop.cropName)}</p>
-                  <p className="text-xs text-slate-500">
-                    {humanise(crop.growthStage) || humanise(crop.status)}
-                    {crop.daysToHarvest !== null && crop.daysToHarvest > 0
-                      ? ` · ${crop.daysToHarvest} days to harvest`
-                      : ''}
-                  </p>
-                </div>
-                {!crop.isRecognised ? (
-                  <Badge tone="warn" className="shrink-0">
-                    Limited data
-                  </Badge>
-                ) : null}
-              </Card>
-            ))}
+            {data.crops.map((crop) => {
+              const imageUrl = getCropThumbnail(crop.cropName);
+              return (
+                <Card key={crop.id} className="flex items-center justify-between gap-4 p-4 hover:shadow-md transition-shadow duration-300">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="relative w-12 h-12 shrink-0 rounded-xl overflow-hidden shadow-inner border border-soil-100 bg-soil-50">
+                      <img 
+                        src={imageUrl} 
+                        alt={crop.cropName} 
+                        className="w-full h-full object-cover" 
+                      />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate font-extrabold text-slate-800 text-sm">{cropLabel(crop.cropName)}</p>
+                      <p className="text-xs text-slate-500 font-semibold mt-0.5">
+                        {humanise(crop.growthStage) || humanise(crop.status)}
+                        {crop.daysToHarvest !== null && crop.daysToHarvest > 0
+                          ? ` · ${crop.daysToHarvest} days to harvest`
+                          : ''}
+                      </p>
+                    </div>
+                  </div>
+                  {!crop.isRecognised ? (
+                    <Badge tone="warn" className="shrink-0 text-[10px]">
+                      Limited data
+                    </Badge>
+                  ) : null}
+                </Card>
+              );
+            })}
           </div>
         )}
       </section>
@@ -551,26 +571,40 @@ function IrrigationCard({ data }: { data: Dashboard }) {
 
   return (
     <Link href="/weather">
-      <Card className={cn('h-full transition hover:border-brand-300', urgent && 'border-orange-300 bg-orange-50')}>
+      <Card 
+        className={cn(
+          'h-full transition-all duration-300 hover:shadow-md hover:border-brand-300 relative overflow-hidden', 
+          urgent 
+            ? 'border-red-200 bg-gradient-to-br from-orange-50 via-red-50/40 to-orange-50/30 shadow-sm shadow-red-50' 
+            : 'border-blue-100 bg-gradient-to-br from-blue-50/40 via-sky-50/20 to-white shadow-sm shadow-blue-50'
+        )}
+      >
+        {/* Subtle droplet shimmer overlay for urgent state */}
+        {urgent && (
+          <div className="absolute right-2 top-2 text-red-500/10 animate-bounce">
+            <Droplets className="h-20 w-20" />
+          </div>
+        )}
+        
         <SectionHeading icon={Droplets} title="Water" />
 
-        <p className={cn('font-bold', urgent ? 'text-orange-900' : 'text-slate-800')}>
+        <p className={cn('font-extrabold text-base', urgent ? 'text-red-950' : 'text-slate-800')}>
           {irrigation.headline}
         </p>
-        <p className="mt-1 line-clamp-3 text-sm text-slate-600">{irrigation.reason}</p>
+        <p className="mt-1 line-clamp-3 text-sm text-slate-600 leading-relaxed">{irrigation.reason}</p>
 
         {/* Soil moisture depletion bar — how much of the crop's comfortable
             water range has been used up. */}
-        <div className="mt-3">
-          <div className="mb-1 flex items-center justify-between text-xs font-medium text-slate-600">
+        <div className="mt-4">
+          <div className="mb-1 flex items-center justify-between text-xs font-semibold text-slate-600">
             <span>Soil water used</span>
-            <span className="tabular-nums">{pct}%</span>
+            <span className="tabular-nums font-bold">{pct}%</span>
           </div>
-          <div className="h-2.5 overflow-hidden rounded-full bg-soil-200">
+          <div className="h-3 overflow-hidden rounded-full bg-soil-200/70 p-0.5 border border-soil-300/30">
             <div
               className={cn(
-                'h-full rounded-full transition-all',
-                pct >= 100 ? 'bg-red-500' : pct >= 75 ? 'bg-orange-500' : 'bg-brand-500',
+                'h-full rounded-full transition-all duration-500',
+                pct >= 100 ? 'bg-gradient-to-r from-red-500 to-rose-600' : pct >= 75 ? 'bg-gradient-to-r from-orange-500 to-amber-600' : 'bg-gradient-to-r from-blue-500 to-sky-600',
               )}
               style={{ width: `${pct}%` }}
             />
@@ -578,9 +612,10 @@ function IrrigationCard({ data }: { data: Dashboard }) {
         </div>
 
         {irrigation.depthMm ? (
-          <p className="mt-2 text-sm font-semibold text-orange-900">
+          <div className="mt-3 inline-flex items-center gap-1 bg-orange-100/70 border border-orange-200/50 rounded-lg px-2.5 py-1 text-xs font-bold text-orange-950">
+            <Droplets className="h-3.5 w-3.5 text-orange-700" />
             Apply about {irrigation.depthMm} mm
-          </p>
+          </div>
         ) : null}
       </Card>
     </Link>
@@ -602,15 +637,26 @@ function WeatherCard({ data }: { data: Dashboard }) {
   }
 
   const today = weather.today;
+  const todayUpcoming = weather.upcoming?.[0];
+  const iconName = todayUpcoming ? weatherIcon(todayUpcoming.description || '') : 'cloud';
+  
+  const gradientClass = {
+    sun: 'border-orange-200 bg-gradient-to-br from-amber-50/60 via-orange-50/35 to-white shadow-sm shadow-orange-50',
+    cloud: 'border-slate-200 bg-gradient-to-br from-slate-50/80 via-slate-100/30 to-white shadow-sm shadow-slate-50',
+    rain: 'border-blue-200 bg-gradient-to-br from-blue-50/60 via-sky-50/30 to-white shadow-sm shadow-blue-50',
+    storm: 'border-purple-200 bg-gradient-to-br from-purple-50/40 via-slate-50/30 to-white shadow-sm shadow-purple-50',
+    fog: 'border-zinc-200 bg-gradient-to-br from-zinc-100/40 via-slate-50/20 to-white shadow-sm shadow-zinc-50',
+    snow: 'border-sky-200 bg-gradient-to-br from-sky-50/40 via-blue-50/20 to-white shadow-sm shadow-sky-50',
+  }[iconName] || 'border-slate-200 bg-gradient-to-br from-slate-50/80 to-white shadow-sm shadow-slate-50';
 
   return (
     <Link href="/weather">
-      <Card className="h-full transition hover:border-brand-300">
+      <Card className={cn('h-full transition-all duration-300 hover:shadow-md hover:border-brand-300', gradientClass)}>
         <SectionHeading icon={CloudSun} title="Weather" />
 
         {today ? (
           <div className="mb-3 flex items-center gap-3">
-            <Thermometer className="h-8 w-8 text-brand-600" aria-hidden />
+            <Thermometer className="h-8 w-8 text-brand-600 animate-pulse" aria-hidden />
             <div>
               <p className="text-2xl font-bold tabular-nums text-slate-900">
                 {Math.round(today.tempMaxC)}°
@@ -629,22 +675,22 @@ function WeatherCard({ data }: { data: Dashboard }) {
           </div>
         ) : null}
 
-        <div className="grid grid-cols-5 gap-1">
+        <div className="grid grid-cols-5 gap-1.5 pt-2">
           {weather.upcoming.slice(0, 5).map((day) => {
             const Icon = WEATHER_ICONS[weatherIcon(day.description)];
             return (
-              <div key={day.date} className="flex flex-col items-center gap-1 rounded-lg py-1.5">
-                <span className="text-[10px] font-semibold text-slate-500">{formatDay(day.date)}</span>
+              <div key={day.date} className="flex flex-col items-center gap-1 rounded-xl py-2 bg-white/40 border border-white/20 shadow-sm backdrop-blur-[1px]">
+                <span className="text-[10px] font-bold text-slate-500">{formatDay(day.date)}</span>
                 <Icon className="h-5 w-5 text-brand-600" aria-hidden />
                 <span className="text-xs font-bold tabular-nums text-slate-800">
                   {Math.round(day.tempMaxC)}°
                 </span>
                 {day.rainMm > 0 ? (
-                  <span className="text-[10px] font-medium tabular-nums text-blue-600">
+                  <span className="text-[10px] font-semibold tabular-nums text-blue-600">
                     {day.rainMm.toFixed(0)}mm
                   </span>
                 ) : (
-                  <span className="text-[10px] text-transparent">-</span>
+                  <span className="text-[10px] text-slate-400 font-medium">-</span>
                 )}
               </div>
             );
