@@ -214,6 +214,21 @@ export const api = {
     supportedCrops: () =>
       request<{ crops: Array<{ key: string; label: string }> }>('/farms/supported-crops'),
 
+    getLocationInfo: (latitude: number, longitude: number) =>
+      request<{
+        location: {
+          village: string | null;
+          district: string | null;
+          state: string | null;
+          country: string | null;
+          formattedAddress: string | null;
+        };
+        soil: {
+          soilType: string | null;
+          soilProperties: Record<string, unknown> | null;
+        };
+      }>(`/farms/location-info?latitude=${latitude}&longitude=${longitude}`),
+
     crops: (farmId: string) => request<{ crops: Crop[] }>(`/farms/${farmId}/crops`),
 
     addCrop: (

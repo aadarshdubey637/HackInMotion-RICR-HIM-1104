@@ -38,6 +38,10 @@ export default function OnboardingPage() {
 
   const [locating, setLocating] = useState(false);
   const [locationNote, setLocationNote] = useState<string | null>(null);
+  const [locationDetecting, setLocationDetecting] = useState(false);
+  const [soilDetecting, setSoilDetecting] = useState(false);
+  const [detectedLocation, setDetectedLocation] = useState<string | null>(null);
+  const [detectedSoilType, setDetectedSoilType] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -53,6 +57,48 @@ export default function OnboardingPage() {
       .catch(() => setCropOptions([]));
   }, []);
 
+  // Fetch location info when coordinates change (from manual input or geolocation)
+  useEffect(() => {
+    if (coords && (coords.lat !== 0 || coords.lon !== 0)) {
+      fetchLocationInfo(coords.lat, coords.lon);
+    }
+  }, [coords]);
+
+  async function fetchLocationInfo(lat: number, lon: number) {
+    setLocationDetecting(true);
+    setSoilDetecting(true);
+    setLocationNote('Finding village and district…');
+    setDetectedLocation(null);
+    setDetectedSoilType(null);
+
+    try {
+      const { location, soil } = await api.farms.getLocationInfo(lat, lon);
+
+      if (location) {
+        const parts = [location.village, location.district, location.state, location.country]
+          .filter(Boolean)
+          .join(', ');
+        if (parts) {
+          setAddress(parts);
+          setDetectedLocation(parts);
+        }
+      }
+
+      if (soil.soilType && SOIL_TYPES.some((s) => s.value === soil.soilType)) {
+        setSoilType(soil.soilType);
+        setDetectedSoilType(soil.soilType);
+      }
+    } catch {
+      // Silently fail - user can still manually enter
+    } finally {
+      setLocationDetecting(false);
+      setSoilDetecting(false);
+      if (!locationDetecting && !soilDetecting) {
+        setLocationNote(null);
+      }
+    }
+  }
+
   function detectLocation() {
     if (!('geolocation' in navigator)) {
       setLocationNote('Your browser cannot detect location. Please enter coordinates manually.');
@@ -64,12 +110,12 @@ export default function OnboardingPage() {
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        setCoords({
-          lat: Number(position.coords.latitude.toFixed(5)),
-          lon: Number(position.coords.longitude.toFixed(5)),
-        });
+        const lat = Number(position.coords.latitude.toFixed(5));
+        const lon = Number(position.coords.longitude.toFixed(5));
+        setCoords({ lat, lon });
         setLocating(false);
         setLocationNote(null);
+        fetchLocationInfo(lat, lon);
       },
       (err) => {
         setLocating(false);
@@ -235,6 +281,15 @@ export default function OnboardingPage() {
                     <Notice tone="success">
                       Location set: {coords.lat}, {coords.lon}
                     </Notice>
+                    {(locationDetecting || soilDetecting) && (
+                      <div className="mt-2 flex gap-2 text-xs text-slate-600">
+                        {locationDetecting && <span className="animate-pulse">Finding village/district…</span>}
+                        {soilDetecting && <span className="animate-pulse">Determining soil type…</span>}
+                      </div>
+                    )}
+                    {detectedLocation && !locationDetecting && !soilDetecting && (
+                      <p className="mt-1 text-xs text-brand-600">��� Location detected: {coords.lat}, {coords.lon}</p>
+                    )}
                   </div>
                 ) : null}
 
@@ -277,7 +332,12 @@ export default function OnboardingPage() {
 
                 <div className="mt-3">
                   <label htmlFor="address" className="label text-xs">
-                    Village / district (optional)
+                    Village / district
+                    {detectedLocation && (
+                      <span className="ml-1.5 text-xs text-brand-600 font-normal">
+                        Detected automatically
+                      </span>
+                    )}
                   </label>
                   <input
                     id="address"
@@ -286,6 +346,12 @@ export default function OnboardingPage() {
                     className="field focus:ring-2 focus:ring-brand-500/20"
                     placeholder="Mohanlalganj, Lucknow"
                   />
+                  {locationDetecting && (
+                    <p className="mt-1 text-xs text-slate-500 animate-pulse">Finding village and district…</p>
+                  )}
+                  {detectedLocation && !locationDetecting && (
+                    <p className="mt-1 text-xs text-brand-600">��� Location detected: {coords?.lat}, {coords?.lon}</p>
+                  )}
                 </div>
               </div>
 
@@ -335,6 +401,7 @@ export default function OnboardingPage() {
 
               {/* ── Soil ── */}
               <div>
+<<<<<<< HEAD
                 <span className="label font-semibold text-slate-700">Soil type (optional)</span>
                 <p className="-mt-1 mb-2 text-xs text-slate-500">
                   This makes irrigation advice noticeably more accurate. Not sure? Skip it.
@@ -367,6 +434,38 @@ export default function OnboardingPage() {
                       </button>
                     );
                   })}
+=======
+                <label className="label flex items-center gap-2">
+                  Soil type (optional)
+                  {detectedSoilType && (
+                    <span className="text-xs text-brand-600 font-normal">Detected automatically</span>
+                  )}
+                </label>
+                <p className="-mt-1 mb-2 text-xs text-slate-500">
+                  This makes irrigation advice noticeably more accurate. Not sure? Skip it.
+                </p>
+                {soilDetecting && (
+                  <p className="mb-2 text-xs text-slate-500 animate-pulse">Determining soil type…</p>
+                )}
+                <div className="grid grid-cols-2 gap-2">
+                  {SOIL_TYPES.map((soil) => (
+                    <button
+                      key={soil.value}
+                      type="button"
+                      onClick={() => setSoilType(soilType === soil.value ? '' : soil.value)}
+                      aria-pressed={soilType === soil.value}
+                      className={cn(
+                        'rounded-xl border p-3 text-left transition',
+                        soilType === soil.value
+                          ? 'border-brand-600 bg-brand-50 ring-1 ring-brand-600'
+                          : 'border-soil-300 bg-white hover:bg-soil-50',
+                      )}
+                    >
+                      <p className="text-sm font-semibold text-slate-800">{soil.label}</p>
+                      <p className="text-xs leading-tight text-slate-500">{soil.hint}</p>
+                    </button>
+                  ))}
+>>>>>>> 6df9d470086bfc265dd3750e949a3bd1a40c8fe6
                 </div>
               </div>
 
