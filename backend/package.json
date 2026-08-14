@@ -8,6 +8,8 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "test": "jest",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\"",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:indexes": "tsx src/prisma/apply-sparse-indexes.ts",

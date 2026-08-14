@@ -8,6 +8,8 @@
     "build": "next build",
     "start": "next start -p 3000",
     "lint": "next lint",
+    "format": "prettier --write \"src/**/*.{ts,tsx}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx}\"",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
