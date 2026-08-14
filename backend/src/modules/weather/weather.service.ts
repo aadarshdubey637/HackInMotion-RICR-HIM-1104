@@ -38,6 +38,33 @@ async function requireFarm(farmId: string, userId: string) {
 
 // ─────────────────────────── Weather fetch ───────────────────────────
 
+export interface WeatherResult {
+  weather: WeatherBundle;
+  stale: boolean;
+  warning?: string;
+}
+
+/**
+ * Weather fetches currently in progress, keyed by farm.
+ *
+ * Two requests for the same farm can arrive before either finishes — the
+ * dashboard and the weather card mounting together, React re-invoking an effect
+ * in development, or simply two open tabs. Each would miss the cache read, call
+ * Open-Meteo, and try to insert the same `(farmId, recordedAt)` rows. The loser
+ * of that insert hits the unique index and `upsertWithoutTransaction` converts
+ * it into an update, so the stored data is correct either way — but the provider
+ * has been called twice to answer one question, and the query engine logs a
+ * `prisma:error` that reads like a fault when it is a handled race.
+ *
+ * Sharing a single promise removes both problems: the second caller awaits the
+ * first caller's work. The entry is deleted as soon as it settles, so this holds
+ * at most one promise per farm being fetched right now, not a growing cache.
+ *
+ * A rejection is shared too, which is what we want — a provider outage should
+ * surface to every waiting caller exactly as it would have individually.
+ */
+const inFlight = new Map<string, Promise<WeatherResult>>();
+
 /**
  * Get weather for a farm, preferring a recent cached fetch.
  * Falls back to stored history if the provider is unreachable.
@@ -47,7 +74,7 @@ export async function getWeatherForFarm(
   latitude: number,
   longitude: number,
   { force = false }: { force?: boolean } = {},
-): Promise<{ weather: WeatherBundle; stale: boolean; warning?: string }> {
+): Promise<WeatherResult> {
   if (!force) {
     const fresh = await prisma.weatherData.findFirst({
       where: { farmId, createdAt: { gte: new Date(Date.now() - CACHE_TTL_MS) } },
@@ -62,6 +89,34 @@ export async function getWeatherForFarm(
     }
   }
 
+  // Past the cache, so a provider call is about to happen. Join one already
+  // running for this farm rather than starting a second.
+  //
+  // A `force` caller joins a fetch that began moments ago rather than issuing
+  // its own. That is the intent of `force` — data not from the hour-old cache —
+  // and the in-flight fetch satisfies it.
+  const running = inFlight.get(farmId);
+  if (running) {
+    logger.debug({ farmId }, 'Joining in-flight weather fetch');
+    return running;
+  }
+
+  const work = fetchAndPersist(farmId, latitude, longitude).finally(() => {
+    // Cleared on both paths: leaving a rejected promise here would pin every
+    // later request for this farm to one failure.
+    inFlight.delete(farmId);
+  });
+
+  inFlight.set(farmId, work);
+  return work;
+}
+
+/** The uncoordinated fetch. Only ever reached through `getWeatherForFarm`. */
+async function fetchAndPersist(
+  farmId: string,
+  latitude: number,
+  longitude: number,
+): Promise<WeatherResult> {
   try {
     const weather = await fetchWeather(latitude, longitude);
     await persistWeather(farmId, weather);
