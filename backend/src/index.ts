@@ -5,7 +5,7 @@ import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
 
-import { config, features, isProduction } from './config';
+import { config, features, isDevelopment, isProduction } from './config';
 import { logger } from './common/logger';
 import { prisma } from './common/prisma';
 import { closeMailer, verifyMailer } from './common/mailer';
@@ -111,8 +111,16 @@ const server = app.listen(config.PORT, () => {
   // whole server.
   if (features.email) {
     void verifyMailer();
+  } else if (isDevelopment) {
+    // Distinguished from the production case below because the consequence is
+    // different: verification still works here, it just arrives in this log
+    // rather than an inbox. Saying "disabled" would send someone hunting for a
+    // broken feature that is working as intended.
+    logger.warn(
+      'EMAIL_USER / EMAIL_APP_PASSWORD not set — verification codes will be printed to this log instead of emailed',
+    );
   } else {
-    logger.warn('EMAIL_USER / EMAIL_APP_PASSWORD not set — email OTP is disabled');
+    logger.warn('EMAIL_USER / EMAIL_APP_PASSWORD not set — email verification is disabled');
   }
 });
 
