@@ -633,3 +633,19 @@ input. Uncertainty (`rangeTotalKg`) narrows as `seasonProgress` rises.
 ## Static files
 
 `GET /uploads/:filename` — uploaded crop photos, cached 7 days.
+
+## Project structure
+```
+smart-farm-dss/
+├── backend/          Express + Prisma + MongoDB
+│   └── src/
+│       ├── modules/  Feature modules (auth, weather, crops, health, market…)
+│       ├── prisma/   schema.prisma + seed scripts
+│       └── domain/   Crop data, nutrition tables
+├── frontend/         Next.js 14 App Router + Tailwind
+│   └── src/
+│       ├── app/      Pages (dashboard, weather, health, planning, community…)
+│       ├── components/
+│       └── lib/      API client, offline cache, voice, translations
+└── scripts/          Dev tooling (setup.js)
+```
