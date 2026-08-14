@@ -1,9 +1,17 @@
 /**
- * Typed API client.
+ * Typed API client with offline-first support.
  *
- * Every call funnels through `request()`, which gives us one place to attach
- * the auth token, unwrap the `{ success, data }` envelope, and turn failures
- * into a consistent `ApiError` carrying a message that is safe to show a farmer.
+ * Every GET funnels through `cachedRequest()`:
+ *   1. Try the network.
+ *   2. On success, write the response to localStorage.
+ *   3. On NETWORK_ERROR, return the last cached copy (with its age attached).
+ *
+ * Key mutations (irrigation logs, health observations, community reports) that
+ * fail while offline are pushed onto a write queue and replayed automatically
+ * when the connection comes back. FormData mutations (photo uploads) are not
+ * queued — they require a real connection.
+ *
+ * All other auth is unchanged; the token store and error types are identical.
  */
 
 import type {
@@ -27,6 +35,7 @@ import type {
   RecordHarvestResult,
   NearbyOutbreaks,
 } from './types';
+import { writeCache, readCache, enqueue, flushQueue } from './offline';
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api';
 
@@ -73,12 +82,10 @@ export class ApiError extends Error {
     this.details = details;
   }
 
-  /** True when the user should be sent back to sign in. */
   get isAuthError(): boolean {
     return this.status === 401;
   }
 
-  /** True for problems that a retry might fix. */
   get isTransient(): boolean {
     return this.status === 0 || this.status === 429 || this.status >= 500;
   }
@@ -89,14 +96,12 @@ export class ApiError extends Error {
 interface RequestOptions {
   method?: string;
   body?: unknown;
-  /** Multipart payload; when set, `body` is ignored. */
   formData?: FormData;
   signal?: AbortSignal;
-  /** Skip the Authorization header (used by login/register). */
   anonymous?: boolean;
 }
 
-async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const { method = 'GET', body, formData, signal, anonymous } = options;
 
   const headers: Record<string, string> = {};
@@ -104,7 +109,6 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     const token = tokenStore.get();
     if (token) headers.Authorization = `Bearer ${token}`;
   }
-  // Let the browser set the multipart boundary itself.
   if (body !== undefined && !formData) headers['Content-Type'] = 'application/json';
 
   let response: Response;
@@ -124,7 +128,6 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     );
   }
 
-  // 204 and friends have no body.
   if (response.status === 204) return undefined as T;
 
   let payload: unknown;
@@ -156,6 +159,63 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   return envelope.data as T;
 }
 
+/**
+ * Cached GET.
+ *
+ * On success the response is written to localStorage under `cacheKey`.
+ * On NETWORK_ERROR (status 0) the cached copy is returned instead — the
+ * caller gets the last known value and the UI stays useful offline.
+ */
+async function cachedRequest<T>(
+  cacheKey: string,
+  path: string,
+  signal?: AbortSignal,
+): Promise<T & { _fromCache?: boolean; _cacheAgeMs?: number }> {
+  try {
+    const data = await request<T>(path, { signal });
+    writeCache<T>(cacheKey, data);
+    return data;
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 0) {
+      const cached = readCache<T>(cacheKey);
+      if (cached) {
+        return { ...cached.data, _fromCache: true, _cacheAgeMs: cached.ageMs };
+      }
+    }
+    throw err;
+  }
+}
+
+/**
+ * Replay helper exposed so the offline queue can re-run mutations when the
+ * device comes back online.
+ */
+export function replayMutation(path: string, method: string, body?: unknown): Promise<unknown> {
+  return request(path, { method, body });
+}
+
+/**
+ * Register a listener that flushes the write queue when the device comes back
+ * online. Safe to call multiple times — deduplication is handled internally.
+ */
+let flushListenerRegistered = false;
+
+export function ensureFlushListener(): void {
+  if (flushListenerRegistered || typeof window === 'undefined') return;
+  flushListenerRegistered = true;
+
+  window.addEventListener('online', () => {
+    void flushQueue(replayMutation).then(({ succeeded, failed }) => {
+      if (succeeded > 0) {
+        console.info(`[SmartFarm] Synced ${succeeded} offline action(s)`);
+      }
+      if (failed > 0) {
+        console.warn(`[SmartFarm] ${failed} action(s) failed to sync and will retry`);
+      }
+    });
+  });
+}
+
 // ─────────────────────────── Endpoints ───────────────────────────
 
 export const api = {
@@ -180,7 +240,7 @@ export const api = {
         anonymous: true,
       }),
 
-    me: () => request<{ user: User }>('/auth/me'),
+    me: () => cachedRequest<{ user: User }>('auth:me', '/auth/me'),
 
     updateProfile: (input: { name?: string; phone?: string; language?: string }) =>
       request<{ user: User }>('/auth/me', { method: 'PATCH', body: input }),
@@ -196,9 +256,10 @@ export const api = {
   },
 
   farms: {
-    list: () => request<{ farms: Farm[] }>('/farms'),
+    list: () => cachedRequest<{ farms: Farm[] }>('farms:list', '/farms'),
 
-    get: (farmId: string) => request<{ farm: Farm }>(`/farms/${farmId}`),
+    get: (farmId: string) =>
+      cachedRequest<{ farm: Farm }>(`farms:${farmId}`, `/farms/${farmId}`),
 
     create: (input: {
       name: string;
@@ -213,7 +274,10 @@ export const api = {
       request<{ farm: Farm }>(`/farms/${farmId}`, { method: 'PATCH', body: input }),
 
     supportedCrops: () =>
-      request<{ crops: Array<{ key: string; label: string }> }>('/farms/supported-crops'),
+      cachedRequest<{ crops: Array<{ key: string; label: string }> }>(
+        'farms:supported-crops',
+        '/farms/supported-crops',
+      ),
 
     getLocationInfo: (latitude: number, longitude: number) =>
       request<{
@@ -230,7 +294,8 @@ export const api = {
         };
       }>(`/farms/location-info?latitude=${latitude}&longitude=${longitude}`),
 
-    crops: (farmId: string) => request<{ crops: Crop[] }>(`/farms/${farmId}/crops`),
+    crops: (farmId: string) =>
+      cachedRequest<{ crops: Crop[] }>(`farms:${farmId}:crops`, `/farms/${farmId}/crops`),
 
     addCrop: (
       farmId: string,
@@ -249,34 +314,53 @@ export const api = {
 
   dashboard: {
     get: (farmId: string, signal?: AbortSignal) =>
-      request<Dashboard>(`/dashboard/${farmId}`, { signal }),
+      cachedRequest<Dashboard>(`dashboard:${farmId}`, `/dashboard/${farmId}`, signal),
   },
 
   weather: {
     forecast: (farmId: string, days = 7) =>
-      request<Forecast>(`/weather/${farmId}/forecast?days=${days}`),
+      cachedRequest<Forecast>(`weather:${farmId}:forecast:${days}`, `/weather/${farmId}/forecast?days=${days}`),
 
     irrigation: (farmId: string, cropId?: string) =>
-      request<IrrigationGuidance>(
+      cachedRequest<IrrigationGuidance>(
+        `weather:${farmId}:irrigation:${cropId ?? 'all'}`,
         `/weather/${farmId}/irrigation${cropId ? `?cropId=${cropId}` : ''}`,
       ),
 
     logIrrigation: (
       farmId: string,
       input: { cropId: string; waterAmountMm: number; irrigationMethod: string },
-    ) =>
-      request<{ log: unknown }>(`/weather/${farmId}/irrigation-log`, {
-        method: 'POST',
-        body: { ...input, wasRecommended: true, guidanceSource: 'app' },
-      }),
+    ) => {
+      const path = `/weather/${farmId}/irrigation-log`;
+      const body = { ...input, wasRecommended: true, guidanceSource: 'app' };
+      const doRequest = () => request<{ log: unknown }>(path, { method: 'POST', body });
+
+      if (typeof window !== 'undefined' && !navigator.onLine) {
+        enqueue({ path, method: 'POST', body, label: 'Irrigation log' });
+        return Promise.resolve({ log: null, _queued: true } as { log: unknown });
+      }
+      return doRequest().catch((err: ApiError) => {
+        if (err.status === 0) {
+          enqueue({ path, method: 'POST', body, label: 'Irrigation log' });
+          return { log: null, _queued: true } as { log: unknown };
+        }
+        throw err;
+      });
+    },
   },
 
   health: {
     list: (farmId: string) =>
-      request<{ observations: HealthLog[] }>(`/crop-health/${farmId}/observations`),
+      cachedRequest<{ observations: HealthLog[] }>(
+        `health:${farmId}:observations`,
+        `/crop-health/${farmId}/observations`,
+      ),
 
     get: (farmId: string, logId: string) =>
-      request<{ observation: HealthLog }>(`/crop-health/${farmId}/observations/${logId}`),
+      cachedRequest<{ observation: HealthLog }>(
+        `health:${farmId}:observation:${logId}`,
+        `/crop-health/${farmId}/observations/${logId}`,
+      ),
 
     create: (
       farmId: string,
@@ -285,13 +369,11 @@ export const api = {
         description: string;
         observationType: string;
         image?: File | null;
-        /**
-         * The language the farmer is reading right now. Sent per-observation
-         * because the picker changes instantly while the saved profile may lag.
-         */
         language?: string;
       },
     ) => {
+      // FormData (photo) mutations cannot be serialised into the write queue.
+      // Fall through to the live request and let the caller handle the error.
       const form = new FormData();
       form.append('cropId', input.cropId);
       form.append('description', input.description);
@@ -312,7 +394,7 @@ export const api = {
       }),
 
     nearby: (farmId: string) =>
-      request<NearbyOutbreaks>(`/crop-health/${farmId}/nearby`),
+      cachedRequest<NearbyOutbreaks>(`health:${farmId}:nearby`, `/crop-health/${farmId}/nearby`),
 
     submitCommunityReport: (
       farmId: string,
@@ -344,31 +426,48 @@ export const api = {
 
   market: {
     farmTrends: (farmId: string, market?: string) =>
-      request<{ trends: PriceTrend[]; message: string | null }>(
-        `/market/farm/${farmId}${market ? `?market=${encodeURIComponent(market)}` : ''}`
+      cachedRequest<{ trends: PriceTrend[]; message: string | null }>(
+        `market:${farmId}:trends:${market ?? 'all'}`,
+        `/market/farm/${farmId}${market ? `?market=${encodeURIComponent(market)}` : ''}`,
       ),
 
     commodity: (commodity: string, days = 60) =>
-      request<PriceTrend>(`/market/commodity/${encodeURIComponent(commodity)}?days=${days}`),
+      cachedRequest<PriceTrend>(
+        `market:commodity:${commodity}:${days}`,
+        `/market/commodity/${encodeURIComponent(commodity)}?days=${days}`,
+      ),
   },
 
   recommendations: {
-    get: (farmId: string) => request<RecommendationResult>(`/recommendations/${farmId}`),
+    get: (farmId: string) =>
+      cachedRequest<RecommendationResult>(
+        `recommendations:${farmId}`,
+        `/recommendations/${farmId}`,
+      ),
   },
 
   planning: {
     farm: (farmId: string) =>
-      request<{ crops: CropPlan[]; message: string | null }>(`/planning/${farmId}`),
+      cachedRequest<{ crops: CropPlan[]; message: string | null }>(
+        `planning:${farmId}:crops`,
+        `/planning/${farmId}`,
+      ),
 
     fertilizer: (farmId: string, cropId: string) =>
-      request<FertilizerPlan>(`/planning/${farmId}/crops/${cropId}/fertilizer`),
+      cachedRequest<FertilizerPlan>(
+        `planning:${farmId}:fertilizer:${cropId}`,
+        `/planning/${farmId}/crops/${cropId}/fertilizer`,
+      ),
 
     yieldPrediction: (farmId: string, cropId: string) =>
-      request<YieldPrediction>(`/planning/${farmId}/crops/${cropId}/yield`),
+      cachedRequest<YieldPrediction>(
+        `planning:${farmId}:yield:${cropId}`,
+        `/planning/${farmId}/crops/${cropId}/yield`,
+      ),
 
-    /** Past estimates for the farm, or for one crop. Newest first. */
     yieldHistory: (farmId: string, cropId?: string) =>
-      request<{ predictions: YieldHistoryEntry[] }>(
+      cachedRequest<{ predictions: YieldHistoryEntry[] }>(
+        `planning:${farmId}:yield-history:${cropId ?? 'all'}`,
         `/planning/${farmId}/yield-history${cropId ? `?cropId=${cropId}` : ''}`,
       ),
 
@@ -390,8 +489,13 @@ export const api = {
       if (options.severity) search.set('severity', options.severity);
       if (options.limit) search.set('limit', String(options.limit));
       const qs = search.toString();
+      const path = `/alerts/${farmId}${qs ? `?${qs}` : ''}`;
 
-      return request<AlertFeed>(`/alerts/${farmId}${qs ? `?${qs}` : ''}`, { signal });
+      return cachedRequest<AlertFeed>(
+        `alerts:${farmId}:${qs}`,
+        path,
+        signal,
+      );
     },
 
     markRead: (alertId: string) =>

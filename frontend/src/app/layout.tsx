@@ -14,6 +14,12 @@ export const metadata: Metadata = {
   title: 'Smart Farm — your farming advisor',
   description:
     'Weather-based irrigation guidance, crop health checks and market prices for your farm, in one place.',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Smart Farm',
+  },
 };
 
 export const viewport: Viewport = {
