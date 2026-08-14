@@ -5,9 +5,10 @@ import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
 
-import { config, isProduction } from './config';
+import { config, features, isProduction } from './config';
 import { logger } from './common/logger';
 import { prisma } from './common/prisma';
+import { closeMailer, verifyMailer } from './common/mailer';
 import { errorHandler, notFoundHandler } from './common/error-handler';
 import { UPLOAD_ROOT } from './common/upload';
 import { apiRouter } from './routes';
@@ -103,12 +104,25 @@ app.use(errorHandler);
 
 const server = app.listen(config.PORT, () => {
   logger.info(`Smart Farm DSS API listening on port ${config.PORT} (${config.NODE_ENV})`);
+
+  // Prove the Gmail App Password actually authenticates, rather than finding out
+  // when the first farmer requests a code and silently never receives it. Not
+  // awaited and never fatal: a dead mailbox costs email verification, not the
+  // whole server.
+  if (features.email) {
+    void verifyMailer();
+  } else {
+    logger.warn('EMAIL_USER / EMAIL_APP_PASSWORD not set — email OTP is disabled');
+  }
 });
 
 /** Close connections cleanly so in-flight requests are not cut off. */
 async function shutdown(signal: string): Promise<void> {
   logger.info(`${signal} received, shutting down`);
   server.close(async () => {
+    // The pooled SMTP socket is a live handle; leaving it open makes this
+    // shutdown wait out the force-exit timer below instead of ending cleanly.
+    closeMailer();
     await prisma.$disconnect().catch(() => undefined);
     process.exit(0);
   });

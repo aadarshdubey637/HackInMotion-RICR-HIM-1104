@@ -7,12 +7,20 @@ import { useAuth } from '@/lib/auth-context';
 import { ApiError } from '@/lib/api';
 import { Spinner, Notice } from '@/components/ui';
 import { LanguageSwitcher } from '@/components/language-switcher';
+import { GoogleSignIn } from '@/components/google-sign-in';
 import { useTranslation } from '@/lib/language-context';
 
 export default function LoginPage() {
   const { login } = useAuth();
   const { t } = useTranslation();
-  const [email, setEmail] = useState('');
+  /**
+   * One field for a username *or* a Gmail address.
+   *
+   * Two separate fields, or a toggle between them, would make a farmer decide
+   * which kind of thing they are about to type before they type it. The server
+   * looks up both, so there is nothing for them to decide.
+   */
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -24,23 +32,34 @@ export default function LoginPage() {
     setSubmitting(true);
 
     try {
-      await login(email, password);
+      await login(identifier, password);
+      // On success the auth context navigates away; keep the button disabled
+      // so a double-tap cannot fire a second request.
     } catch (err) {
       setSubmitting(false);
       setError(err instanceof ApiError ? err.message : t('auth.serverError'));
     }
   }
 
+<<<<<<< ours
+=======
+  function useDemoAccount() {
+    setIdentifier('farmer');
+    setPassword('demo1234');
+    setError(null);
+  }
+
+>>>>>>> theirs
   return (
     <div className="relative min-h-dvh bg-slate-900 lg:grid lg:grid-cols-2">
       {/* Mobile background blurred image */}
-      <div 
+      <div
         className="absolute inset-0 bg-cover bg-center opacity-10 blur-sm lg:hidden"
         style={{ backgroundImage: 'url("/images/smart_farm_hero.png")' }}
       />
 
       {/* Left panel: Desktop only hero illustration with glassmorphism overlays */}
-      <div 
+      <div
         className="relative hidden flex-col justify-between p-12 text-white bg-cover bg-center lg:flex"
         style={{ backgroundImage: 'linear-gradient(to right, rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.45)), url("/images/smart_farm_hero.png")' }}
       >
@@ -122,19 +141,24 @@ export default function LoginPage() {
               {error ? <Notice tone="warn">{error}</Notice> : null}
 
               <div>
-                <label htmlFor="email" className="block text-sm font-semibold text-slate-300 mb-1">
-                  {t('auth.email')}
+                <label htmlFor="identifier" className="block text-sm font-semibold text-slate-300 mb-1">
+                  Username or Gmail
                 </label>
                 <input
-                  id="email"
-                  type="email"
-                  inputMode="email"
-                  autoComplete="email"
+                  id="identifier"
+                  // `type="text"`, not `type="email"`: an email input refuses to
+                  // submit a bare username, and the browser's own validation error
+                  // would block a farmer typing exactly what they were told to.
+                  type="text"
+                  autoComplete="username"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
                   required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
                   className="w-full rounded-xl border border-slate-700 bg-slate-800/80 px-4 py-3 text-white placeholder-slate-500 transition duration-200 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-                  placeholder="you@example.com"
+                  placeholder="rameshkumar or you@gmail.com"
                 />
               </div>
 
@@ -164,14 +188,26 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              <button 
-                type="submit" 
-                disabled={submitting} 
+              <button
+                type="submit"
+                disabled={submitting}
                 className="w-full flex justify-center items-center gap-2 rounded-xl bg-brand-600 hover:bg-brand-500 py-3 text-sm font-bold text-white shadow-lg transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {submitting ? <Spinner className="h-5 w-5" /> : null}
                 {submitting ? t('common.loading') : t('auth.signIn')}
               </button>
+
+              {/* <button
+                type="button"
+                onClick={useDemoAccount}
+                className="w-full text-slate-400 hover:text-white py-2 text-sm font-semibold transition duration-200 border border-slate-800 hover:border-slate-700 bg-slate-900/50 rounded-xl"
+              >
+                Use the demo account
+              </button> */}
+
+              {/* Renders nothing when Google is not configured or unreachable. */}
+              <GoogleSignIn />
+
             </form>
 
             <div className="pt-4 border-t border-slate-800 text-center">

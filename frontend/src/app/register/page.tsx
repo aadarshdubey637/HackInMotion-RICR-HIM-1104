@@ -1,25 +1,47 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useCallback, useState, type FormEvent } from 'react';
 import Link from 'next/link';
-import { Sprout, CheckCircle2, TrendingUp, Droplet } from 'lucide-react';
+import { Sprout, CheckCircle2, TrendingUp, Droplet, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
 import { ApiError } from '@/lib/api';
 import { Spinner, Notice } from '@/components/ui';
 import { LanguageSwitcher } from '@/components/language-switcher';
+import { GoogleSignIn } from '@/components/google-sign-in';
 import { useTranslation } from '@/lib/language-context';
+
+/**
+ * Registration — one form, one submit.
+ *
+ * Everything the account needs is collected here: full name, username, Gmail
+ * address, mobile number and a password typed twice. The server validates the
+ * same rules again, checks the identifiers are free, hashes the password with
+ * bcrypt and signs the farmer in with the tokens it returns.
+ */
+
+/** Field-level messages from the API, keyed the way `validate.ts` sends them. */
+type FieldErrors = Record<string, string>;
 
 export default function RegisterPage() {
   const { register } = useAuth();
   const { t, language } = useTranslation();
-  const [form, setForm] = useState({ name: '', email: '', phone: '', password: '' });
+
   const [error, setError] = useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [submitting, setSubmitting] = useState(false);
 
-  function update(key: keyof typeof form, value: string) {
-    setForm((prev) => ({ ...prev, [key]: value }));
-    // Clear a field's error as soon as the user edits it.
+  const [form, setForm] = useState({
+    name: '',
+    username: '',
+    email: '',
+    phone: '',
+    password: '',
+    confirmPassword: '',
+  });
+  const [showPassword, setShowPassword] = useState(false);
+
+  /** Clear one field's error as soon as the farmer edits it. */
+  function clearFieldError(key: string) {
     setFieldErrors((prev) => {
       if (!(key in prev)) return prev;
       const next = { ...prev };
@@ -28,44 +50,63 @@ export default function RegisterPage() {
     });
   }
 
+  function update(key: keyof typeof form, value: string) {
+    setForm((prev) => ({ ...prev, [key]: value }));
+    clearFieldError(key);
+  }
+
+  /**
+   * Turn a failure into either inline field errors or one banner — never both,
+   * so a farmer is not told the same thing twice in two places.
+   */
+  const showError = useCallback((err: unknown, fallback: string) => {
+    if (err instanceof ApiError) {
+      const details = err.details ?? {};
+      const hasFieldErrors = Object.keys(details).length > 0;
+      setFieldErrors(hasFieldErrors ? details : {});
+      setError(hasFieldErrors ? null : err.message);
+    } else {
+      setError(fallback);
+    }
+  }, []);
+
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setError(null);
     setFieldErrors({});
+
+    // Checked here for an instant answer; the server checks it too and is the
+    // one that decides. Saves a round trip on the most common typo.
+    if (form.password !== form.confirmPassword) {
+      setFieldErrors({ confirmPassword: 'Both passwords must match' });
+      return;
+    }
+
     setSubmitting(true);
 
     try {
-      await register({
-        name: form.name,
-        email: form.email,
-        password: form.password,
-        phone: form.phone || undefined,
-        // Save the language picked on this screen, so the account opens in it
-        // on any other device.
-        language,
-      });
+      // Save the language picked on this screen, so the account opens in it
+      // on any other device.
+      await register({ ...form, language });
+      // On success the auth context stores the tokens and navigates to email
+      // verification, which is where the farmer enters the code we just sent.
+      // Leave `submitting` set so a double-tap cannot fire again.
     } catch (err) {
       setSubmitting(false);
-      if (err instanceof ApiError) {
-        // Surface per-field messages inline where the backend gave them.
-        if (err.details) setFieldErrors(err.details);
-        setError(err.details ? null : err.message);
-      } else {
-        setError('Could not create your account. Please try again.');
-      }
+      showError(err, 'Could not create your account. Please try again.');
     }
   }
 
   return (
     <div className="relative min-h-dvh bg-slate-900 lg:grid lg:grid-cols-2">
       {/* Mobile background blurred image */}
-      <div 
+      <div
         className="absolute inset-0 bg-cover bg-center opacity-10 blur-sm lg:hidden"
         style={{ backgroundImage: 'url("/images/smart_farm_hero.png")' }}
       />
 
       {/* Left panel: Desktop only hero illustration with glassmorphism overlays */}
-      <div 
+      <div
         className="relative hidden flex-col justify-between p-12 text-white bg-cover bg-center lg:flex"
         style={{ backgroundImage: 'linear-gradient(to right, rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.45)), url("/images/smart_farm_hero.png")' }}
       >
@@ -148,7 +189,7 @@ export default function RegisterPage() {
 
               <Field
                 id="name"
-                label="Your name"
+                label={t('auth.name')}
                 value={form.name}
                 onChange={(v) => update('name', v)}
                 error={fieldErrors.name}
@@ -158,58 +199,127 @@ export default function RegisterPage() {
               />
 
               <Field
+                id="username"
+                label="Username"
+                value={form.username}
+                onChange={(v) => update('username', v)}
+                error={fieldErrors.username}
+                autoComplete="username"
+                placeholder="rameshkumar"
+                hint="You will use this to sign in. Letters, numbers, dots and underscores."
+                // Keeps phone keyboards out of caps mode and off autocorrect,
+                // both of which fight a username field.
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                required
+              />
+
+              <Field
                 id="email"
-                label="Email"
+                label="Gmail address"
                 type="email"
                 inputMode="email"
                 value={form.email}
                 onChange={(v) => update('email', v)}
                 error={fieldErrors.email}
                 autoComplete="email"
-                placeholder="you@example.com"
+                placeholder="you@gmail.com"
+                hint="Must end in @gmail.com, so “Continue with Google” works on this account too."
+                autoCapitalize="none"
+                autoCorrect="off"
                 required
               />
 
               <Field
                 id="phone"
-                label="Phone (optional)"
+                label="Mobile number"
                 type="tel"
                 inputMode="tel"
                 value={form.phone}
                 onChange={(v) => update('phone', v)}
                 error={fieldErrors.phone}
                 autoComplete="tel"
-                placeholder="+91 98765 43210"
-              />
-
-              <Field
-                id="password"
-                label="Password"
-                type="password"
-                value={form.password}
-                onChange={(v) => update('password', v)}
-                error={fieldErrors.password}
-                autoComplete="new-password"
-                placeholder="At least 8 characters"
-                hint="At least 8 characters."
+                placeholder="98765 43210"
+                hint="10-digit Indian mobile number."
                 required
               />
 
-              <button 
-                type="submit" 
-                disabled={submitting} 
+              <div>
+                <label htmlFor="password" className="block text-sm font-semibold text-slate-300 mb-1">
+                  {t('auth.password')}
+                </label>
+                <div className="relative">
+                  <input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="new-password"
+                    required
+                    value={form.password}
+                    onChange={(e) => update('password', e.target.value)}
+                    aria-invalid={fieldErrors.password ? true : undefined}
+                    aria-describedby={fieldErrors.password ? 'password-error' : 'password-hint'}
+                    className={`w-full rounded-xl border bg-slate-800/80 px-4 py-3 pr-12 text-white placeholder-slate-500 transition duration-200 focus:outline-none focus:ring-2 focus:ring-brand-500/20 ${
+                      fieldErrors.password
+                        ? 'border-red-400 focus:border-red-500 focus:ring-red-500'
+                        : 'border-slate-700 focus:border-brand-500'
+                    }`}
+                    placeholder="At least 8 characters"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    className="absolute right-1 top-1 flex h-[44px] w-10 items-center justify-center rounded-lg text-slate-400 hover:text-white"
+                  >
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
+                </div>
+                {fieldErrors.password ? (
+                  <p id="password-error" className="mt-1.5 text-xs font-semibold text-red-400">
+                    {fieldErrors.password}
+                  </p>
+                ) : (
+                  <p id="password-hint" className="mt-1 text-xs text-slate-400">
+                    At least 8 characters.
+                  </p>
+                )}
+              </div>
+
+              <Field
+                id="confirmPassword"
+                label="Confirm password"
+                // Both boxes follow the eye toggle together: they are meant to hold
+                // the same text, and revealing only one makes them harder to compare.
+                type={showPassword ? 'text' : 'password'}
+                value={form.confirmPassword}
+                onChange={(v) => update('confirmPassword', v)}
+                error={fieldErrors.confirmPassword}
+                autoComplete="new-password"
+                placeholder="Type it again"
+                required
+              />
+
+              <button
+                type="submit"
+                disabled={submitting}
                 className="w-full flex justify-center items-center gap-2 rounded-xl bg-brand-600 hover:bg-brand-500 py-3 text-sm font-bold text-white shadow-lg transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {submitting ? <Spinner className="h-5 w-5" /> : null}
                 {submitting ? 'Creating account…' : 'Create account'}
               </button>
+
+              {/* "Sign up with Google" wording here — same flow, but this is the
+                  screen where the farmer expects to be creating something. A Google
+                  account needs no username and no password. */}
+              <GoogleSignIn text="signup_with" />
             </form>
 
             <div className="pt-4 border-t border-slate-800 text-center">
               <p className="text-sm text-slate-400">
-                Already have an account?{' '}
+                {t('auth.alreadyAccount')}{' '}
                 <Link href="/login" className="font-bold text-brand-400 hover:text-brand-300 underline underline-offset-4">
-                  Sign in
+                  {t('auth.signIn')}
                 </Link>
               </p>
             </div>

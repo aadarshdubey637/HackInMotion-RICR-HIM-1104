@@ -26,8 +26,11 @@ import { cn } from '@/lib/utils';
  * and confirms *in Punjabi*. Script detection catches the same case for
  * dictated text.
  *
- * When nothing matches, we retry across the other locales before giving up —
- * that covers the farmer whose app is in English but who speaks only Marathi.
+ * The farmer whose app is in English but who speaks only Marathi is covered by
+ * the romanised marker sets in speech.ts, not by re-listening: an English
+ * recogniser hands back Latin text, and the markers read the language out of it.
+ * Reopening the microphone at someone who has finished speaking would buy a
+ * minute of dead air and then fail anyway.
  */
 /**
  * Broadcast so whichever page is mounted can narrate itself.

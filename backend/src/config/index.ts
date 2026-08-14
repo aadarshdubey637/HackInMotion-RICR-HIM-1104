@@ -47,6 +47,29 @@ const envSchema = z.object({
   OPENWEATHER_API_KEY: z.string().optional(),
   PLANT_ID_API_KEY: z.string().optional(),
   DATA_GOV_IN_API_KEY: z.string().optional(),
+
+  // Google Sign-In. Only the client id is needed: we verify the ID token the
+  // browser obtained, rather than running a server-side code exchange, so
+  // there is no client *secret* anywhere in this system. Unset simply means
+  // the "Continue with Google" button is not offered.
+  GOOGLE_CLIENT_ID: z.string().optional(),
+
+  // ── Email OTP delivery (Gmail SMTP) ──
+  // Both must be present for OTP email to send; either one alone is a
+  // half-configured mailbox, which `features.email` below treats as off.
+  EMAIL_USER: z.string().email('EMAIL_USER must be an email address').optional(),
+
+  // A Google App Password — 16 characters, no spaces. Google displays it in
+  // four groups of four, and pasting it that way is the single most common
+  // way this ends up failing to authenticate, so the spaces are stripped
+  // here rather than rejected: the grouped form is what the user was shown.
+  EMAIL_APP_PASSWORD: z
+    .string()
+    .transform((value) => value.replace(/\s/g, ''))
+    .refine((value) => value.length === 16, {
+      message: 'EMAIL_APP_PASSWORD must be a 16-character Google App Password',
+    })
+    .optional(),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;
@@ -78,4 +101,8 @@ export const features = {
   ollamaVision: config.OLLAMA_VISION_ENABLED,
   plantIdApi: Boolean(config.PLANT_ID_API_KEY),
   dataGovIn: Boolean(config.DATA_GOV_IN_API_KEY),
+  googleAuth: Boolean(config.GOOGLE_CLIENT_ID),
+  // Both halves required: a username with no app password cannot authenticate
+  // to Gmail, and an app password with no username has no mailbox to send from.
+  email: Boolean(config.EMAIL_USER && config.EMAIL_APP_PASSWORD),
 } as const;

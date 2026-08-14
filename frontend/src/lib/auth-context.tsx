@@ -12,16 +12,41 @@ interface AuthState {
   currentFarm: Farm | null;
   /** True until the initial session check finishes. */
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  /** `identifier` is a username or a Gmail address. */
+  login: (identifier: string, password: string) => Promise<void>;
+  /**
+   * Create the account, sign in, and land on email verification.
+   *
+   * Unlike `login`, this does *not* go on to the dashboard: it stops at
+   * `/verify-email`. The tokens are stored first because both OTP endpoints are
+   * authenticated — the code is emailed to the address on the account, never to
+   * one supplied in a request — so the farmer must already hold a session by the
+   * time that screen loads. `continueToApp` finishes the journey.
+   */
   register: (input: {
-    email: string;
-    password: string;
     name: string;
-    phone?: string;
+    username: string;
+    email: string;
+    phone: string;
+    password: string;
+    confirmPassword: string;
     /** Language chosen on the sign-up screen, saved with the account. */
     language?: string;
   }) => Promise<void>;
+  /**
+   * Sign in with the ID token Google handed the browser. Covers sign-up too —
+   * the backend creates the account when it has never seen this Google user.
+   */
+  loginWithGoogle: (idToken: string, language?: string) => Promise<void>;
   logout: () => void;
+  /**
+   * Load farms and move on to the app — the tail of a sign-in, on its own.
+   *
+   * `/verify-email` calls this once the code is accepted, so registration ends
+   * in exactly the same place a login does. Split out of `afterAuth` rather than
+   * duplicated, so "where does a signed-in farmer land" stays one decision.
+   */
+  continueToApp: () => Promise<void>;
   selectFarm: (farmId: string) => void;
   /** Re-fetch farms after creating or editing one. */
   refreshFarms: () => Promise<Farm[]>;
@@ -79,35 +104,66 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, [loadFarms]);
 
+  /**
+   * Load farms and route onward. The tail end of every successful sign-in.
+   *
+   * A farmer with no farm goes straight to setup — the profile drives every
+   * other feature, so there is nothing useful to show without it.
+   */
+  const continueToApp = useCallback(async () => {
+    const list = await loadFarms();
+    router.push(list.length === 0 ? '/onboarding' : '/dashboard');
+  }, [loadFarms, router]);
+
   const afterAuth = useCallback(
     async (result: { user: User; tokens: Parameters<typeof tokenStore.set>[0] }) => {
       tokenStore.set(result.tokens);
       setUser(result.user);
-
-      const list = await loadFarms();
-      // A farmer with no farm goes straight to setup — the profile drives
-      // every other feature, so there is nothing useful to show without it.
-      router.push(list.length === 0 ? '/onboarding' : '/dashboard');
+      await continueToApp();
     },
-    [loadFarms, router],
+    [continueToApp],
   );
 
   const login = useCallback(
-    async (email: string, password: string) => {
-      await afterAuth(await api.auth.login(email, password));
+    async (identifier: string, password: string) => {
+      await afterAuth(await api.auth.login(identifier, password));
     },
     [afterAuth],
   );
 
+  /**
+   * Registration signs the farmer in, then stops at email verification.
+   *
+   * "Registered means signed in" still holds — the endpoint returns the same
+   * `{ user, tokens }` as login and the tokens are stored here, which is what
+   * lets the authenticated OTP endpoints work on the next screen. What differs
+   * is only the destination: `/verify-email` instead of the dashboard.
+   *
+   * Farms are deliberately not loaded yet. A brand-new account has none, so the
+   * request would be a wasted round trip on the slowest connection in the
+   * journey; `continueToApp` does it after the code is accepted.
+   */
   const register = useCallback(
     async (input: {
-      email: string;
-      password: string;
       name: string;
-      phone?: string;
+      username: string;
+      email: string;
+      phone: string;
+      password: string;
+      confirmPassword: string;
       language?: string;
     }) => {
-      await afterAuth(await api.auth.register(input));
+      const result = await api.auth.register(input);
+      tokenStore.set(result.tokens);
+      setUser(result.user);
+      router.push('/verify-email');
+    },
+    [router],
+  );
+
+  const loginWithGoogle = useCallback(
+    async (idToken: string, language?: string) => {
+      await afterAuth(await api.auth.google(idToken, language));
     },
     [afterAuth],
   );
@@ -147,7 +203,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loading,
         login,
         register,
+        loginWithGoogle,
         logout,
+        continueToApp,
         selectFarm,
         refreshFarms: loadFarms,
         setUser,

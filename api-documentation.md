@@ -35,7 +35,8 @@ render errors inline. Messages are written to be shown directly to a farmer.
 
 ### Authentication
 
-All endpoints except `/auth/register`, `/auth/login` and `/auth/refresh` require:
+All endpoints except `/auth/register`, `/auth/login`, `/auth/google` and
+`/auth/refresh` require:
 
 ```
 Authorization: Bearer <accessToken>
@@ -89,31 +90,91 @@ Liveness probe. Returns `503` if the database is unreachable.
 
 ### `POST /api/auth/register`
 
+One call creates the account and signs the farmer in.
+
 | Field | Type | Rules |
 |---|---|---|
-| `email` | string | Valid email, lowercased |
-| `password` | string | Min 8 characters |
 | `name` | string | 2–100 characters |
-| `phone` | string | Optional, 7–15 digits |
+| `username` | string | 3–20 chars, `a-z0-9._`, must start/end alphanumeric, no `..`/`__`; lowercased |
+| `email` | string | Must end `@gmail.com`; lowercased |
+| `phone` | string | Indian mobile. `9876543210`, `+91 98765 43210`, `098765-43210` all accepted; normalised to `+919876543210` |
+| `password` | string | Min 8 characters |
+| `confirmPassword` | string | Must equal `password` — compared server-side, not trusted from the browser |
 | `language` | string | Optional, defaults `en` |
 
-**`201`**
+The password is hashed with bcrypt at `BCRYPT_ROUNDS` before it is stored; the
+plaintext is never written or logged. Username, Gmail address and mobile number
+are each checked for availability before the insert.
+
+**`201`** — the same `{ user, tokens }` shape as login, which is what makes
+registration and sign-in one moment: the client stores these tokens and goes
+straight to the dashboard.
 ```json
 {
   "success": true,
   "data": {
-    "user": { "id": "6a7d…", "email": "farmer@demo.com", "name": "Ramesh Kumar", "role": "FARMER" },
+    "user": {
+      "id": "6a7d…", "email": "ramesh@gmail.com", "username": "rameshkumar",
+      "name": "Ramesh Kumar", "phone": "+919876543210", "role": "FARMER"
+    },
     "tokens": { "accessToken": "eyJ…", "refreshToken": "eyJ…", "expiresIn": 604800000 }
   }
 }
 ```
 
-`409` if the email is already registered.
+| Response | Meaning |
+|---|---|
+| `400 VALIDATION_ERROR` | A field failed validation; `details` is keyed by field name |
+| `409 CONFLICT` | `details` names which of `username` / `email` / `phone` is taken |
 
 ### `POST /api/auth/login`
 
-Body: `{ "email", "password" }`. Returns the same shape as register.
-`401` on bad credentials — the message does not reveal whether the email exists.
+Body: `{ "identifier", "password" }`, where `identifier` is a **username or a
+Gmail address** — the server looks up both. `{ "email", … }` is still accepted as a
+fallback for clients written against the previous contract.
+
+Returns the same shape as register. `401` on bad credentials, and the message
+does not reveal whether the account exists.
+
+Logging out does not send anyone back to registration: the account, its username
+and its password hash outlive the session.
+
+### `POST /api/auth/google`
+
+Sign in **or** sign up with Google. Body:
+
+```json
+{ "idToken": "<ID token from Google Identity Services>", "language": "hi" }
+```
+
+`language` is optional and applied only when this call creates the account — it
+carries over the language the farmer selected on the sign-in screen.
+
+Returns the register/login shape plus `isNewUser`, with `201` when an account was
+created and `200` when an existing one was used:
+
+```json
+{ "user": { … }, "tokens": { … }, "isNewUser": false }
+```
+
+The ID token is verified server-side against Google's public keys, checking
+signature, issuer, expiry and that the audience is *our* client id. Only the
+client id is configured (`GOOGLE_CLIENT_ID`) — there is no client secret in this
+system, because the browser obtains the token and we merely verify it.
+
+If the email matches an existing password account and Google reports it verified,
+the Google identity is **linked** to that account rather than rejected — the
+alternative locks a farmer out of their own farm data. Tokens for unverified
+Google emails are refused, which is what makes that linking safe.
+
+| Response | Meaning |
+|---|---|
+| `400 VALIDATION_ERROR` | `idToken` missing, or `GOOGLE_CLIENT_ID` not configured on this server |
+| `401 AUTHENTICATION_ERROR` | Token invalid, expired, issued to another app, or email unverified |
+
+Related: an account created this way has no password, so `POST /api/auth/login`
+against it returns `401` telling the farmer to use the Google button, and
+`POST /api/auth/change-password` returns `400`.
 
 ### `POST /api/auth/refresh`
 Body: `{ "refreshToken" }` → `{ "tokens": { … } }`. The old refresh token is
@@ -127,6 +188,10 @@ Returns `{ "user": { … } }`.
 
 ### `PATCH /api/auth/me` 🔒
 Body: any of `name`, `phone`, `language`, `avatarUrl`.
+
+`phone` runs through the registration normaliser, so an edited number cannot
+collide with another account's by being spelled differently. Changing it returns
+`409` if another account already holds that number.
 
 ### `POST /api/auth/change-password` 🔒
 Body: `{ "currentPassword", "newPassword" }`. Revokes all other sessions.

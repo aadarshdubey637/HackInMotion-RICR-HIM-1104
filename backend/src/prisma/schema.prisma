@@ -125,23 +125,62 @@ enum HealthStatus {
 // ─────────────────────────────── Models ──────────────────────────────
 
 model User {
-  id           String    @id @default(auto()) @map("_id") @db.ObjectId
-  email        String    @unique
-  passwordHash String    @map("password_hash")
-  name         String
-  phone        String?
-  language     String    @default("en")
-  role         UserRole  @default(FARMER)
-  avatarUrl    String?   @map("avatar_url")
-  preferences  Json?
-  isVerified   Boolean   @default(false) @map("is_verified")
-  lastLoginAt  DateTime? @map("last_login_at")
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
+  id    String @id @default(auto()) @map("_id") @db.ObjectId
+  email String @unique
 
-  farms    Farm[]
-  sessions Session[]
+  /// Null for accounts created through Google Sign-In, which never set a
+  /// password. Every password path must treat null as "this account does not
+  /// sign in that way" rather than assuming a hash is present.
+  passwordHash String? @map("password_hash")
 
+  /// Google's stable subject id (`sub`) for the account. Matched on before
+  /// email, because a Google user may later change the address on their
+  /// Google account and `sub` is the only identifier guaranteed not to move.
+  ///
+  /// Indexed but deliberately NOT `@unique`. MongoDB treats a missing field as
+  /// null for indexing, so a unique index here rejects the *second* password-only
+  /// account — every one of them has no google_id, and the index sees a pile of
+  /// duplicate nulls (E11000). Sparse indexes fix that but Prisma cannot declare
+  /// one. Uniqueness is not lost: one Google account has one email, and `email`
+  /// above is unique, so two rows can never share a google_id.
+  googleId String? @map("google_id")
+
+  /// Chosen at registration; a second way to sign in besides the email address.
+  /// Stored lowercased — a farmer should not have to remember capitalisation to
+  /// get back into their own account.
+  ///
+  /// Optional and deliberately NOT `@unique`, for exactly the reason documented
+  /// on `googleId` above: MongoDB indexes a *missing* field as null, so a unique
+  /// index here would reject the second account that has no username — and
+  /// every account created through Google Sign-In has none. Uniqueness is
+  /// enforced in application code before insert (`assertIdentifiersAreFree` in
+  /// auth.service.ts). See PRE-DEPLOY note at the bottom of this file for the
+  /// sparse index that closes the remaining race window.
+  username String?
+
+  name String
+
+  /// Mobile number in E.164 form (`+919876543210`), collected at registration.
+  /// Null on accounts created through Google Sign-In, which never ask for one.
+  /// Same nullable-unique situation as `username`: indexed, checked in code.
+  phone String?
+
+  language    String    @default("en")
+  role        UserRole  @default(FARMER)
+  avatarUrl   String?   @map("avatar_url")
+  preferences Json?
+  isVerified  Boolean   @default(false) @map("is_verified")
+  lastLoginAt DateTime? @map("last_login_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  farms     Farm[]
+  sessions  Session[]
+  emailOtps EmailOtp[]
+
+  @@index([googleId])
+  @@index([username])
+  @@index([phone])
   @@map("users")
 }
 
@@ -159,6 +198,58 @@ model Session {
   @@index([userId])
   @@index([expiresAt])
   @@map("sessions")
+}
+
+/// A one-time code emailed to a farmer to prove they own their Gmail address.
+///
+/// Only password accounts ever get one. Google Sign-In accounts arrive already
+/// verified — Google asserted the address — so `loginWithGoogle` sets
+/// `isVerified` directly and never issues a code.
+///
+/// Rows are kept after use rather than deleted: `consumedAt` is what makes a
+/// code single-use, and the spent rows are also what the per-hour send limit in
+/// `email-otp.ts` counts. `cleanupExpiredOtps` clears the old ones.
+model EmailOtp {
+  id     String @id @default(auto()) @map("_id") @db.ObjectId
+  userId String @map("user_id") @db.ObjectId
+
+  /// bcrypt hash of the six digits — never the digits themselves.
+  ///
+  /// A six-digit code is only a million possibilities, so a leaked database
+  /// dump would give up plaintext codes instantly to anything faster. bcrypt at
+  /// BCRYPT_ROUNDS makes that search cost hours instead of milliseconds, and by
+  /// then every code in the table is long expired. It is the same hash the
+  /// account password uses, for the same reason.
+  codeHash String @map("code_hash")
+
+  /// Ten minutes after issue. Short on purpose: the farmer has the mail open.
+  expiresAt DateTime @map("expires_at")
+
+  /// Wrong guesses against this code. At the limit the code is dead and a new
+  /// one must be requested — that cap, not the hash, is what stops an online
+  /// brute force of a six-digit space.
+  attempts Int @default(0)
+
+  /// Set the moment the code is accepted. Non-null means spent: re-sending the
+  /// same digits a second time must not verify the account again.
+  ///
+  /// MongoDB trap, verified by experiment. Prisma does not write an optional
+  /// field it was not given, so a row created without this one has no
+  /// `consumed_at` key at all — and `where: { consumedAt: null }` does NOT match
+  /// a missing key, even though MongoDB's own `$eq: null` would. Querying it the
+  /// obvious way makes every emailed code unfindable and verification reject
+  /// correct codes as expired. Always go through `NOT_CONSUMED` in email-otp.ts,
+  /// which accepts both shapes.
+  consumedAt DateTime? @map("consumed_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// The lookup every verify does: newest live code for one farmer.
+  @@index([userId, createdAt])
+  @@index([expiresAt])
+  @@map("email_otps")
 }
 
 model Farm {
@@ -506,3 +597,28 @@ model YieldPredictionLog {
   @@index([farmId, predictedAt])
   @@map("yield_prediction_logs")
 }
+
+// ───────────────────── AFTER EVERY db push: sparse indexes ─────────────────────
+//
+// `User.username` and `User.phone` are unique to a farmer, but Prisma cannot
+// declare the *sparse* unique index MongoDB needs for a nullable field (see the
+// note on `username`). Application code checks both before every insert, which
+// leaves a race window of a few milliseconds: two farmers submitting the same
+// username at the same instant could both pass the check.
+//
+// Closing it is `npm run db:indexes` (src/prisma/apply-sparse-indexes.ts), and it
+// must run AFTER every `prisma db push` — not once. Push syncs indexes to exactly
+// what this schema declares, and it *drops* anything else it finds, logging the
+// removal as `[-] Unique index users_username_sparse_unique`. Verified, not
+// assumed. So the sequence is always:
+//
+//   npm run db:push && npm run db:indexes
+//
+// A sparse unique index coexists fine with the plain `@@index` Prisma creates on
+// the same field, as long as the two have different names — which the script
+// handles. Sparse means documents missing the field are skipped entirely, so the
+// pile of Google-Sign-In accounts with no username never collide.
+//
+// Once the indexes exist, a lost race surfaces as a Prisma P2002, which
+// `register` already translates into the same friendly "already taken" message
+// as the pre-check.

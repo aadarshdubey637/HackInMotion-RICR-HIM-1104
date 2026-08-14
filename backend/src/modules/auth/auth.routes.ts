@@ -8,12 +8,22 @@ import {
   refreshTokenSchema,
   changePasswordSchema,
   updateProfileSchema,
+  googleAuthSchema,
+  verifyEmailSchema,
 } from './auth.schema';
 import * as service from './auth.service';
+import { sendVerificationOtp, verifyOtp } from './email-otp';
 
 export const authRouter = Router();
 
-/** POST /api/auth/register — create a farmer account. */
+// ───────────────────────── Registration ─────────────────────────
+
+/**
+ * POST /api/auth/register — create a farmer account and sign in.
+ *
+ * 201, and the body is the same `{ user, tokens }` login returns — the farmer is
+ * signed in by the act of registering and goes straight to the dashboard.
+ */
 authRouter.post(
   '/register',
   validateBody(registerSchema),
@@ -23,13 +33,33 @@ authRouter.post(
   }),
 );
 
-/** POST /api/auth/login */
+// ───────────────────────── Sign in ─────────────────────────
+
+/** POST /api/auth/login — username or Gmail, plus password. */
 authRouter.post(
   '/login',
   validateBody(loginSchema),
   handler(async (req, res) => {
     const result = await service.login(req.body);
     ok(res, result);
+  }),
+);
+
+/**
+ * POST /api/auth/google — sign in or sign up with a Google ID token.
+ *
+ * 200 for an existing account, 201 when this created one, so the client can
+ * tell a new farmer from a returning one without a second request.
+ *
+ * A Google account is verified by Google, has no password and no username, and
+ * needs no mobile number.
+ */
+authRouter.post(
+  '/google',
+  validateBody(googleAuthSchema),
+  handler(async (req, res) => {
+    const { isNewUser, ...result } = await service.loginWithGoogle(req.body);
+    ok(res, { ...result, isNewUser }, isNewUser ? 201 : 200);
   }),
 );
 
@@ -71,6 +101,47 @@ authRouter.patch(
   handler(async (req, res) => {
     const user = await service.updateProfile(userId(req), req.body);
     ok(res, { user });
+  }),
+);
+
+// ───────────────────── Email verification (OTP) ─────────────────────
+//
+// Both routes are authenticated. Registration already returns tokens, so the
+// farmer holds one by the time this screen appears, and taking the identity from
+// the token rather than the body is what stops these endpoints from being an
+// account-existence oracle or a way to send mail to arbitrary addresses.
+
+/**
+ * POST /api/auth/send-otp — email a 6-digit code to the signed-in farmer.
+ *
+ * 429 with `retryAfter` while the 60-second resend cooldown is running or the
+ * hourly ceiling is reached; 502 if the mailbox is unconfigured or Gmail
+ * rejected the message.
+ */
+authRouter.post(
+  '/send-otp',
+  authenticate,
+  handler(async (req, res) => {
+    const result = await sendVerificationOtp(userId(req));
+    ok(res, result);
+  }),
+);
+
+/**
+ * POST /api/auth/verify-email — submit the code.
+ *
+ * Idempotent: an already-verified account returns 200 rather than an error.
+ */
+authRouter.post(
+  '/verify-email',
+  authenticate,
+  validateBody(verifyEmailSchema),
+  handler(async (req, res) => {
+    await verifyOtp(userId(req), req.body.code);
+    // The updated profile comes back so the client can replace its cached user
+    // without a follow-up GET /me.
+    const user = await service.getProfile(userId(req));
+    ok(res, { user, message: 'Email verified' });
   }),
 );
 

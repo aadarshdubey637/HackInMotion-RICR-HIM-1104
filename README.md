@@ -77,6 +77,29 @@ npm run db:seed
 
 ---
 
+## Authentication
+
+Two ways in, and the second one is optional to run:
+
+- **Username or Gmail + password.** Always available, no keys to configure. Sign-in
+  takes one field for either identifier — the server looks up both, so a farmer
+  does not have to know which kind of thing they are typing. Registration collects
+  name, username, Gmail address, mobile number and the password twice.
+- **Continue with Google.** Shown only when `GOOGLE_CLIENT_ID` is configured. The
+  browser obtains the ID token and the backend verifies it, so there is **no client
+  secret** anywhere in this project. Unset simply hides the button.
+
+Registration ends on `/verify-email`, where a 6-digit code emailed via Gmail SMTP
+confirms the address. With `EMAIL_USER` / `EMAIL_APP_PASSWORD` unset the server
+still boots and everything else works — OTP email is just disabled, the same way
+the other optional keys degrade.
+
+`EMAIL_APP_PASSWORD` must be a Google **App Password** (16 characters, 2-Step
+Verification required), not the Gmail account password. See `.env.example` for the
+step-by-step.
+
+---
+
 ## Project structure
 
 ```
@@ -101,8 +124,10 @@ smart-farm-dss/
 | File | Purpose | Committed? |
 |---|---|---|
 | `.env.example` | Template with shared Atlas URL pre-filled | ✅ Yes |
+| `backend/.env.example` | Backend-only template (same values) | ✅ Yes |
+| `frontend/.env.local.example` | Frontend template (API URL, Google client id) | ✅ Yes |
 | `backend/.env` | Actual secrets (copied from `.env.example`) | ❌ No (gitignored) |
-| `frontend/.env.local` | Frontend API URL | ❌ No (gitignored) |
+| `frontend/.env.local` | Frontend API URL and Google client id | ❌ No (gitignored) |
 
 `npm run setup` creates both ignored files automatically.
 
@@ -132,6 +157,7 @@ npm run db:studio       # Open Prisma Studio (visual DB browser)
 | Fertilizer & Resource Planning | ✅ ICAR-based dosing, soil-adjusted |
 | Yield Prediction | ✅ Transparent stress-factor model |
 | Offline-First | ✅ localStorage cache + write queue, auto-sync on reconnect |
+| Google Sign-In + Email OTP | ✅ Optional — both degrade gracefully when unconfigured |
 
 ---
 
@@ -140,7 +166,7 @@ npm run db:studio       # Open Prisma Studio (visual DB browser)
 - **Backend:** Node.js, Express, TypeScript, Prisma ORM
 - **Database:** MongoDB Atlas
 - **Frontend:** Next.js 14, React, Tailwind CSS, Recharts
-- **Auth:** JWT (access + refresh tokens)
+- **Auth:** JWT (access + refresh tokens), optional Google Sign-In, email OTP via Gmail SMTP
 - **Weather:** Open-Meteo (no API key needed)
 - **Offline:** localStorage cache + write queue (no service worker)
 

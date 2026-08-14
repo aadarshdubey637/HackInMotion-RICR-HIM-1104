@@ -8,10 +8,21 @@ export type SoilType = 'SANDY' | 'LOAMY' | 'CLAY' | 'SILTY' | 'PEATY' | 'CHALKY'
 export interface User {
   id: string;
   email: string;
+  /** Null on accounts created through Google Sign-In, which never pick one. */
+  username: string | null;
   name: string;
   phone: string | null;
   language: string;
   role: string;
+  /**
+   * Whether the email address has been confirmed by entering an emailed code.
+   *
+   * True from the start on Google accounts — Google already asserted the
+   * address. A password account starts false and becomes true on
+   * `/verify-email`. The server has always sent this field; it was simply not
+   * read here before.
+   */
+  isVerified: boolean;
 }
 
 export interface AuthTokens {

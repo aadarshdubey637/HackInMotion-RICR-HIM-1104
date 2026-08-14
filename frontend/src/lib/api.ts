@@ -241,24 +241,64 @@ export function ensureFlushListener(): void {
 
 export const api = {
   auth: {
-    login: (email: string, password: string) =>
+    /** `identifier` is a username or a Gmail address — the server accepts either. */
+    login: (identifier: string, password: string) =>
       request<{ user: User; tokens: AuthTokens }>('/auth/login', {
         method: 'POST',
-        body: { email, password },
+        body: { identifier, password },
         anonymous: true,
       }),
 
+    /**
+     * Create an account. Returns the same `{ user, tokens }` as login, which is
+     * what lets the caller sign the farmer straight in.
+     */
     register: (input: {
-      email: string;
-      password: string;
       name: string;
-      phone?: string;
+      username: string;
+      email: string;
+      phone: string;
+      password: string;
+      confirmPassword: string;
       language?: string;
     }) =>
       request<{ user: User; tokens: AuthTokens }>('/auth/register', {
         method: 'POST',
         body: input,
         anonymous: true,
+      }),
+
+    /**
+     * Exchange a Google ID token for our own session.
+     *
+     * `language` is only applied when this call creates the account — it is the
+     * language the farmer had selected on the sign-in screen, and losing it at
+     * the moment of sign-up would drop them into an English app.
+     */
+    google: (idToken: string, language?: string) =>
+      request<{ user: User; tokens: AuthTokens; isNewUser: boolean }>('/auth/google', {
+        method: 'POST',
+        body: { idToken, language },
+        anonymous: true,
+      }),
+
+    /**
+     * Email a fresh 6-digit verification code to the signed-in farmer.
+     *
+     * Authenticated, and deliberately takes no address: the server reads it from
+     * the account. `resendAfter` is the cooldown in seconds, which the verify
+     * screen counts down rather than hard-coding.
+     */
+    sendOtp: () =>
+      request<{ email: string; expiresAt: string; resendAfter: number }>('/auth/send-otp', {
+        method: 'POST',
+      }),
+
+    /** Submit the code. Returns the updated profile, so `isVerified` is fresh. */
+    verifyEmail: (code: string) =>
+      request<{ user: User; message: string }>('/auth/verify-email', {
+        method: 'POST',
+        body: { code },
       }),
 
     me: () => cachedRequest<{ user: User }>('auth:me', '/auth/me'),

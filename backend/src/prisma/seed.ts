@@ -15,6 +15,7 @@ import { CROPS } from '../domain/crops';
 import { seedPriceHistory } from '../modules/market/market.service';
 
 const DEMO_EMAIL = 'farmer@demo.com';
+const DEMO_USERNAME = 'farmer';
 const DEMO_PASSWORD = 'demo1234';
 
 async function main(): Promise<void> {
@@ -59,15 +60,19 @@ async function main(): Promise<void> {
     where: { email: DEMO_EMAIL },
     create: {
       email: DEMO_EMAIL,
+      // Lets the demo show the username half of sign-in, not just the email
+      // half. Both reach this same account.
+      username: DEMO_USERNAME,
       passwordHash,
       name: 'Ramesh Kumar',
       phone: '+919876543210',
       language: 'en',
       isVerified: true,
     },
-    update: { passwordHash },
+    // Backfills the username on a demo account seeded before usernames existed.
+    update: { passwordHash, username: DEMO_USERNAME },
   });
-  console.log(`  Demo farmer:     ${user.email}`);
+  console.log(`  Demo farmer:     ${user.email} (username: ${DEMO_USERNAME})`);
 
   // ── Demo farm (Lucknow, Uttar Pradesh) ──
   let farm = await prisma.farm.findFirst({ where: { userId: user.id, name: 'Kumar Farm' } });
@@ -165,7 +170,9 @@ async function main(): Promise<void> {
   console.log(`  Price history:   ${priceRows} rows across ${CROPS.length} commodities`);
 
   console.log(`\nDone.\n`);
-  console.log(`  Sign in with:  ${DEMO_EMAIL}  /  ${DEMO_PASSWORD}\n`);
+  console.log(
+    `  Sign in with:  ${DEMO_EMAIL}  (or username "${DEMO_USERNAME}")  /  ${DEMO_PASSWORD}\n`,
+  );
 }
 
 main()
