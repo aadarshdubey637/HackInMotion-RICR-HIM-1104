@@ -67,8 +67,8 @@ export async function reverseGeocode(latitude: number, longitude: number): Promi
     const address = data.address || {};
 
     return {
-      village: address.village || address.hamlet || address.suburb || address.neighbourhood || null,
-      district: address.district || address.county || address.city_district || null,
+      village: address.neighbourhood || address.suburb || address.quarter || address.village || address.hamlet || null,
+      district: address.city || address.town || address.district || address.county || address.city_district || null,
       state: address.state || address.province || null,
       country: address.country || null,
       formattedAddress: data.display_name || null,

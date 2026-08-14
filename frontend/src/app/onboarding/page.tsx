@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, type FormEvent } from 'react';
+import { useState, useEffect, useRef, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { Sprout, MapPin, Loader2, Check } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
@@ -57,14 +57,22 @@ export default function OnboardingPage() {
       .catch(() => setCropOptions([]));
   }, []);
 
-  // Fetch location info when coordinates change (from manual input or geolocation)
+  // Fetch location info when coordinates change (from manual input or geolocation).
+  // The ref prevents double-fetching when detectLocation() sets coords AND
+  // the useEffect fires for the same change.
+  const fetchingRef = useRef<string | null>(null);
+
   useEffect(() => {
-    if (coords && (coords.lat !== 0 || coords.lon !== 0)) {
-      fetchLocationInfo(coords.lat, coords.lon);
-    }
+    if (!coords || (coords.lat === 0 && coords.lon === 0)) return;
+    const key = `${coords.lat},${coords.lon}`;
+    if (fetchingRef.current === key) return; // already in-flight for these coords
+    fetchLocationInfo(coords.lat, coords.lon);
   }, [coords]);
 
   async function fetchLocationInfo(lat: number, lon: number) {
+    const key = `${lat},${lon}`;
+    fetchingRef.current = key;
+
     setLocationDetecting(true);
     setSoilDetecting(true);
     setLocationNote('Finding village and district…');
@@ -72,10 +80,62 @@ export default function OnboardingPage() {
     setDetectedSoilType(null);
 
     try {
-      const { location, soil } = await api.farms.getLocationInfo(lat, lon);
+      // Try the backend first (also fetches soil type).
+      // Falls back to a direct Nominatim call if the backend is unreachable.
+      let location: {
+        village: string | null;
+        district: string | null;
+        state: string | null;
+        country: string | null;
+        formattedAddress: string | null;
+      } | null = null;
+      let soilType: string | null = null;
+
+      try {
+        const result = await api.farms.getLocationInfo(lat, lon);
+        location = result.location;
+        if (result.soil?.soilType && SOIL_TYPES.some((s) => s.value === result.soil.soilType)) {
+          soilType = result.soil.soilType;
+        }
+      } catch {
+        // Backend unreachable — call Nominatim directly from the browser.
+        // This works without any API key and handles the common case where
+        // the backend is slow to start or the network blocks our server.
+        try {
+          const params = new URLSearchParams({
+            lat: lat.toString(),
+            lon: lon.toString(),
+            format: 'json',
+            addressdetails: '1',
+            'accept-language': 'en',
+          });
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?${params}`,
+            { headers: { 'User-Agent': 'SmartFarmDSS/1.0' } },
+          );
+          if (res.ok) {
+            const data = await res.json() as {
+              address?: Record<string, string>;
+              display_name?: string;
+            };
+            const addr = data.address ?? {};
+            location = {
+              village: addr.neighbourhood ?? addr.suburb ?? addr.quarter ?? addr.village ?? addr.hamlet ?? null,
+              district: addr.city ?? addr.town ?? addr.district ?? addr.county ?? addr.city_district ?? null,
+              state: addr.state ?? addr.province ?? null,
+              country: addr.country ?? null,
+              formattedAddress: data.display_name ?? null,
+            };
+          }
+        } catch {
+          // Network fully unavailable — leave fields empty, user fills manually.
+        }
+      }
 
       if (location) {
-        const parts = [location.village, location.district, location.state, location.country]
+        // Build a short, useful address: neighbourhood/village + city/district + state.
+        // Skip country — it's always India and wastes space.
+        const parts = [location.village, location.district, location.state]
           .filter(Boolean)
           .join(', ');
         if (parts) {
@@ -84,18 +144,16 @@ export default function OnboardingPage() {
         }
       }
 
-      if (soil.soilType && SOIL_TYPES.some((s) => s.value === soil.soilType)) {
-        setSoilType(soil.soilType);
-        setDetectedSoilType(soil.soilType);
+      if (soilType) {
+        setSoilType(soilType);
+        setDetectedSoilType(soilType);
       }
-    } catch {
-      // Silently fail - user can still manually enter
     } finally {
+      // Always clear the spinners, regardless of success or failure.
       setLocationDetecting(false);
       setSoilDetecting(false);
-      if (!locationDetecting && !soilDetecting) {
-        setLocationNote(null);
-      }
+      setLocationNote(null);
+      fetchingRef.current = null;
     }
   }
 
@@ -115,7 +173,7 @@ export default function OnboardingPage() {
         setCoords({ lat, lon });
         setLocating(false);
         setLocationNote(null);
-        fetchLocationInfo(lat, lon);
+        // fetchLocationInfo is triggered by the coords useEffect above.
       },
       (err) => {
         setLocating(false);
@@ -288,7 +346,10 @@ export default function OnboardingPage() {
                       </div>
                     )}
                     {detectedLocation && !locationDetecting && !soilDetecting && (
-                      <p className="mt-1 text-xs text-brand-600">��� Location detected: {coords.lat}, {coords.lon}</p>
+                      <p className="mt-1 flex items-center gap-1 text-xs text-brand-600">
+                        <MapPin className="h-3 w-3 shrink-0" aria-hidden />
+                        {detectedLocation}
+                      </p>
                     )}
                   </div>
                 ) : null}
@@ -350,7 +411,10 @@ export default function OnboardingPage() {
                     <p className="mt-1 text-xs text-slate-500 animate-pulse">Finding village and district…</p>
                   )}
                   {detectedLocation && !locationDetecting && (
-                    <p className="mt-1 text-xs text-brand-600">��� Location detected: {coords?.lat}, {coords?.lon}</p>
+                    <p className="mt-1 flex items-center gap-1 text-xs text-brand-600">
+                      <MapPin className="h-3 w-3 shrink-0" aria-hidden />
+                      {detectedLocation}
+                    </p>
                   )}
                 </div>
               </div>
