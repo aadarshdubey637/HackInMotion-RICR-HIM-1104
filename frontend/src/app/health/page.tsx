@@ -53,6 +53,7 @@ function HealthContent() {
   const { currentFarm } = useAuth();
   const { t, tCrop } = useTranslation();
   const [crops, setCrops] = useState<Crop[]>([]);
+  const [supportedCrops, setSupportedCrops] = useState<Array<{ key: string; label: string }>>([]);
   const [logs, setLogs] = useState<HealthLog[]>([]);
   const [nearby, setNearby] = useState<NearbyOutbreaks | null>(null);
   const [loading, setLoading] = useState(true);
@@ -65,12 +66,14 @@ function HealthContent() {
     setError(null);
 
     try {
-      const [cropsRes, logsRes] = await Promise.all([
+      const [cropsRes, logsRes, supportedRes] = await Promise.all([
         api.farms.crops(currentFarm.id),
         api.health.list(currentFarm.id),
+        api.farms.supportedCrops(),
       ]);
       setCrops(cropsRes.crops);
       setLogs(logsRes.observations);
+      setSupportedCrops(supportedRes.crops);
 
       // Community signal is a bonus — failure here must not break the page.
       api.health
@@ -119,6 +122,7 @@ function HealthContent() {
         <ObservationForm
           farmId={currentFarm.id}
           crops={crops}
+          supportedCrops={supportedCrops}
           onCancel={() => setShowForm(false)}
           onSuccess={(diagnosis, warning) => {
             setShowForm(false);
@@ -133,7 +137,7 @@ function HealthContent() {
             setShowForm(true);
             setResult(null);
           }}
-          disabled={crops.length === 0}
+          disabled={crops.length === 0 && supportedCrops.length === 0}
           className="btn-primary w-full"
         >
           <Camera className="h-5 w-5" aria-hidden />
@@ -141,7 +145,7 @@ function HealthContent() {
         </button>
       )}
 
-      {crops.length === 0 && !loading ? (
+      {crops.length === 0 && supportedCrops.length === 0 && !loading ? (
         <Notice tone="warn">
           {t('health.cropSelect')} — {t('health.subtitle')}
         </Notice>
@@ -211,23 +215,95 @@ function HealthContent() {
 function ObservationForm({
   farmId,
   crops,
+  supportedCrops,
   onCancel,
   onSuccess,
 }: {
   farmId: string;
   crops: Crop[];
+  supportedCrops: Array<{ key: string; label: string }>;
   onCancel: () => void;
   onSuccess: (diagnosis: Diagnosis, warning?: string) => void;
 }) {
   const { t, tCrop, language } = useTranslation();
   const fileInput = useRef<HTMLInputElement>(null);
-  const [cropId, setCropId] = useState(crops[0]?.id ?? '');
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Construct the selectable list of crops dynamically (both registered and all supported crops)
+  const selectableCrops = (() => {
+    const list: Array<{ id: string; name: string; isNew: boolean; cropKey: string }> = [];
+
+    // 1. Add all supported crops (linking to existing registered crops where matched)
+    supportedCrops.forEach((s) => {
+      const existing = crops.find(
+        (c) =>
+          c.cropName.toLowerCase() === s.key ||
+          c.cropName.toLowerCase() === s.label.toLowerCase()
+      );
+      list.push({
+        id: existing ? existing.id : `new:${s.key}`,
+        name: s.label,
+        isNew: !existing,
+        cropKey: s.key,
+      });
+    });
+
+    // 2. Add any registered crops that are custom/not in supportedCrops
+    crops.forEach((c) => {
+      const alreadyAdded = list.some((sc) => sc.id === c.id);
+      if (!alreadyAdded) {
+        list.push({
+          id: c.id,
+          name: c.cropName,
+          isNew: false,
+          cropKey: c.cropName.toLowerCase(),
+        });
+      }
+    });
+
+    return list;
+  })();
+
+  // Multi-select: track a Set of selected crop IDs
+  const [selectedCropIds, setSelectedCropIds] = useState<Set<string>>(() => {
+    const firstRegistered = crops[0]?.id;
+    if (firstRegistered) return new Set([firstRegistered]);
+    return new Set(selectableCrops[0]?.id ? [selectableCrops[0].id] : []);
+  });
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [description, setDescription] = useState('');
   const [observationType, setObservationType] = useState<string>('OTHER');
   const [image, setImage] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [submitProgress, setSubmitProgress] = useState<{ done: number; total: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    if (!dropdownOpen) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [dropdownOpen]);
+
+  function toggleCrop(id: string) {
+    setSelectedCropIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        // Prevent deselecting the last one
+        if (next.size === 1) return prev;
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }
 
   // Object URLs must be revoked or they leak for the page's lifetime.
   useEffect(() => {
@@ -254,24 +330,56 @@ function ObservationForm({
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    if (!cropId) return;
+    if (selectedCropIds.size === 0) return;
 
     setError(null);
     setSubmitting(true);
 
+    const ids = [...selectedCropIds];
+    setSubmitProgress({ done: 0, total: ids.length });
+
     try {
-      const response = await api.health.create(farmId, {
-        cropId,
-        description,
-        observationType,
-        image,
-        // Plant.id localises its disease descriptions and treatment advice,
-        // but only for the language actually asked for.
-        language,
-      });
-      onSuccess(response.diagnosis, response.warning);
+      let lastResponse: { diagnosis: Diagnosis; warning?: string } | null = null;
+      let worstWarning: string | undefined;
+
+      for (let i = 0; i < ids.length; i++) {
+        let finalCropId = ids[i];
+
+        // Automatically register the crop on the farm if it is not added yet
+        if (finalCropId.startsWith('new:')) {
+          const cropInfo = selectableCrops.find((sc) => sc.id === finalCropId);
+          if (cropInfo) {
+            const addRes = await api.farms.addCrop(farmId, { cropName: cropInfo.name });
+            finalCropId = addRes.crop.id;
+          }
+        }
+
+        const response = await api.health.create(farmId, {
+          cropId: finalCropId,
+          description,
+          observationType,
+          image,
+          // Plant.id localises its disease descriptions and treatment advice,
+          // but only for the language actually asked for.
+          language,
+        });
+        // Keep the most severe diagnosis to surface to the farmer
+        const severityOrder = ['NONE', 'MILD', 'MODERATE', 'SEVERE', 'CRITICAL'];
+        if (
+          !lastResponse ||
+          severityOrder.indexOf(response.diagnosis.severity) >
+            severityOrder.indexOf(lastResponse.diagnosis.severity)
+        ) {
+          lastResponse = response;
+        }
+        if (response.warning) worstWarning = response.warning;
+        setSubmitProgress({ done: i + 1, total: ids.length });
+      }
+
+      if (lastResponse) onSuccess(lastResponse.diagnosis, worstWarning);
     } catch (err) {
       setSubmitting(false);
+      setSubmitProgress(null);
       setError(
         err instanceof ApiError ? err.message : 'Could not save your observation. Please try again.',
       );
@@ -291,28 +399,122 @@ function ObservationForm({
         {error ? <Notice tone="warn">{error}</Notice> : null}
 
         <div>
-          <label htmlFor="crop" className="label">
+          <label className="label">
             {t('health.cropSelect')}
           </label>
-          <div className="relative">
-            <select
-              id="crop"
-              value={cropId}
-              onChange={(e) => setCropId(e.target.value)}
-              className="field appearance-none pr-10"
-              required
+          {/* Custom multi-select dropdown */}
+          <div ref={dropdownRef} className="relative">
+            {/* Trigger button */}
+            <button
+              type="button"
+              onClick={() => setDropdownOpen((v) => !v)}
+              className="field flex w-full items-center justify-between gap-2 text-left"
             >
-              {crops.map((crop) => (
-                <option key={crop.id} value={crop.id}>
-                  {tCrop(crop.cropName)}
-                </option>
-              ))}
-            </select>
-            <ChevronDown
-              className="pointer-events-none absolute right-3 top-3.5 h-5 w-5 text-slate-400"
-              aria-hidden
-            />
+              <span className="flex-1 truncate text-sm">
+                {selectedCropIds.size === 0
+                  ? 'Select crops…'
+                  : selectedCropIds.size === 1
+                    ? tCrop(selectableCrops.find((c) => selectedCropIds.has(c.id))?.name ?? '')
+                    : `${selectedCropIds.size} crops selected`}
+              </span>
+              <ChevronDown
+                className={cn('h-4 w-4 shrink-0 text-slate-400 transition-transform', dropdownOpen && 'rotate-180')}
+                aria-hidden
+              />
+            </button>
+
+            {/* Dropdown panel */}
+            {dropdownOpen && (
+              <div className="absolute z-50 mt-1 w-full overflow-hidden rounded-xl border border-soil-200 bg-white shadow-lg">
+                {/* Select / deselect all */}
+                <div className="flex items-center justify-between border-b border-soil-100 px-3 py-2">
+                  <span className="text-xs font-semibold text-slate-500">
+                    {selectedCropIds.size} of {selectableCrops.length} selected
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSelectedCropIds(
+                        selectedCropIds.size === selectableCrops.length
+                          ? new Set([selectableCrops[0]?.id ?? ''])
+                          : new Set(selectableCrops.map((c) => c.id)),
+                      )
+                    }
+                    className="text-xs font-semibold text-brand-600 hover:underline"
+                  >
+                    {selectedCropIds.size === selectableCrops.length ? 'Deselect all' : 'Select all'}
+                  </button>
+                </div>
+
+                {/* Crop list */}
+                <ul className="max-h-52 overflow-y-auto py-1">
+                  {selectableCrops.map((crop) => {
+                    const checked = selectedCropIds.has(crop.id);
+                    return (
+                      <li key={crop.id}>
+                        <label
+                          className={cn(
+                            'flex cursor-pointer items-center gap-3 px-3 py-2.5 text-sm transition',
+                            checked ? 'bg-brand-50 font-semibold text-brand-800' : 'text-slate-700 hover:bg-soil-50',
+                          )}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleCrop(crop.id)}
+                            className="h-4 w-4 rounded border-soil-300 accent-brand-600"
+                          />
+                          {tCrop(crop.name)}
+                          {crop.isNew && (
+                            <span className="ml-2 rounded bg-soil-100 px-1.5 py-0.5 text-[10px] font-normal text-slate-500">
+                              New
+                            </span>
+                          )}
+                        </label>
+                      </li>
+                    );
+                  })}
+                </ul>
+
+                {/* Done button */}
+                <div className="border-t border-soil-100 px-3 py-2">
+                  <button
+                    type="button"
+                    onClick={() => setDropdownOpen(false)}
+                    className="w-full rounded-lg bg-brand-600 py-1.5 text-sm font-semibold text-white transition hover:bg-brand-700"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
+
+          {/* Selected crop tags below dropdown */}
+          {selectedCropIds.size > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {selectableCrops
+                .filter((c) => selectedCropIds.has(c.id))
+                .map((crop) => (
+                  <span
+                    key={crop.id}
+                    className="flex items-center gap-1 rounded-full border border-brand-200 bg-brand-50 px-2.5 py-0.5 text-xs font-semibold text-brand-700"
+                  >
+                    {tCrop(crop.name)}
+                    {selectedCropIds.size > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => toggleCrop(crop.id)}
+                        aria-label={`Remove ${crop.name}`}
+                        className="ml-0.5 text-brand-400 hover:text-brand-700"
+                      >
+                        ×
+                      </button>
+                    )}
+                  </span>
+                ))}
+            </div>
+          )}
         </div>
 
         <div>
@@ -412,9 +614,13 @@ function ObservationForm({
           <button type="button" onClick={onCancel} className="btn-secondary flex-1">
             {t('common.cancel')}
           </button>
-          <button type="submit" disabled={submitting || !cropId} className="btn-primary flex-1">
+          <button type="submit" disabled={submitting || selectedCropIds.size === 0} className="btn-primary flex-1">
             {submitting ? <Spinner className="h-5 w-5" /> : null}
-            {submitting ? t('common.loading') : t('health.submit')}
+            {submitting && submitProgress
+              ? `Checking ${submitProgress.done}/${submitProgress.total}…`
+              : submitting
+                ? t('common.loading')
+                : t('health.submit')}
           </button>
         </div>
       </form>

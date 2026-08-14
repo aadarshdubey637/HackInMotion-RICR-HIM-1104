@@ -430,7 +430,7 @@ export default function OnboardingPage() {
                         )}
                       >
                         {selected && (
-                          <span className="absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded-full bg-brand-600 text-white">
+                          <span className="absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded-full bg-brand-600 text-white animate-scale-in">
                             <Check className="h-3 w-3" />
                           </span>
                         )}
