@@ -5,19 +5,16 @@
   "private": true,
   "workspaces": [
     "backend",
-    "frontend",
-    "intelligence"
+    "frontend"
   ],
   "scripts": {
     "setup": "node scripts/setup.js",
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:backend": "npm run dev --workspace=backend",
     "dev:frontend": "npm run dev --workspace=frontend",
-    "dev:intelligence": "npm run dev --workspace=intelligence",
     "build": "npm run build --workspaces",
     "build:backend": "npm run build --workspace=backend",
     "build:frontend": "npm run build --workspace=frontend",
-    "build:intelligence": "npm run build --workspace=intelligence",
     "test": "npm run test --workspaces",
     "lint": "npm run lint --workspaces",
     "db:generate": "npm run db:generate --workspace=backend",
