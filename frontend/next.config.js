@@ -2,12 +2,17 @@
 const nextConfig = {
   reactStrictMode: true,
 
-  images: {
-    remotePatterns: [
-      { protocol: 'http', hostname: 'localhost' },
-      { protocol: 'https', hostname: '**' },
-    ],
-  },
+  // No `remotePatterns`, which means the image optimizer will only serve files
+  // from this app's own `public/` directory.
+  //
+  // It previously allowed `https://**` — every host on the internet. That turns
+  // the optimizer into an open proxy: anyone can pass a third-party URL through
+  // it and have this deployment fetch, resize and cache the result, on our
+  // bandwidth and from our IP.
+  //
+  // Nothing here needs it. Crop photos are private and are fetched with the
+  // farmer's token as a blob (see `components/crop-photo.tsx`), and every
+  // `next/image` in the app points at a local file.
 
   async headers() {
     return [

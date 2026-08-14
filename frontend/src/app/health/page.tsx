@@ -14,6 +14,7 @@ import {
   Mic,
 } from 'lucide-react';
 import { AppShell } from '@/components/app-shell';
+import { CropPhoto } from '@/components/crop-photo';
 import { useAuth } from '@/lib/auth-context';
 import { api, ApiError } from '@/lib/api';
 import { useVoice, buildSpokenDiagnosis } from '@/lib/voice';
@@ -1026,8 +1027,7 @@ function HealthLogCard({
       <div className="flex gap-3">
         {log.imageUrl ? (
           <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-soil-100">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={log.imageUrl} alt="" className="h-full w-full object-cover" />
+            <CropPhoto src={log.imageUrl} className="h-full w-full object-cover" />
           </div>
         ) : null}
 

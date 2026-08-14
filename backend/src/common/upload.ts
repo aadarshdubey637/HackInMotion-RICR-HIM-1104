@@ -8,9 +8,12 @@ import { ValidationError } from './errors';
 /**
  * Crop photo uploads.
  *
- * Files are written to local disk and served statically. This keeps the demo
- * free of an object-storage dependency; swapping in S3 or Cloudinary means
- * replacing only `storage` and `publicUrl` below.
+ * Files are written to local disk. This keeps the demo free of an
+ * object-storage dependency; swapping in S3 or Cloudinary means replacing only
+ * `storage` and the URL built in `storeImage` below.
+ *
+ * They are *not* served statically. The URL points at an authenticated route
+ * that checks farm ownership before streaming — see `crop-health/photo.ts`.
  *
  * Images are kept in memory as well as on disk so the crop-health service can
  * forward the bytes to an image-analysis API without a second read.
@@ -57,7 +60,10 @@ export function storeImage(file: Express.Multer.File): StoredImage {
 
   return {
     filename,
-    url: `${config.PUBLIC_URL.replace(/\/$/, '')}/uploads/${filename}`,
+    // Points at the authenticated streaming route, not a static directory.
+    // Rows written before this change still hold `/uploads/<filename>`; the
+    // client reads only the trailing filename, so both shapes resolve.
+    url: `${config.PUBLIC_URL.replace(/\/$/, '')}/api/crop-health/photo/${filename}`,
     base64: file.buffer.toString('base64'),
   };
 }

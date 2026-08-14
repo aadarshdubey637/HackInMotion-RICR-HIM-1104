@@ -10,7 +10,6 @@ import { logger } from './common/logger';
 import { prisma } from './common/prisma';
 import { closeMailer, verifyMailer } from './common/mailer';
 import { errorHandler, notFoundHandler } from './common/error-handler';
-import { UPLOAD_ROOT } from './common/upload';
 import { apiRouter } from './routes';
 
 const app = express();
@@ -23,7 +22,29 @@ app.use(
   helmet({
     // Uploaded crop photos are served to a different origin (the frontend).
     crossOriginResourcePolicy: { policy: 'cross-origin' },
-    contentSecurityPolicy: false,
+
+    /**
+     * This server returns JSON and image bytes — never HTML that a browser
+     * will execute. So the policy can be close to "nothing is allowed": there
+     * is no script, style or frame for it to permit.
+     *
+     * It was previously disabled outright. That is a different thing from
+     * being unnecessary: without a policy, any HTML that does get served —
+     * an error page from a dependency, a future admin view — inherits the
+     * browser's permissive default. The frontend's own CSP is separate and
+     * does not cover this origin.
+     */
+    contentSecurityPolicy: {
+      useDefaults: false,
+      directives: {
+        defaultSrc: ["'none'"],
+        // Photos are streamed from this origin by the crop-health route.
+        imgSrc: ["'self'", 'data:'],
+        frameAncestors: ["'none'"],
+        baseUri: ["'none'"],
+        formAction: ["'none'"],
+      },
+    },
   }),
 );
 
@@ -53,8 +74,9 @@ app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 app.use(cookieParser());
 
-// Uploaded crop photos.
-app.use('/uploads', express.static(UPLOAD_ROOT, { maxAge: '7d', fallthrough: true }));
+// Crop photos are NOT served statically from here. They are a farmer's private
+// record, so they go through GET /api/crop-health/photo/:filename, which
+// authenticates the request and checks farm ownership before streaming.
 
 app.use(
   '/api',

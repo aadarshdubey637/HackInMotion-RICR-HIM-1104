@@ -695,9 +695,19 @@ input. Uncertainty (`rangeTotalKg`) narrows as `seasonProgress` rises.
 
 ---
 
-## Static files
+## Crop photos
 
-`GET /uploads/:filename` — uploaded crop photos, cached 7 days.
+`GET /api/crop-health/photo/:filename` — streams an uploaded crop photo.
+
+Authenticated, and additionally checks that the photo belongs to a farm the
+caller owns. A photo belonging to someone else returns `404`, the same as one
+that does not exist, so the endpoint cannot be used to test whether a given
+filename is real. Responses are `Cache-Control: private, max-age=3600`.
+
+There is no public static file route. Photos were previously served by
+`GET /uploads/:filename` with no authentication; that mount has been removed.
+Because the client reads only the trailing filename, health-log rows written
+before the change still resolve.
 
 ## Project structure
 ```

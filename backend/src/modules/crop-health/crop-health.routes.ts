@@ -14,6 +14,7 @@ import {
   createCommunityReportBody,
 } from './crop-health.schema';
 import * as service from './crop-health.service';
+import { resolvePhotoForUser } from './photo';
 
 export const cropHealthRouter = Router();
 
@@ -126,6 +127,33 @@ cropHealthRouter.delete(
     const { farmId, logId } = params(req, logIdParams);
     await service.deleteObservation(farmId, logId, userId(req));
     ok(res, { message: 'Observation deleted' });
+  }),
+);
+
+/**
+ * GET /api/crop-health/photo/:filename — stream an uploaded crop photo.
+ *
+ * Replaces the old public `/uploads` static mount. The router authenticates
+ * every request above, and `resolvePhotoForUser` additionally proves the photo
+ * belongs to a farm this user owns before a byte is written.
+ *
+ * Declared before `/:farmId/...` would be a concern in a path-conflicting
+ * router; here it is safe either way, because `farmIdParams` rejects anything
+ * that is not a Mongo ObjectId and "photo" is not one.
+ */
+cropHealthRouter.get(
+  '/photo/:filename',
+  handler(async (req, res) => {
+    const { absolutePath, contentType } = await resolvePhotoForUser(
+      req.params.filename,
+      userId(req),
+    );
+
+    res.type(contentType);
+    // Private: this is one farmer's photo, so a shared proxy must not keep a
+    // copy to hand to the next person who asks for the same URL.
+    res.setHeader('Cache-Control', 'private, max-age=3600');
+    res.sendFile(absolutePath);
   }),
 );
 

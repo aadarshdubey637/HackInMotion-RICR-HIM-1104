@@ -181,6 +181,43 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
 }
 
 /**
+ * GET a binary response as an object URL.
+ *
+ * Crop photos are private, so the route serving them requires the same bearer
+ * token as every other call. A plain `<img src>` cannot send that header, so
+ * the bytes are fetched here and handed to the browser as a `blob:` URL.
+ *
+ * The caller owns the returned URL and must `URL.revokeObjectURL` it when the
+ * image unmounts — otherwise the blob is held for the life of the document.
+ */
+export async function requestObjectUrl(path: string, signal?: AbortSignal): Promise<string> {
+  const token = tokenStore.get();
+
+  let response: Response;
+  try {
+    response = await fetch(`${BASE_URL}${path}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      signal,
+    });
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError') throw err;
+    throw new ApiError('Cannot reach the server.', 0, 'NETWORK_ERROR');
+  }
+
+  if (!response.ok) {
+    // The body is a JSON error envelope here, not an image — but the caller
+    // only needs to know it failed, so the status carries the meaning.
+    throw new ApiError(
+      response.status === 404 ? 'That photo is no longer available.' : 'Could not load the photo.',
+      response.status,
+      'PHOTO_UNAVAILABLE',
+    );
+  }
+
+  return URL.createObjectURL(await response.blob());
+}
+
+/**
  * Cached GET.
  *
  * On success the response is written to localStorage under `cacheKey`.
