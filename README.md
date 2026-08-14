@@ -143,3 +143,21 @@ npm run db:studio       # Open Prisma Studio (visual DB browser)
 - **Auth:** JWT (access + refresh tokens)
 - **Weather:** Open-Meteo (no API key needed)
 - **Offline:** localStorage cache + write queue (no service worker)
+
+  ## Screenshots
+
+<img width="1900" height="900" alt="image" src="https://github.com/user-attachments/assets/f6b59fd5-5984-4cff-b876-155c4bac3f57" />
+
+<img width="1891" height="906" alt="image" src="https://github.com/user-attachments/assets/37a66ff2-e9f2-481d-b848-043bdccb9b9e" />
+
+<img width="1885" height="880" alt="image" src="https://github.com/user-attachments/assets/f84f0b35-b5c9-4f44-ab96-a327b7c82b72" />
+
+<img width="369" height="423" alt="image" src="https://github.com/user-attachments/assets/60a7083a-ea95-469c-b424-7460e049e8f2" />
+
+<img width="1892" height="887" alt="image" src="https://github.com/user-attachments/assets/d031e024-d988-4106-9281-9bd1e908ec1b" />
+
+<img width="1887" height="875" alt="image" src="https://github.com/user-attachments/assets/1f2d9f68-0c1a-4a5d-899a-e556c0db447f" />
+
+<img width="367" height="797" alt="image" src="https://github.com/user-attachments/assets/ff00f7c0-261a-4bf8-80c8-fdd718f18d69" />
+
+<img width="368" height="801" alt="image" src="https://github.com/user-attachments/assets/9d09afb7-d445-4b84-b72b-dc0c15d7d7e9" />
