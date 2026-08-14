@@ -25,6 +25,8 @@
     "db:push": "npm run db:push --workspace=backend",
     "db:migrate": "npm run db:migrate --workspace=backend",
     "db:seed": "npm run db:seed --workspace=backend",
+    "db:seed:prices": "npm run db:seed:prices --workspace=backend",
+    "db:seed:community": "npm run db:seed:community --workspace=backend",
     "docker:up": "docker compose -f docker/docker-compose.yml up -d --build",
     "docker:down": "docker compose -f docker/docker-compose.yml down",
     "docker:logs": "docker compose -f docker/docker-compose.yml logs -f"

@@ -22,7 +22,7 @@
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../../common/prisma';
 import { logger } from '../../common/logger';
-import { config } from '../../config';
+import { config, features } from '../../config';
 import { NotFoundError } from '../../common/errors';
 import { upsertWithoutTransaction } from '../../common/upsert';
 import { findCrop, CROPS } from '../../domain/crops';
@@ -88,11 +88,12 @@ export async function syncCommodityPrices(
     const records = body.records ?? [];
     if (records.length === 0) return 0;
 
-    let ingested = 0;
-    for (const record of records) {
-      const parsed = parseRecord(record, commodity);
-      if (!parsed) continue;
+    const parsedRows = records
+      .map((record) => parseRecord(record, commodity))
+      .filter((row): row is NonNullable<typeof row> => row !== null);
 
+    let ingested = 0;
+    for (const parsed of rejectOutliers(parsedRows, commodity)) {
       try {
         await upsertWithoutTransaction(prisma.priceHistory, {
           where: {
@@ -123,6 +124,119 @@ export async function syncCommodityPrices(
   } finally {
     clearTimeout(timeout);
   }
+}
+
+/**
+ * How long a stored AGMARKNET snapshot counts as current.
+ *
+ * The upstream resource publishes once a day, so anything more frequent spends
+ * a request to be told the same thing. Twelve hours means a mandi that updates
+ * in the morning is picked up the same day without polling all afternoon.
+ */
+const PRICE_TTL_MS = 12 * 60 * 60 * 1000;
+
+/** Syncs currently running, keyed by commodity. See `syncOnce`. */
+const inFlightSyncs = new Map<string, Promise<number>>();
+
+/**
+ * Run one sync per commodity at a time.
+ *
+ * `getFarmPriceTrends` fans out across every crop on the farm, and a farm with
+ * both wheat and rice reloading twice (React re-invokes effects in development)
+ * would otherwise issue four upstream calls for two answers.
+ */
+function syncOnce(commodity: string): Promise<number> {
+  const running = inFlightSyncs.get(commodity);
+  if (running) return running;
+
+  const work = syncCommodityPrices(commodity)
+    // `syncCommodityPrices` already handles its own failures and resolves 0,
+    // but a rejection here would become an unhandled rejection in the
+    // background case below, so it is caught unconditionally.
+    .catch(() => 0)
+    .finally(() => inFlightSyncs.delete(commodity));
+
+  inFlightSyncs.set(commodity, work);
+  return work;
+}
+
+/**
+ * Make sure a commodity's stored prices are worth reading, before reading them.
+ *
+ * Three outcomes, and which one applies is the whole point:
+ *
+ *  - No API key: returns immediately. Seeded history stands, and the response
+ *    already reports `isSeeded` so the UI says so.
+ *  - Real observations exist but are stale: refresh in the background and serve
+ *    what we have. A farmer checking prices should not wait on an upstream call
+ *    to redraw a chart that is a few hours old.
+ *  - No real observations at all: await the sync. This is the case that used to
+ *    make a configured key look broken — the first view showed a seeded
+ *    baseline, and only a second visit showed live prices.
+ */
+async function ensureFreshPrices(commodity: string): Promise<void> {
+  if (!features.dataGovIn) return;
+
+  const newest = await prisma.priceHistory.findFirst({
+    where: { commodity, source: 'agmarknet' },
+    orderBy: { priceDate: 'desc' },
+    select: { priceDate: true },
+  });
+
+  if (newest && Date.now() - newest.priceDate.getTime() < PRICE_TTL_MS) return;
+
+  if (!newest) {
+    await syncOnce(commodity);
+    return;
+  }
+
+  void syncOnce(commodity);
+}
+
+/**
+ * How far above the day's own median a price may sit before we treat it as a
+ * data-entry error rather than a premium grade.
+ *
+ * Chosen from the real feed: on one day rice ranged from a 3,500 median up to
+ * a legitimate 11,357 for a premium variety (3.2x), alongside a single row
+ * reporting a 35,000 maximum (10x) that is not a real price for any grade of
+ * rice. Five leaves genuine premium produce alone and catches the errors.
+ */
+const OUTLIER_MULTIPLE = 5;
+
+/**
+ * Drop rows whose prices are implausible next to the rest of the same batch.
+ *
+ * A single bad row matters more than it sounds: the chart's upper band is
+ * `Math.max` across the day's markets, so one mistyped figure redraws the
+ * whole scale and makes every real movement invisible.
+ *
+ * Compared against the batch's own median, not a hardcoded ceiling, so this
+ * keeps working as prices move and needs no maintenance per commodity.
+ */
+function rejectOutliers<T extends { modalPrice: number; maxPrice: number }>(
+  rows: T[],
+  commodity: string,
+): T[] {
+  // Too few rows to say what is normal; a "median" of three points would
+  // reject legitimate spread rather than errors.
+  if (rows.length < 5) return rows;
+
+  const modals = rows.map((row) => row.modalPrice).sort((a, b) => a - b);
+  const median = modals[Math.floor(modals.length / 2)];
+  if (!median) return rows;
+
+  const ceiling = median * OUTLIER_MULTIPLE;
+  const kept = rows.filter((row) => row.modalPrice <= ceiling && row.maxPrice <= ceiling);
+
+  if (kept.length !== rows.length) {
+    logger.warn(
+      { commodity, dropped: rows.length - kept.length, median, ceiling },
+      'Dropped implausible mandi price rows',
+    );
+  }
+
+  return kept;
 }
 
 function parseRecord(record: AgmarknetRecord, fallbackCommodity: string) {
@@ -257,6 +371,11 @@ export async function getPriceTrend(
   days = 60,
   scope: PriceScope = {},
 ): Promise<PriceTrend> {
+  // Pull today's mandi snapshot if we do not already have a current one. Both
+  // the single-commodity and per-farm endpoints reach the database through
+  // here, so doing it at this level covers both without either duplicating it.
+  await ensureFreshPrices(commodity);
+
   const since = new Date(Date.now() - days * 86_400_000);
 
   const whereClause: Prisma.PriceHistoryWhereInput = {
@@ -324,7 +443,12 @@ export async function getPriceTrend(
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([date, b]) => ({
       date,
-      modalPrice: Math.round(mean(b.modal)),
+      // Median across the day's mandis, not mean. A handful of markets quoting
+      // a premium grade pulls a mean well above what most farmers can actually
+      // get, and the point of this number is "what is my crop worth today".
+      // It also matches the statistic the seed anchors to, so a synthetic
+      // baseline and real observations meet at the same level.
+      modalPrice: Math.round(median(b.modal)),
       minPrice: Math.round(Math.min(...b.min)),
       maxPrice: Math.round(Math.max(...b.max)),
     }));
@@ -523,8 +647,10 @@ export async function getFarmPriceTrends(farmId: string, userId: string, scope: 
     };
   }
 
-  // Refresh in the background where a key is configured; never block the read.
-  void Promise.all([...commodities.keys()].map((c) => syncCommodityPrices(c).catch(() => 0)));
+  // No refresh fan-out here: `getPriceTrend` calls `ensureFreshPrices` for the
+  // commodity it is about to read. This used to sync every commodity on every
+  // request, which spent an upstream call per crop per page load — including
+  // when the stored snapshot was minutes old.
 
   const trends = await Promise.all(
     [...commodities.entries()].map(async ([commodity, meta]) => ({
@@ -591,6 +717,35 @@ function seededNoise(seed: string, index: number): number {
   return ((h >>> 0) / 0xffffffff) * 2 - 1;
 }
 
+/**
+ * The observed price level per commodity, from real AGMARKNET rows.
+ *
+ * Median rather than mean: a single premium-grade mandi reporting basmati at
+ * three times the going rate should not lift the whole baseline. Commodities
+ * with no live rows are simply absent, and the caller falls back to the table.
+ */
+async function observedBasePrices(): Promise<Map<string, number>> {
+  const rows = await prisma.priceHistory.findMany({
+    where: { source: 'agmarknet' },
+    select: { commodity: true, modalPrice: true },
+  });
+
+  const byCommodity = new Map<string, number[]>();
+  for (const row of rows) {
+    const prices = byCommodity.get(row.commodity) ?? [];
+    prices.push(row.modalPrice);
+    byCommodity.set(row.commodity, prices);
+  }
+
+  const bases = new Map<string, number>();
+  for (const [commodity, prices] of byCommodity) {
+    prices.sort((a, b) => a - b);
+    bases.set(commodity, Math.round(prices[Math.floor(prices.length / 2)]));
+  }
+
+  return bases;
+}
+
 export async function seedPriceHistory(days = 90): Promise<number> {
   const markets = [
     // Madhya Pradesh
@@ -645,9 +800,18 @@ export async function seedPriceHistory(days = 90): Promise<number> {
 
   const rows: Prisma.PriceHistoryCreateManyInput[] = [];
 
+  // Anchor the synthetic series to what each commodity actually costs, where we
+  // have observed it. `BASE_PRICES` is a hand-maintained 2024-25 table and
+  // drifts: rice was listed at 2300 while live AGMARKNET reported a median of
+  // 3500, so the seeded history ended ~40% below reality and the chart showed a
+  // 57% "rise" on the day real data began — an artefact of the join, not a
+  // market movement. The table remains the fallback for commodities we have
+  // never seen a live price for.
+  const observed = await observedBasePrices();
+
   for (const crop of CROPS) {
     const commodity = crop.commodity;
-    const base = BASE_PRICES[commodity];
+    const base = observed.get(commodity) ?? BASE_PRICES[commodity];
     if (!base) continue;
 
     const seasonality = SEASONALITY[commodity] ?? FLAT_SEASONALITY;
@@ -655,6 +819,10 @@ export async function seedPriceHistory(days = 90): Promise<number> {
     // Random-walk drift accumulated across the window, bounded so the series
     // stays plausible rather than wandering off.
     let drift = 0;
+
+    // Build the national-level series first so it can be rescaled as a whole,
+    // before per-mandi offsets are applied.
+    const generated: Array<{ date: Date; modal: number }> = [];
 
     for (let i = days; i >= 0; i--) {
       const date = new Date(today.getTime() - i * 86_400_000);
@@ -664,7 +832,28 @@ export async function seedPriceHistory(days = 90): Promise<number> {
       const seasonal = seasonality[month];
       const daily = seededNoise(`${commodity}-daily`, i) * 0.02;
 
-      const modal = Math.round(base * seasonal * (1 + drift + daily));
+      generated.push({ date, modal: base * seasonal * (1 + drift + daily) });
+    }
+
+    /**
+     * Land the last synthetic day on the price actually observed today.
+     *
+     * Anchoring the base alone is not enough: the seasonal multiplier is free
+     * to carry the series well away from it by the final day. Onion anchored
+     * to a 2,980 median still ended at 3,785 against a real 3,125, and that
+     * gap showed up on the chart as a 22% one-day crash the moment live data
+     * joined — an artefact of the join, not a market event.
+     *
+     * Scaling the whole series preserves its shape (seasonality, drift,
+     * volatility) while making it meet reality at the seam.
+     */
+    const anchor = observed.get(commodity);
+    const generatedLast = generated[generated.length - 1]?.modal;
+    const scale = anchor && generatedLast ? anchor / generatedLast : 1;
+
+    for (const point of generated) {
+      const date = point.date;
+      const modal = Math.round(point.modal * scale);
       const spread = Math.round(modal * 0.06);
 
       for (const market of markets) {
@@ -759,6 +948,14 @@ export async function getUniqueLocations() {
 
 function mean(values: number[]): number {
   return values.length ? values.reduce((a, b) => a + b, 0) / values.length : 0;
+}
+
+/** Middle value. Even-length inputs take the mean of the two middle values. */
+function median(values: number[]): number {
+  if (!values.length) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
 }
 
 function standardDeviation(values: number[]): number {
