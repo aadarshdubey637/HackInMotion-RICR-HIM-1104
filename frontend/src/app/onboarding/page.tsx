@@ -401,11 +401,18 @@ export default function OnboardingPage() {
 
               {/* ── Soil ── */}
               <div>
-<<<<<<< HEAD
-                <span className="label font-semibold text-slate-700">Soil type (optional)</span>
+                <label className="label flex items-center gap-2 font-semibold text-slate-700">
+                  Soil type (optional)
+                  {detectedSoilType && (
+                    <span className="text-xs text-brand-600 font-normal">Detected automatically</span>
+                  )}
+                </label>
                 <p className="-mt-1 mb-2 text-xs text-slate-500">
                   This makes irrigation advice noticeably more accurate. Not sure? Skip it.
                 </p>
+                {soilDetecting && (
+                  <p className="mb-2 text-xs text-slate-500 animate-pulse">Determining soil type…</p>
+                )}
                 <div className="grid grid-cols-2 gap-3">
                   {SOIL_TYPES.map((soil) => {
                     const selected = soilType === soil.value;
@@ -423,7 +430,7 @@ export default function OnboardingPage() {
                         )}
                       >
                         {selected && (
-                          <span className="absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded-full bg-brand-600 text-white animate-scale-in">
+                          <span className="absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded-full bg-brand-600 text-white">
                             <Check className="h-3 w-3" />
                           </span>
                         )}
@@ -434,38 +441,6 @@ export default function OnboardingPage() {
                       </button>
                     );
                   })}
-=======
-                <label className="label flex items-center gap-2">
-                  Soil type (optional)
-                  {detectedSoilType && (
-                    <span className="text-xs text-brand-600 font-normal">Detected automatically</span>
-                  )}
-                </label>
-                <p className="-mt-1 mb-2 text-xs text-slate-500">
-                  This makes irrigation advice noticeably more accurate. Not sure? Skip it.
-                </p>
-                {soilDetecting && (
-                  <p className="mb-2 text-xs text-slate-500 animate-pulse">Determining soil type…</p>
-                )}
-                <div className="grid grid-cols-2 gap-2">
-                  {SOIL_TYPES.map((soil) => (
-                    <button
-                      key={soil.value}
-                      type="button"
-                      onClick={() => setSoilType(soilType === soil.value ? '' : soil.value)}
-                      aria-pressed={soilType === soil.value}
-                      className={cn(
-                        'rounded-xl border p-3 text-left transition',
-                        soilType === soil.value
-                          ? 'border-brand-600 bg-brand-50 ring-1 ring-brand-600'
-                          : 'border-soil-300 bg-white hover:bg-soil-50',
-                      )}
-                    >
-                      <p className="text-sm font-semibold text-slate-800">{soil.label}</p>
-                      <p className="text-xs leading-tight text-slate-500">{soil.hint}</p>
-                    </button>
-                  ))}
->>>>>>> 6df9d470086bfc265dd3750e949a3bd1a40c8fe6
                 </div>
               </div>
 
