@@ -174,7 +174,7 @@ async function cachedRequest<T>(
   try {
     const data = await request<T>(path, { signal });
     writeCache<T>(cacheKey, data);
-    return data;
+    return data as T & { _fromCache?: boolean; _cacheAgeMs?: number };
   } catch (err) {
     if (err instanceof ApiError && err.status === 0) {
       const cached = readCache<T>(cacheKey);
