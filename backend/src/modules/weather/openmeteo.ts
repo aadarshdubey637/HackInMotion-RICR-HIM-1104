@@ -215,9 +215,15 @@ export async function fetchWeather(
   } catch (err) {
     if (err instanceof ExternalServiceError) throw err;
     if (err instanceof Error && err.name === 'AbortError') {
-      throw new ExternalServiceError('Open-Meteo', `Request timed out after ${REQUEST_TIMEOUT_MS}ms`);
+      throw new ExternalServiceError(
+        'Open-Meteo',
+        `Request timed out after ${REQUEST_TIMEOUT_MS}ms`,
+      );
     }
-    throw new ExternalServiceError('Open-Meteo', err instanceof Error ? err.message : 'Network error');
+    throw new ExternalServiceError(
+      'Open-Meteo',
+      err instanceof Error ? err.message : 'Network error',
+    );
   } finally {
     clearTimeout(timeout);
   }

@@ -493,10 +493,7 @@ export function diagnose(input: DiagnosisInput): Diagnosis {
 
   const candidates: Candidate[] = [];
 
-  const evaluate = (
-    profile: DiseaseProfile | PestProfile,
-    kind: 'disease' | 'pest',
-  ): void => {
+  const evaluate = (profile: DiseaseProfile | PestProfile, kind: 'disease' | 'pest'): void => {
     const described = scoreSymptoms(description, profile.keywords);
     const seen = photoSymptomText
       ? scoreSymptoms(photoSymptomText, profile.keywords)
@@ -532,7 +529,9 @@ export function diagnose(input: DiagnosisInput): Diagnosis {
       evidence.push(`You described: ${described.matched.slice(0, 4).join(', ')}.`);
     }
     if (regional.matchedTerms.length > 0 && described.matched.length > 0) {
-      evidence.push(`Understood from your own words: ${regional.matchedTerms.slice(0, 4).join(', ')}.`);
+      evidence.push(
+        `Understood from your own words: ${regional.matchedTerms.slice(0, 4).join(', ')}.`,
+      );
     }
     // Named separately from the farmer's own words: two sources agreeing is the
     // strongest thing this engine can show, and blurring them into one line
@@ -546,7 +545,9 @@ export function diagnose(input: DiagnosisInput): Diagnosis {
       );
     }
     if (weatherVerdict.reasons.length > 0) {
-      evidence.push(`Recent weather favours it — ${weatherVerdict.reasons.slice(0, 2).join(', and ')}.`);
+      evidence.push(
+        `Recent weather favours it — ${weatherVerdict.reasons.slice(0, 2).join(', and ')}.`,
+      );
     } else if (weatherVerdict.score < 0.4) {
       evidence.push('Recent weather does not strongly favour this, so it is less likely.');
     }

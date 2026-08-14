@@ -37,9 +37,19 @@ const PRIMARY = [
 
 /** Secondary destinations — behind "More" on mobile, inline on desktop. */
 const SECONDARY = [
-  { href: '/recommendations', labelKey: 'nav.recommendations', icon: Sprout, hintKey: 'nav.recommendationsHint' },
+  {
+    href: '/recommendations',
+    labelKey: 'nav.recommendations',
+    icon: Sprout,
+    hintKey: 'nav.recommendationsHint',
+  },
   { href: '/planning', labelKey: 'nav.planning', icon: FlaskConical, hintKey: 'nav.planningHint' },
-  { href: '/community', labelKey: 'nav.community', icon: AlertTriangle, hintKey: 'nav.communityHint' },
+  {
+    href: '/community',
+    labelKey: 'nav.community',
+    icon: AlertTriangle,
+    hintKey: 'nav.communityHint',
+  },
   { href: '/crops', labelKey: 'nav.farm', icon: MapPin, hintKey: 'nav.farmHint' },
 ] as const;
 

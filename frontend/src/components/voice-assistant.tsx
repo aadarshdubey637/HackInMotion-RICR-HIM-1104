@@ -4,11 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Mic, X, Loader2 } from 'lucide-react';
 import { useTranslation } from '@/lib/language-context';
-import {
-  useSpeechRecognition,
-  detectScriptLanguage,
-  detectRomanisedLanguage,
-} from '@/lib/speech';
+import { useSpeechRecognition, detectScriptLanguage, detectRomanisedLanguage } from '@/lib/speech';
 import { useVoice } from '@/lib/voice';
 import { matchCommand, commandExamples, type VoiceIntent } from '@/lib/voice-commands';
 import { LANGUAGES, translations, type Language } from '@/lib/translations';
@@ -94,7 +90,10 @@ export function VoiceAssistant({ onReadAloud }: { onReadAloud?: () => void }) {
         }
 
         case 'log-issue': {
-          respond(phraseIn(spokenIn, 'voice.opening', { page: phraseIn(spokenIn, 'nav.health', {}) }), spokenIn);
+          respond(
+            phraseIn(spokenIn, 'voice.opening', { page: phraseIn(spokenIn, 'nav.health', {}) }),
+            spokenIn,
+          );
           router.push('/health');
           setTimeout(() => setOpen(false), 1200);
           return;

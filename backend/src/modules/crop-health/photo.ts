@@ -46,10 +46,7 @@ export interface PhotoFile {
  * to somebody else. That is deliberate: a distinguishable "forbidden" would
  * confirm to a stranger that a given filename is a real photo on this server.
  */
-export async function resolvePhotoForUser(
-  filename: string,
-  userId: string,
-): Promise<PhotoFile> {
+export async function resolvePhotoForUser(filename: string, userId: string): Promise<PhotoFile> {
   if (!FILENAME_PATTERN.test(filename)) {
     throw new ValidationError('That is not a valid photo reference.');
   }

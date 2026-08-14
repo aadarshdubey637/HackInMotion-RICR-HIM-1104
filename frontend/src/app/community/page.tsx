@@ -71,11 +71,7 @@ function CommunityContent() {
       const res = await api.health.nearby(currentFarm.id);
       setData(res);
     } catch (err) {
-      setError(
-        err instanceof ApiError
-          ? err.message
-          : 'Could not load community outbreak alerts.'
-      );
+      setError(err instanceof ApiError ? err.message : 'Could not load community outbreak alerts.');
     } finally {
       setLoading(false);
     }
@@ -134,7 +130,7 @@ function CommunityContent() {
       void loadOutbreaks();
     } catch (err) {
       setFormError(
-        err instanceof ApiError ? err.message : 'Failed to submit report. Please try again.'
+        err instanceof ApiError ? err.message : 'Failed to submit report. Please try again.',
       );
     } finally {
       setSubmitting(false);
@@ -146,9 +142,7 @@ function CommunityContent() {
       {/* Page Header */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-800">
-            Community Alerts
-          </h1>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-800">Community Alerts</h1>
           <p className="text-sm text-slate-500">
             Monitor and report pest & disease outbreaks reported by nearby farmers.
           </p>
@@ -164,7 +158,7 @@ function CommunityContent() {
             'flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition',
             showForm
               ? 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-              : 'bg-brand-600 text-white hover:bg-brand-700'
+              : 'bg-brand-600 text-white hover:bg-brand-700',
           )}
         >
           {showForm ? 'Cancel' : 'Report Outbreak'}
@@ -177,7 +171,9 @@ function CommunityContent() {
         <div className="flex gap-2">
           <Shield className="h-5 w-5 shrink-0 text-slate-600" />
           <div className="text-xs">
-            <span className="font-bold">Anonymity Guaranteed:</span> To protect privacy, we never display names, phone numbers, or exact locations of other farms. Distances are rounded to ensure complete anonymity.
+            <span className="font-bold">Anonymity Guaranteed:</span> To protect privacy, we never
+            display names, phone numbers, or exact locations of other farms. Distances are rounded
+            to ensure complete anonymity.
           </div>
         </div>
       </Notice>
@@ -187,7 +183,7 @@ function CommunityContent() {
         <Card className="border-brand-100 bg-brand-50/10">
           <form onSubmit={handleSubmit} className="space-y-4">
             <h3 className="text-base font-bold text-slate-800">New Community Crop-Health Report</h3>
-            
+
             {formError && <div className="text-sm font-semibold text-red-600">{formError}</div>}
 
             <div className="grid gap-4 sm:grid-cols-2">
@@ -233,7 +229,10 @@ function CommunityContent() {
                     />
                     <button
                       type="button"
-                      onClick={() => { setUseCustomCrop(false); setCustomCropName(''); }}
+                      onClick={() => {
+                        setUseCustomCrop(false);
+                        setCustomCropName('');
+                      }}
                       className="text-[11px] text-brand-600 hover:underline"
                     >
                       ← Pick from my farm crops
@@ -257,7 +256,7 @@ function CommunityContent() {
                         'flex-1 rounded-lg border py-2 text-center text-sm font-semibold transition',
                         issueType === type
                           ? 'border-brand-500 bg-brand-50 text-brand-800'
-                          : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                          : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50',
                       )}
                     >
                       {type === 'DISEASE' ? 'Disease / Infection' : 'Insect / Pest'}
@@ -371,7 +370,9 @@ function CommunityContent() {
           <div className="flex gap-2">
             <Check className="h-5 w-5 shrink-0 text-emerald-600" />
             <div>
-              <span className="font-bold">Report Submitted Successfully!</span> Your observation has been anonymized and added to help protect other farmers in your local community. Thank you!
+              <span className="font-bold">Report Submitted Successfully!</span> Your observation has
+              been anonymized and added to help protect other farmers in your local community. Thank
+              you!
             </div>
           </div>
         </Notice>
@@ -408,11 +409,7 @@ function CommunityContent() {
 }
 
 // Outbreak detailed presentation card
-function OutbreakCard({
-  outbreak,
-}: {
-  outbreak: NearbyOutbreaks['outbreaks'][0];
-}) {
+function OutbreakCard({ outbreak }: { outbreak: NearbyOutbreaks['outbreaks'][0] }) {
   const [expanded, setExpanded] = useState(false);
   const { tCrop } = useTranslation();
 
@@ -432,9 +429,7 @@ function OutbreakCard({
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge tone={style.tone}>
-              🔴 Potential Outbreak
-            </Badge>
+            <Badge tone={style.tone}>🔴 Potential Outbreak</Badge>
             <span className="text-xs text-slate-500 font-medium">
               Last reported: {new Date(outbreak.latest).toLocaleDateString()}
             </span>
@@ -458,11 +453,7 @@ function OutbreakCard({
           aria-expanded={expanded}
           aria-label="Toggle details"
         >
-          {expanded ? (
-            <ChevronDown className="h-5 w-5" />
-          ) : (
-            <ChevronRight className="h-5 w-5" />
-          )}
+          {expanded ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
         </button>
       </div>
 
@@ -486,7 +477,8 @@ function OutbreakCard({
 
           {/* Disclaimer details */}
           <p className="text-[11px] text-slate-400 italic">
-            This is an early alert based on reports from nearby farms. Please inspect your fields and consult local extensions before treating.
+            This is an early alert based on reports from nearby farms. Please inspect your fields
+            and consult local extensions before treating.
           </p>
         </div>
       )}

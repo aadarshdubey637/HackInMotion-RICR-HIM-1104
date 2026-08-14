@@ -33,9 +33,7 @@ const nextConfig = {
       // and pre-caching them means the app shell loads instantly offline.
       {
         source: '/icons/:path*',
-        headers: [
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
-        ],
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
       },
       {
         source: '/images/:path*',

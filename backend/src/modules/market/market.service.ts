@@ -161,7 +161,9 @@ function parseArrivalDate(value: string | undefined): Date | null {
     return new Date(`${yyyy}-${mm}-${dd}T00:00:00.000Z`);
   }
   const parsed = Date.parse(value);
-  return Number.isNaN(parsed) ? null : new Date(new Date(parsed).toISOString().slice(0, 10) + 'T00:00:00.000Z');
+  return Number.isNaN(parsed)
+    ? null
+    : new Date(new Date(parsed).toISOString().slice(0, 10) + 'T00:00:00.000Z');
 }
 
 // ─────────────────────────── Trend analysis ───────────────────────────
@@ -250,7 +252,11 @@ export interface PriceScope {
  * Price trend for a commodity, with selling guidance.
  * Aggregates across markets by day (mean modal price) to smooth mandi-level noise.
  */
-export async function getPriceTrend(commodity: string, days = 60, scope: PriceScope = {}): Promise<PriceTrend> {
+export async function getPriceTrend(
+  commodity: string,
+  days = 60,
+  scope: PriceScope = {},
+): Promise<PriceTrend> {
   const since = new Date(Date.now() - days * 86_400_000);
 
   const whereClause: Prisma.PriceHistoryWhereInput = {
@@ -292,7 +298,10 @@ export async function getPriceTrend(commodity: string, days = 60, scope: PriceSc
   let rows: Awaited<ReturnType<typeof prisma.priceHistory.findMany>> = [];
   let appliedLevel: ScopeLevel = levels[0].level;
   for (const candidate of levels) {
-    rows = await prisma.priceHistory.findMany({ where: candidate.where, orderBy: { priceDate: 'asc' } });
+    rows = await prisma.priceHistory.findMany({
+      where: candidate.where,
+      orderBy: { priceDate: 'asc' },
+    });
     appliedLevel = candidate.level;
     if (rows.length >= MIN_SERIES_POINTS) break;
   }
@@ -393,10 +402,7 @@ function percentChange(prices: number[], lookback: number, latest: number): numb
   return round1(((latest - past) / past) * 100);
 }
 
-function classifyDirection(
-  change7: number | null,
-  volatility: number | null,
-): TrendDirection {
+function classifyDirection(change7: number | null, volatility: number | null): TrendDirection {
   if (change7 === null) return 'STABLE';
   // A volatile market needs a bigger move before we call it a trend.
   const threshold = volatility !== null && volatility > 10 ? 5 : 2.5;
@@ -588,52 +594,51 @@ function seededNoise(seed: string, index: number): number {
 export async function seedPriceHistory(days = 90): Promise<number> {
   const markets = [
     // Madhya Pradesh
-    { marketName: 'Indore',    state: 'Madhya Pradesh', district: 'Indore' },
-    { marketName: 'Bhopal',    state: 'Madhya Pradesh', district: 'Bhopal' },
-    { marketName: 'Ujjain',    state: 'Madhya Pradesh', district: 'Ujjain' },
-    { marketName: 'Dewas',     state: 'Madhya Pradesh', district: 'Dewas' },
-    { marketName: 'Jabalpur',  state: 'Madhya Pradesh', district: 'Jabalpur' },
-    { marketName: 'Sagar',     state: 'Madhya Pradesh', district: 'Sagar' },
-    { marketName: 'Gwalior',   state: 'Madhya Pradesh', district: 'Gwalior' },
+    { marketName: 'Indore', state: 'Madhya Pradesh', district: 'Indore' },
+    { marketName: 'Bhopal', state: 'Madhya Pradesh', district: 'Bhopal' },
+    { marketName: 'Ujjain', state: 'Madhya Pradesh', district: 'Ujjain' },
+    { marketName: 'Dewas', state: 'Madhya Pradesh', district: 'Dewas' },
+    { marketName: 'Jabalpur', state: 'Madhya Pradesh', district: 'Jabalpur' },
+    { marketName: 'Sagar', state: 'Madhya Pradesh', district: 'Sagar' },
+    { marketName: 'Gwalior', state: 'Madhya Pradesh', district: 'Gwalior' },
     // Uttar Pradesh
-    { marketName: 'Lucknow',   state: 'Uttar Pradesh', district: 'Lucknow' },
-    { marketName: 'Kanpur',    state: 'Uttar Pradesh', district: 'Kanpur Nagar' },
-    { marketName: 'Agra',      state: 'Uttar Pradesh', district: 'Agra' },
-    { marketName: 'Varanasi',  state: 'Uttar Pradesh', district: 'Varanasi' },
-    { marketName: 'Meerut',    state: 'Uttar Pradesh', district: 'Meerut' },
-    { marketName: 'Mathura',   state: 'Uttar Pradesh', district: 'Mathura' },
+    { marketName: 'Lucknow', state: 'Uttar Pradesh', district: 'Lucknow' },
+    { marketName: 'Kanpur', state: 'Uttar Pradesh', district: 'Kanpur Nagar' },
+    { marketName: 'Agra', state: 'Uttar Pradesh', district: 'Agra' },
+    { marketName: 'Varanasi', state: 'Uttar Pradesh', district: 'Varanasi' },
+    { marketName: 'Meerut', state: 'Uttar Pradesh', district: 'Meerut' },
+    { marketName: 'Mathura', state: 'Uttar Pradesh', district: 'Mathura' },
     // Rajasthan
-    { marketName: 'Jaipur',    state: 'Rajasthan', district: 'Jaipur' },
-    { marketName: 'Jodhpur',   state: 'Rajasthan', district: 'Jodhpur' },
-    { marketName: 'Kota',      state: 'Rajasthan', district: 'Kota' },
-    { marketName: 'Ajmer',     state: 'Rajasthan', district: 'Ajmer' },
-    { marketName: 'Bikaner',   state: 'Rajasthan', district: 'Bikaner' },
+    { marketName: 'Jaipur', state: 'Rajasthan', district: 'Jaipur' },
+    { marketName: 'Jodhpur', state: 'Rajasthan', district: 'Jodhpur' },
+    { marketName: 'Kota', state: 'Rajasthan', district: 'Kota' },
+    { marketName: 'Ajmer', state: 'Rajasthan', district: 'Ajmer' },
+    { marketName: 'Bikaner', state: 'Rajasthan', district: 'Bikaner' },
     // Maharashtra
-    { marketName: 'Nashik',    state: 'Maharashtra', district: 'Nashik' },
-    { marketName: 'Pune',      state: 'Maharashtra', district: 'Pune' },
-    { marketName: 'Nagpur',    state: 'Maharashtra', district: 'Nagpur' },
-    { marketName: 'Solapur',   state: 'Maharashtra', district: 'Solapur' },
-    { marketName: 'Latur',     state: 'Maharashtra', district: 'Latur' },
+    { marketName: 'Nashik', state: 'Maharashtra', district: 'Nashik' },
+    { marketName: 'Pune', state: 'Maharashtra', district: 'Pune' },
+    { marketName: 'Nagpur', state: 'Maharashtra', district: 'Nagpur' },
+    { marketName: 'Solapur', state: 'Maharashtra', district: 'Solapur' },
+    { marketName: 'Latur', state: 'Maharashtra', district: 'Latur' },
     // Punjab
-    { marketName: 'Bathinda',  state: 'Punjab', district: 'Bathinda' },
-    { marketName: 'Amritsar',  state: 'Punjab', district: 'Amritsar' },
-    { marketName: 'Ludhiana',  state: 'Punjab', district: 'Ludhiana' },
-    { marketName: 'Patiala',   state: 'Punjab', district: 'Patiala' },
+    { marketName: 'Bathinda', state: 'Punjab', district: 'Bathinda' },
+    { marketName: 'Amritsar', state: 'Punjab', district: 'Amritsar' },
+    { marketName: 'Ludhiana', state: 'Punjab', district: 'Ludhiana' },
+    { marketName: 'Patiala', state: 'Punjab', district: 'Patiala' },
     // Andhra Pradesh
-    { marketName: 'Kurnool',   state: 'Andhra Pradesh', district: 'Kurnool' },
-    { marketName: 'Guntur',    state: 'Andhra Pradesh', district: 'Guntur' },
+    { marketName: 'Kurnool', state: 'Andhra Pradesh', district: 'Kurnool' },
+    { marketName: 'Guntur', state: 'Andhra Pradesh', district: 'Guntur' },
     { marketName: 'Vijayawada', state: 'Andhra Pradesh', district: 'Krishna' },
     // Gujarat
-    { marketName: 'Rajkot',    state: 'Gujarat', district: 'Rajkot' },
+    { marketName: 'Rajkot', state: 'Gujarat', district: 'Rajkot' },
     { marketName: 'Ahmedabad', state: 'Gujarat', district: 'Ahmedabad' },
-    { marketName: 'Surat',     state: 'Gujarat', district: 'Surat' },
-    { marketName: 'Junagadh',  state: 'Gujarat', district: 'Junagadh' },
+    { marketName: 'Surat', state: 'Gujarat', district: 'Surat' },
+    { marketName: 'Junagadh', state: 'Gujarat', district: 'Junagadh' },
     // West Bengal
-    { marketName: 'Burdwan',   state: 'West Bengal', district: 'Purba Bardhaman' },
-    { marketName: 'Kolkata',   state: 'West Bengal', district: 'Kolkata' },
+    { marketName: 'Burdwan', state: 'West Bengal', district: 'Purba Bardhaman' },
+    { marketName: 'Kolkata', state: 'West Bengal', district: 'Kolkata' },
     { marketName: 'Murshidabad', state: 'West Bengal', district: 'Murshidabad' },
   ];
-
 
   const today = new Date();
   today.setUTCHours(0, 0, 0, 0);

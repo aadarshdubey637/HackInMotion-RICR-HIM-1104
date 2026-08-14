@@ -397,15 +397,13 @@ export async function getFarmPlan(
 
   // Each crop's plan is independent; one failing must not lose the others.
   const results = await Promise.allSettled(
-    farm.crops.map(
-      async (crop): Promise<CropPlan> => ({
-        cropId: crop.id,
-        cropName: crop.cropName,
-        status: crop.status,
-        fertilizer: await getFertilizerPlan(farmId, crop.id, userId),
-        yieldPrediction: await getYieldPrediction(farmId, crop.id, userId),
-      }),
-    ),
+    farm.crops.map(async (crop): Promise<CropPlan> => ({
+      cropId: crop.id,
+      cropName: crop.cropName,
+      status: crop.status,
+      fertilizer: await getFertilizerPlan(farmId, crop.id, userId),
+      yieldPrediction: await getYieldPrediction(farmId, crop.id, userId),
+    })),
   );
 
   const crops = results

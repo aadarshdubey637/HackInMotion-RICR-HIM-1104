@@ -18,11 +18,7 @@ import { NotFoundError, ExternalServiceError } from '../../common/errors';
 import { upsertWithoutTransaction } from '../../common/upsert';
 import { resolveCrop } from '../../domain/crops';
 import { fetchWeather, type WeatherBundle } from './openmeteo';
-import {
-  generateIrrigationGuidance,
-  type IrrigationGuidance,
-  type RiskAlert,
-} from './irrigation';
+import { generateIrrigationGuidance, type IrrigationGuidance, type RiskAlert } from './irrigation';
 import type { LogIrrigationInput } from './weather.schema';
 
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
@@ -147,7 +143,10 @@ async function fetchAndPersist(
 
     throw err instanceof ExternalServiceError
       ? err
-      : new ExternalServiceError('Open-Meteo', 'Weather unavailable and no stored data for this farm');
+      : new ExternalServiceError(
+          'Open-Meteo',
+          'Weather unavailable and no stored data for this farm',
+        );
   }
 }
 
@@ -276,7 +275,11 @@ export async function getIrrigationGuidance(
   if (options.cropId && !cropRecord) throw new NotFoundError('Crop', options.cropId);
 
   const { crop, isKnown } = resolveCrop(cropRecord?.cropName);
-  const { weather, stale, warning } = await getWeatherForFarm(farmId, farm.latitude, farm.longitude);
+  const { weather, stale, warning } = await getWeatherForFarm(
+    farmId,
+    farm.latitude,
+    farm.longitude,
+  );
 
   // Most recent logged irrigation feeds back into the water balance.
   const lastIrrigation = cropRecord
@@ -347,7 +350,11 @@ async function persistAlerts(
         where: { dedupeKey },
         create: { ...payload, dedupeKey },
         // Refresh content but preserve the farmer's read/dismissed state.
-        update: { severity: payload.severity, message: payload.message, metadata: payload.metadata },
+        update: {
+          severity: payload.severity,
+          message: payload.message,
+          metadata: payload.metadata,
+        },
       });
     } catch (err) {
       logger.warn({ farmId, dedupeKey, err }, 'Failed to persist alert');

@@ -72,5 +72,3 @@ export const createCommunityReportBody = z
   });
 
 export type CreateCommunityReportInput = z.infer<typeof createCommunityReportBody>;
-
-

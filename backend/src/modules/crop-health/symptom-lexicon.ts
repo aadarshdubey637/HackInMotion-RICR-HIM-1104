@@ -148,7 +148,14 @@ const SYMPTOMS: SymptomEntry[] = [
       'ਚਿੱਟਾ ਪਾਊਡਰ',
       'ਭੁੱਖੀ',
     ],
-    roman: ['safed powder', 'safed churn', 'safaid powder', 'bhukkhi', 'powder jaisa', 'chitta powder'],
+    roman: [
+      'safed powder',
+      'safed churn',
+      'safaid powder',
+      'bhukkhi',
+      'powder jaisa',
+      'chitta powder',
+    ],
   },
   {
     canonical: ['rust', 'orange powder', 'brown pustule'],

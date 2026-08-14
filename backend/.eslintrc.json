@@ -10,11 +10,7 @@
     "es2022": true
   },
   "plugins": ["@typescript-eslint"],
-  "extends": [
-    "eslint:recommended",
-    "plugin:@typescript-eslint/recommended",
-    "prettier"
-  ],
+  "extends": ["eslint:recommended", "plugin:@typescript-eslint/recommended", "prettier"],
   "ignorePatterns": ["dist/", "node_modules/", "uploads/"],
   "rules": {
     "@typescript-eslint/no-unused-vars": [

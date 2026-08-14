@@ -48,7 +48,8 @@ const FARM_KEY = 'sf_active_farm';
 // ─────────────────────────── Token storage ───────────────────────────
 
 export const tokenStore = {
-  get: (): string | null => (typeof window === 'undefined' ? null : localStorage.getItem(TOKEN_KEY)),
+  get: (): string | null =>
+    typeof window === 'undefined' ? null : localStorage.getItem(TOKEN_KEY),
   getRefresh: (): string | null =>
     typeof window === 'undefined' ? null : localStorage.getItem(REFRESH_KEY),
   set(tokens: AuthTokens) {
@@ -156,7 +157,9 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     payload = await response.json();
   } catch {
     throw new ApiError(
-      response.ok ? 'The server sent back an unreadable response.' : `Request failed (${response.status})`,
+      response.ok
+        ? 'The server sent back an unreadable response.'
+        : `Request failed (${response.status})`,
       response.status,
       'BAD_RESPONSE',
     );
@@ -356,8 +359,7 @@ export const api = {
   farms: {
     list: () => cachedRequest<{ farms: Farm[] }>('farms:list', '/farms'),
 
-    get: (farmId: string) =>
-      cachedRequest<{ farm: Farm }>(`farms:${farmId}`, `/farms/${farmId}`),
+    get: (farmId: string) => cachedRequest<{ farm: Farm }>(`farms:${farmId}`, `/farms/${farmId}`),
 
     create: (input: {
       name: string;
@@ -417,7 +419,10 @@ export const api = {
 
   weather: {
     forecast: (farmId: string, days = 7) =>
-      cachedRequest<Forecast>(`weather:${farmId}:forecast:${days}`, `/weather/${farmId}/forecast?days=${days}`),
+      cachedRequest<Forecast>(
+        `weather:${farmId}:forecast:${days}`,
+        `/weather/${farmId}/forecast?days=${days}`,
+      ),
 
     irrigation: (farmId: string, cropId?: string) =>
       cachedRequest<IrrigationGuidance>(
@@ -479,10 +484,12 @@ export const api = {
       if (input.language) form.append('language', input.language);
       if (input.image) form.append('image', input.image);
 
-      return request<{ log: HealthLog; diagnosis: Diagnosis; imageStored: boolean; warning?: string }>(
-        `/crop-health/${farmId}/observations`,
-        { method: 'POST', formData: form },
-      );
+      return request<{
+        log: HealthLog;
+        diagnosis: Diagnosis;
+        imageStored: boolean;
+        warning?: string;
+      }>(`/crop-health/${farmId}/observations`, { method: 'POST', formData: form });
     },
 
     updateStatus: (farmId: string, logId: string, status: string) =>
@@ -537,10 +544,8 @@ export const api = {
         `/market/commodity/${encodeURIComponent(commodity)}?days=${days}${scopeQuery(scope, true)}`,
       ),
 
-    getLocations: () => cachedRequest<{ locations: MarketLocation[] }>(
-      'market:locations',
-      '/market/locations',
-    ),
+    getLocations: () =>
+      cachedRequest<{ locations: MarketLocation[] }>('market:locations', '/market/locations'),
   },
 
   recommendations: {
@@ -596,11 +601,7 @@ export const api = {
       const qs = search.toString();
       const path = `/alerts/${farmId}${qs ? `?${qs}` : ''}`;
 
-      return cachedRequest<AlertFeed>(
-        `alerts:${farmId}:${qs}`,
-        path,
-        signal,
-      );
+      return cachedRequest<AlertFeed>(`alerts:${farmId}:${qs}`, path, signal);
     },
 
     markRead: (alertId: string) =>

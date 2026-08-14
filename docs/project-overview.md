@@ -35,13 +35,13 @@ Key design constraints that shaped every decision:
 
 Recommendations are scored on five weighted dimensions:
 
-| Dimension | Weight | Data source |
-|---|---|---|
-| Climate suitability | 30% | Open-Meteo archive API (3-year normals, 120-day window) |
-| Season fit | 25% | Crop knowledge base (kharif / rabi / zaid windows) |
-| Soil compatibility | 20% | Farm soil type + optional SoilGrids enrichment |
-| Water requirement | 15% | Rainfall forecast vs. crop water demand |
-| Market potential | 10% | Data.gov.in mandi prices — estimated income/hectare |
+| Dimension           | Weight | Data source                                             |
+| ------------------- | ------ | ------------------------------------------------------- |
+| Climate suitability | 30%    | Open-Meteo archive API (3-year normals, 120-day window) |
+| Season fit          | 25%    | Crop knowledge base (kharif / rabi / zaid windows)      |
+| Soil compatibility  | 20%    | Farm soil type + optional SoilGrids enrichment          |
+| Water requirement   | 15%    | Rainfall forecast vs. crop water demand                 |
+| Market potential    | 10%    | Data.gov.in mandi prices — estimated income/hectare     |
 
 Climate and season dominate by design. A crop sown out of its window fails regardless of price. Each dimension returns its numeric score and a one-sentence reason a farmer can read.
 
@@ -111,36 +111,36 @@ The offline layer uses browser **localStorage** as both a read cache and a write
 
 ## Technical Architecture
 
-| Layer | Technology |
-|---|---|
-| Frontend | Next.js 14 (App Router), React, Tailwind CSS, Recharts |
-| Backend | Node.js, Express, TypeScript, Prisma ORM |
-| Database | MongoDB Atlas (replica set, free tier) |
-| Auth | JWT — access tokens (7 days) + refresh tokens (30 days) |
-| Voice | Web Speech API — Hindi, Punjabi, Telugu, Marathi, Bengali, English |
+| Layer    | Technology                                                         |
+| -------- | ------------------------------------------------------------------ |
+| Frontend | Next.js 14 (App Router), React, Tailwind CSS, Recharts             |
+| Backend  | Node.js, Express, TypeScript, Prisma ORM                           |
+| Database | MongoDB Atlas (replica set, free tier)                             |
+| Auth     | JWT — access tokens (7 days) + refresh tokens (30 days)            |
+| Voice    | Web Speech API — Hindi, Punjabi, Telugu, Marathi, Bengali, English |
 
 ### External APIs (all free / no-key)
 
-| API | Purpose |
-|---|---|
-| Open-Meteo | 14-day forecast + ET₀ + historical climate archive |
+| API                       | Purpose                                            |
+| ------------------------- | -------------------------------------------------- |
+| Open-Meteo                | 14-day forecast + ET₀ + historical climate archive |
 | Nominatim (OpenStreetMap) | Reverse geocoding (coordinates → village/district) |
-| SoilGrids (ISRIC) | Soil texture and property lookup |
-| Data.gov.in | Mandi commodity prices (optional key) |
-| Plant.id | Visual crop disease identification (optional key) |
+| SoilGrids (ISRIC)         | Soil texture and property lookup                   |
+| Data.gov.in               | Mandi commodity prices (optional key)              |
+| Plant.id                  | Visual crop disease identification (optional key)  |
 
 ---
 
 ## Impact
 
-| Without Smart Farm DSS | With Smart Farm DSS |
-|---|---|
-| Irrigate by schedule or guess | Irrigate when the FAO-56 model says depletion crosses the stress threshold |
-| Sell at harvest regardless of price | See the 30-day trend and hold or sell with context |
-| Identify disease from a neighbour's description | Get a ranked differential diagnosis with weather context |
-| Apply fertilizer by habit | Get a stage-wise plan with bag counts and soil-adjusted doses |
-| Choose crops based on last year's price | Score crops on climate, season, soil, water, and current market |
-| No access to advisory while offline | Full guidance from local cache; writes queue and sync automatically |
+| Without Smart Farm DSS                          | With Smart Farm DSS                                                        |
+| ----------------------------------------------- | -------------------------------------------------------------------------- |
+| Irrigate by schedule or guess                   | Irrigate when the FAO-56 model says depletion crosses the stress threshold |
+| Sell at harvest regardless of price             | See the 30-day trend and hold or sell with context                         |
+| Identify disease from a neighbour's description | Get a ranked differential diagnosis with weather context                   |
+| Apply fertilizer by habit                       | Get a stage-wise plan with bag counts and soil-adjusted doses              |
+| Choose crops based on last year's price         | Score crops on climate, season, soil, water, and current market            |
+| No access to advisory while offline             | Full guidance from local cache; writes queue and sync automatically        |
 
 ---
 

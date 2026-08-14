@@ -8,14 +8,14 @@ import {
   AuthenticationError,
   ConflictError,
   NotFoundError,
-  ValidationError
+  ValidationError,
 } from '../../common/errors';
 import type {
   RegisterInput,
   LoginInput,
   ChangePasswordInput,
   UpdateProfileInput,
-  GoogleAuthInput
+  GoogleAuthInput,
 } from './auth.schema';
 import { verifyGoogleIdToken } from './google';
 
@@ -70,12 +70,12 @@ function generateTokens(payload: TokenPayload): AuthTokens {
       jti: randomUUID(),
     },
     config.JWT_SECRET,
-    { expiresIn: '30d' }
+    { expiresIn: '30d' },
   );
 
   const decoded = jwt.decode(accessToken) as { exp: number };
   const expiresIn = decoded.exp * 1000 - Date.now();
-  
+
   return { accessToken, refreshToken, expiresIn };
 }
 
@@ -230,7 +230,9 @@ export async function register(
  * `identifier` arrives already lowercased from the schema, matching how both
  * `username` and `email` are stored.
  */
-export async function login(input: LoginInput): Promise<{ user: UserResponse; tokens: AuthTokens }> {
+export async function login(
+  input: LoginInput,
+): Promise<{ user: UserResponse; tokens: AuthTokens }> {
   // findFirst with an OR rather than two lookups: `username` has no unique
   // index (see schema.prisma), so findUnique is not available on it anyway.
   const user = await prisma.user.findFirst({
@@ -261,15 +263,15 @@ export async function login(input: LoginInput): Promise<{ user: UserResponse; to
   if (!isPasswordValid) {
     throw new AuthenticationError('Incorrect username/email or password');
   }
-  
+
   const payload: TokenPayload = {
     userId: user.id,
     email: user.email,
     role: user.role,
   };
-  
+
   const tokens = generateTokens(payload);
-  
+
   await prisma.session.create({
     data: {
       userId: user.id,
@@ -277,14 +279,14 @@ export async function login(input: LoginInput): Promise<{ user: UserResponse; to
       expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     },
   });
-  
+
   await prisma.user.update({
     where: { id: user.id },
     data: { lastLoginAt: new Date() },
   });
-  
+
   logger.info({ userId: user.id }, 'User logged in');
-  
+
   return { user: formatUserResponse(user), tokens };
 }
 
@@ -375,21 +377,21 @@ export async function refreshTokens(refreshToken: string): Promise<AuthTokens> {
     where: { token: refreshToken },
     include: { user: true },
   });
-  
+
   if (!session || session.expiresAt < new Date()) {
     throw new AuthenticationError('Invalid or expired refresh token');
   }
-  
+
   await prisma.session.delete({ where: { id: session.id } });
-  
+
   const payload: TokenPayload = {
     userId: session.user.id,
     email: session.user.email,
     role: session.user.role,
   };
-  
+
   const tokens = generateTokens(payload);
-  
+
   await prisma.session.create({
     data: {
       userId: session.user.id,
@@ -397,7 +399,7 @@ export async function refreshTokens(refreshToken: string): Promise<AuthTokens> {
       expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     },
   });
-  
+
   return tokens;
 }
 
@@ -415,7 +417,7 @@ export async function logoutAll(userId: string): Promise<void> {
 
 export async function changePassword(userId: string, input: ChangePasswordInput): Promise<void> {
   const user = await prisma.user.findUnique({ where: { id: userId } });
-  
+
   if (!user) {
     throw new NotFoundError('User', userId);
   }
@@ -432,16 +434,16 @@ export async function changePassword(userId: string, input: ChangePasswordInput)
   if (!isCurrentPasswordValid) {
     throw new ValidationError('Current password is incorrect');
   }
-  
+
   const newPasswordHash = await bcrypt.hash(input.newPassword, config.BCRYPT_ROUNDS);
-  
+
   await prisma.user.update({
     where: { id: userId },
     data: { passwordHash: newPasswordHash },
   });
-  
+
   await logoutAll(userId);
-  
+
   logger.info({ userId }, 'Password changed');
 }
 
@@ -452,7 +454,10 @@ export async function changePassword(userId: string, input: ChangePasswordInput)
  * number as an identifier, so without a check here anyone could type another
  * farmer's number into their own profile and take it over.
  */
-export async function updateProfile(userId: string, input: UpdateProfileInput): Promise<UserResponse> {
+export async function updateProfile(
+  userId: string,
+  input: UpdateProfileInput,
+): Promise<UserResponse> {
   const current = await prisma.user.findUnique({ where: { id: userId } });
 
   if (!current) {
@@ -489,11 +494,11 @@ export async function updateProfile(userId: string, input: UpdateProfileInput): 
 
 export async function getProfile(userId: string): Promise<UserResponse> {
   const user = await prisma.user.findUnique({ where: { id: userId } });
-  
+
   if (!user) {
     throw new NotFoundError('User', userId);
   }
-  
+
   return formatUserResponse(user);
 }
 
@@ -504,11 +509,11 @@ export async function verifyAccessToken(token: string): Promise<TokenPayload> {
 export async function getUserFromToken(token: string): Promise<UserResponse> {
   const payload = verifyToken(token);
   const user = await prisma.user.findUnique({ where: { id: payload.userId } });
-  
+
   if (!user) {
     throw new AuthenticationError('User not found');
   }
-  
+
   return formatUserResponse(user);
 }
 

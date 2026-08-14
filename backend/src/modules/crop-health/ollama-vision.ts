@@ -279,7 +279,11 @@ const MONTHS = [
   'December',
 ];
 
-function resolveLanguage(requested: string | undefined): { code: string; name: string; fellBack: boolean } {
+function resolveLanguage(requested: string | undefined): {
+  code: string;
+  name: string;
+  fellBack: boolean;
+} {
   const base = (requested ?? 'en').toLowerCase().split(/[-_]/)[0];
   const name = LANGUAGE_NAMES[base];
   if (name) return { code: base, name, fellBack: false };
@@ -369,7 +373,10 @@ function toFinding(raw: RawFinding): ImageFinding | null {
     // `name` carries the taxonomy so the synonym table in diagnosis.ts can map
     // "Alternaria solani" onto our "Early blight"; `localName` carries the name
     // to show the farmer, already in their language.
-    name: scientific && scientific.toLowerCase() !== displayName.toLowerCase() ? scientific : displayName,
+    name:
+      scientific && scientific.toLowerCase() !== displayName.toLowerCase()
+        ? scientific
+        : displayName,
     localName: displayName,
     commonNames: [],
     probability: clamp(raw.probability * CONFIDENCE_SCALE, 0, 0.9),
@@ -422,7 +429,8 @@ function toAssessment(
     accessToken: null,
     observedSymptoms: isPlant ? cleanList(raw.observed_symptoms, 8, 60) : [],
     affectedParts: isPlant ? cleanList(raw.affected_parts, 6, 40) : [],
-    imageQuality: quality === 'good' || quality === 'acceptable' || quality === 'poor' ? quality : null,
+    imageQuality:
+      quality === 'good' || quality === 'acceptable' || quality === 'poor' ? quality : null,
   };
 }
 

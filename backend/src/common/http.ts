@@ -38,9 +38,7 @@ export function ok<T>(res: Response, data: T, status = 200): void {
  * Using this instead of z.string().uuid() matters: an invalid id would
  * otherwise reach Prisma and surface as an opaque 500 instead of a clean 400.
  */
-export const objectId = z
-  .string()
-  .regex(/^[0-9a-fA-F]{24}$/, 'Invalid id');
+export const objectId = z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid id');
 
 /** Coerce common truthy/falsy query-string spellings into a boolean. */
 export const boolParam = (defaultValue: boolean) =>

@@ -1,0 +1,25 @@
+# Editor defaults, applied before anyone runs Prettier.
+#
+# Prettier is the authority on formatting; this file exists so that an editor
+# gets it right while typing — and so that files Prettier does not process
+# (.env examples, .gitignore) still agree on line endings and indentation.
+#
+# Kept deliberately consistent with .prettierrc: 2-space indent, LF endings.
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+indent_style = space
+indent_size = 2
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# Markdown treats two trailing spaces as a line break, so they must survive.
+[*.md]
+trim_trailing_whitespace = false
+
+# Tab-indented by specification.
+[Makefile]
+indent_style = tab

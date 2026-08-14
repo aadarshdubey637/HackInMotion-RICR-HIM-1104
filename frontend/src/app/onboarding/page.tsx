@@ -109,19 +109,30 @@ export default function OnboardingPage() {
             addressdetails: '1',
             'accept-language': 'en',
           });
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?${params}`,
-            { headers: { 'User-Agent': 'SmartFarmDSS/1.0' } },
-          );
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?${params}`, {
+            headers: { 'User-Agent': 'SmartFarmDSS/1.0' },
+          });
           if (res.ok) {
-            const data = await res.json() as {
+            const data = (await res.json()) as {
               address?: Record<string, string>;
               display_name?: string;
             };
             const addr = data.address ?? {};
             location = {
-              village: addr.neighbourhood ?? addr.suburb ?? addr.quarter ?? addr.village ?? addr.hamlet ?? null,
-              district: addr.city ?? addr.town ?? addr.district ?? addr.county ?? addr.city_district ?? null,
+              village:
+                addr.neighbourhood ??
+                addr.suburb ??
+                addr.quarter ??
+                addr.village ??
+                addr.hamlet ??
+                null,
+              district:
+                addr.city ??
+                addr.town ??
+                addr.district ??
+                addr.county ??
+                addr.city_district ??
+                null,
               state: addr.state ?? addr.province ?? null,
               country: addr.country ?? null,
               formattedAddress: data.display_name ?? null,
@@ -249,13 +260,18 @@ export default function OnboardingPage() {
   return (
     <div className="min-h-dvh bg-gradient-to-b from-brand-50 to-soil-50 pb-16">
       {/* Top cover banner */}
-      <div 
+      <div
         className="h-64 w-full bg-cover bg-center relative flex flex-col justify-between p-6"
-        style={{ backgroundImage: 'linear-gradient(to bottom, rgba(15, 23, 42, 0.15) 0%, rgba(15, 23, 42, 0.45) 50%, rgba(15, 23, 42, 0.85) 100%), url("/images/smart_farm_hero.png")' }}
+        style={{
+          backgroundImage:
+            'linear-gradient(to bottom, rgba(15, 23, 42, 0.15) 0%, rgba(15, 23, 42, 0.45) 50%, rgba(15, 23, 42, 0.85) 100%), url("/images/smart_farm_hero.png")',
+        }}
       >
         <div className="flex items-center gap-2 text-white bg-slate-900/60 backdrop-blur-md py-1.5 px-3 rounded-xl border border-white/10 self-start">
           <Sprout className="h-4 w-4 text-emerald-400" />
-          <span className="text-[10px] font-extrabold tracking-wider text-emerald-50">SMART ONBOARDING</span>
+          <span className="text-[10px] font-extrabold tracking-wider text-emerald-50">
+            SMART ONBOARDING
+          </span>
         </div>
 
         <div className="text-center text-white pb-2">
@@ -274,7 +290,9 @@ export default function OnboardingPage() {
               <div
                 className={cn(
                   'flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold shadow-md transition-all duration-300',
-                  step >= n ? 'bg-brand-600 text-white scale-110' : 'bg-white text-slate-500 border border-soil-200',
+                  step >= n
+                    ? 'bg-brand-600 text-white scale-110'
+                    : 'bg-white text-slate-500 border border-soil-200',
                 )}
               >
                 {step > n ? <Check className="h-4 w-4" /> : n}
@@ -341,8 +359,12 @@ export default function OnboardingPage() {
                     </Notice>
                     {(locationDetecting || soilDetecting) && (
                       <div className="mt-2 flex gap-2 text-xs text-slate-600">
-                        {locationDetecting && <span className="animate-pulse">Finding village/district…</span>}
-                        {soilDetecting && <span className="animate-pulse">Determining soil type…</span>}
+                        {locationDetecting && (
+                          <span className="animate-pulse">Finding village/district…</span>
+                        )}
+                        {soilDetecting && (
+                          <span className="animate-pulse">Determining soil type…</span>
+                        )}
                       </div>
                     )}
                     {detectedLocation && !locationDetecting && !soilDetecting && (
@@ -408,7 +430,9 @@ export default function OnboardingPage() {
                     placeholder="Mohanlalganj, Lucknow"
                   />
                   {locationDetecting && (
-                    <p className="mt-1 text-xs text-slate-500 animate-pulse">Finding village and district…</p>
+                    <p className="mt-1 text-xs text-slate-500 animate-pulse">
+                      Finding village and district…
+                    </p>
                   )}
                   {detectedLocation && !locationDetecting && (
                     <p className="mt-1 flex items-center gap-1 text-xs text-brand-600">
@@ -445,7 +469,9 @@ export default function OnboardingPage() {
                         onClick={() => setAreaUnit(unit)}
                         className={cn(
                           'rounded-lg px-3 text-sm font-semibold transition-all duration-200',
-                          areaUnit === unit ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900',
+                          areaUnit === unit
+                            ? 'bg-brand-600 text-white shadow-sm'
+                            : 'text-slate-600 hover:text-slate-900',
                         )}
                       >
                         {unit === 'acre' ? 'Acres' : 'Hectares'}
@@ -468,14 +494,18 @@ export default function OnboardingPage() {
                 <label className="label flex items-center gap-2 font-semibold text-slate-700">
                   Soil type (optional)
                   {detectedSoilType && (
-                    <span className="text-xs text-brand-600 font-normal">Detected automatically</span>
+                    <span className="text-xs text-brand-600 font-normal">
+                      Detected automatically
+                    </span>
                   )}
                 </label>
                 <p className="-mt-1 mb-2 text-xs text-slate-500">
                   This makes irrigation advice noticeably more accurate. Not sure? Skip it.
                 </p>
                 {soilDetecting && (
-                  <p className="mb-2 text-xs text-slate-500 animate-pulse">Determining soil type…</p>
+                  <p className="mb-2 text-xs text-slate-500 animate-pulse">
+                    Determining soil type…
+                  </p>
                 )}
                 <div className="grid grid-cols-2 gap-3">
                   {SOIL_TYPES.map((soil) => {
@@ -498,7 +528,12 @@ export default function OnboardingPage() {
                             <Check className="h-3 w-3" />
                           </span>
                         )}
-                        <p className={cn('text-sm font-bold transition-colors duration-200', selected ? 'text-brand-900' : 'text-slate-800')}>
+                        <p
+                          className={cn(
+                            'text-sm font-bold transition-colors duration-200',
+                            selected ? 'text-brand-900' : 'text-slate-800',
+                          )}
+                        >
                           {soil.label}
                         </p>
                         <p className="mt-1 text-xs leading-tight text-slate-500">{soil.hint}</p>
@@ -564,16 +599,25 @@ export default function OnboardingPage() {
                     className="field focus:ring-2 focus:ring-brand-500/20"
                   />
                   <p className="mt-1 text-xs text-slate-500">
-                    Helps us work out the growth stage and water needs. Leave blank if not planted yet.
+                    Helps us work out the growth stage and water needs. Leave blank if not planted
+                    yet.
                   </p>
                 </div>
               ) : null}
 
               <div className="flex gap-3">
-                <button type="button" onClick={() => setStep(1)} className="btn-secondary flex-1 py-3 rounded-xl border border-soil-200">
+                <button
+                  type="button"
+                  onClick={() => setStep(1)}
+                  className="btn-secondary flex-1 py-3 rounded-xl border border-soil-200"
+                >
                   Back
                 </button>
-                <button type="submit" disabled={submitting} className="btn-primary flex-1 py-3 rounded-xl shadow-lg transition duration-200">
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="btn-primary flex-1 py-3 rounded-xl shadow-lg transition duration-200"
+                >
                   {submitting ? <Spinner className="h-5 w-5" /> : null}
                   {submitting ? 'Saving…' : 'Finish'}
                 </button>

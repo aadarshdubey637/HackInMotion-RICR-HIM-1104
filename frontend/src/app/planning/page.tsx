@@ -165,9 +165,7 @@ function PlanningContent() {
                   void load();
                 }}
               />
-              <YieldHistorySection
-                history={history.filter((h) => h.cropId === active.cropId)}
-              />
+              <YieldHistorySection history={history.filter((h) => h.cropId === active.cropId)} />
               <FertilizerSection plan={active.fertilizer} />
             </>
           ) : null}
@@ -241,7 +239,11 @@ function YieldSection({
             <div
               className={cn(
                 'h-full rounded-full',
-                lossPercent > 25 ? 'bg-orange-500' : lossPercent > 10 ? 'bg-amber-500' : 'bg-brand-500',
+                lossPercent > 25
+                  ? 'bg-orange-500'
+                  : lossPercent > 10
+                    ? 'bg-amber-500'
+                    : 'bg-brand-500',
               )}
               style={{ width: `${(prediction.predictedKgHa / prediction.attainableKgHa) * 100}%` }}
             />
@@ -426,7 +428,12 @@ function HarvestForm({
           className="field w-32"
         />
         <span className="self-center text-sm text-slate-500">kg</span>
-        <button type="button" onClick={() => void submit()} disabled={saving} className="btn-primary">
+        <button
+          type="button"
+          onClick={() => void submit()}
+          disabled={saving}
+          className="btn-primary"
+        >
           {saving ? <Spinner className="h-4 w-4" /> : null}
           {t('common.save')}
         </button>
@@ -455,12 +462,10 @@ function YieldHistorySection({ history }: { history: YieldHistoryEntry[] }) {
   // Oldest first so the chart reads left to right.
   const chartData = useMemo(
     () =>
-      [...history]
-        .reverse()
-        .map((entry) => ({
-          date: formatDay(entry.predictedAt),
-          kg: Math.round(entry.predictedTotalKg),
-        })),
+      [...history].reverse().map((entry) => ({
+        date: formatDay(entry.predictedAt),
+        kg: Math.round(entry.predictedTotalKg),
+      })),
     [history],
   );
 
@@ -521,7 +526,13 @@ function YieldHistorySection({ history }: { history: YieldHistoryEntry[] }) {
                   }}
                 />
               ) : null}
-              <Line type="monotone" dataKey="kg" stroke="#16a34a" strokeWidth={2.5} dot={{ r: 3 }} />
+              <Line
+                type="monotone"
+                dataKey="kg"
+                stroke="#16a34a"
+                strokeWidth={2.5}
+                dot={{ r: 3 }}
+              />
             </LineChart>
           </ResponsiveContainer>
         </div>

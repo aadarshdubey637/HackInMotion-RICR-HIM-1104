@@ -246,7 +246,11 @@ export default function VerifyEmailPage() {
             />
 
             {fieldError ? (
-              <p id="otp-error" role="alert" className="mt-2 text-center text-sm font-medium text-red-700">
+              <p
+                id="otp-error"
+                role="alert"
+                className="mt-2 text-center text-sm font-medium text-red-700"
+              >
                 {fieldError}
               </p>
             ) : (
@@ -257,7 +261,11 @@ export default function VerifyEmailPage() {
           </div>
 
           <button type="submit" disabled={!complete || verifying} className="btn-primary w-full">
-            {verifying ? <Spinner className="h-5 w-5" /> : <ShieldCheck className="h-5 w-5" aria-hidden />}
+            {verifying ? (
+              <Spinner className="h-5 w-5" />
+            ) : (
+              <ShieldCheck className="h-5 w-5" aria-hidden />
+            )}
             {verifying ? t('auth.otpVerifying') : t('auth.otpVerify')}
           </button>
 

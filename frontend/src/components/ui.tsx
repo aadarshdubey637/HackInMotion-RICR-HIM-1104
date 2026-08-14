@@ -60,7 +60,10 @@ export const severityStyles: Record<
   },
 };
 
-export const healthSeverityStyles: Record<HealthSeverity, { bg: string; text: string; label: string }> = {
+export const healthSeverityStyles: Record<
+  HealthSeverity,
+  { bg: string; text: string; label: string }
+> = {
   CRITICAL: { bg: 'bg-red-100', text: 'text-red-800', label: 'Critical' },
   SEVERE: { bg: 'bg-orange-100', text: 'text-orange-800', label: 'Severe' },
   MODERATE: { bg: 'bg-amber-100', text: 'text-amber-900', label: 'Moderate' },

@@ -61,7 +61,9 @@ async function main(): Promise<void> {
 
     if (duplicates.length > 0) {
       failed = true;
-      console.error(`\n  ✗ users.${field} — cannot make unique, ${duplicates.length} duplicated value(s):`);
+      console.error(
+        `\n  ✗ users.${field} — cannot make unique, ${duplicates.length} duplicated value(s):`,
+      );
       for (const { value, count } of duplicates) {
         console.error(`      ${value}  (${count} accounts)`);
       }

@@ -280,7 +280,7 @@ function getOutbreakGuidance(issueName: string, cropName: string): string[] {
       'Inspect leaves daily for water-soaked spots or dark lesions.',
       'Avoid overhead watering and improve air circulation.',
       'Remove and destroy infected plant debris immediately.',
-      'Consider applying preventive bio-fungicides.'
+      'Consider applying preventive bio-fungicides.',
     ];
   }
   if (issue.includes('blast')) {
@@ -288,7 +288,7 @@ function getOutbreakGuidance(issueName: string, cropName: string): string[] {
       'Monitor plants for spindle-shaped lesions on leaves and neck rot.',
       'Avoid excessive nitrogen fertilization.',
       'Maintain proper water levels in the field.',
-      'Use certified disease-free seeds for future seasons.'
+      'Use certified disease-free seeds for future seasons.',
     ];
   }
   if (issue.includes('borer') || issue.includes('caterpillar') || issue.includes('worm')) {
@@ -296,7 +296,7 @@ function getOutbreakGuidance(issueName: string, cropName: string): string[] {
       'Inspect stems and leaves for boring holes or larval feeding signs.',
       'Install pheromone traps to monitor adult moth populations.',
       'Use neem-based sprays or biological control agents.',
-      'Remove and burn severely infested shoots.'
+      'Remove and burn severely infested shoots.',
     ];
   }
   if (issue.includes('aphid') || issue.includes('whitefly') || issue.includes('thrip')) {
@@ -304,14 +304,14 @@ function getOutbreakGuidance(issueName: string, cropName: string): string[] {
       'Check the undersides of leaves for clusters of tiny sucking insects.',
       'Use yellow sticky cards to trap flying insect vectors.',
       'Spray with neem oil or insecticidal soap.',
-      'Encourage natural predators like ladybugs.'
+      'Encourage natural predators like ladybugs.',
     ];
   }
   return [
     `Inspect your ${cropName} crop daily for early signs of ${issueName}.`,
     'Isolate or remove affected plants immediately.',
     'Sanitize all farming tools after handling suspect plants.',
-    'Consult local agricultural extension services for control measures.'
+    'Consult local agricultural extension services for control measures.',
   ];
 }
 
@@ -476,7 +476,7 @@ export async function nearbyOutbreaks(farmId: string, userId: string, radiusKm =
     } else {
       groups.set(key, {
         name,
-        crop: cropName,  // use resolved name (custom or registered)
+        crop: cropName, // use resolved name (custom or registered)
         farmIds: new Set([log.farmId]),
         latest: log.observedAt,
         minDistance: farmDist,
@@ -515,4 +515,3 @@ export async function nearbyOutbreaks(farmId: string, userId: string, radiusKm =
     radiusKm,
   };
 }
-

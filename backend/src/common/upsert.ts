@@ -31,12 +31,7 @@ interface HasId {
   id: string;
 }
 
-export async function upsertWithoutTransaction<
-  TWhere,
-  TCreate,
-  TUpdate,
-  TResult extends HasId,
->(
+export async function upsertWithoutTransaction<TWhere, TCreate, TUpdate, TResult extends HasId>(
   delegate: Delegate<TWhere, TCreate, TUpdate, TResult>,
   args: { where: TWhere; create: TCreate; update: TUpdate },
 ): Promise<TResult> {

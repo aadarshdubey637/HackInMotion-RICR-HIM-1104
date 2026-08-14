@@ -28,10 +28,30 @@ export default function RecommendationsPage() {
 }
 
 const RATING_STYLE = {
-  EXCELLENT: { bg: 'bg-emerald-50', border: 'border-emerald-300', text: 'text-emerald-800', bar: 'bg-emerald-500' },
-  GOOD: { bg: 'bg-brand-50', border: 'border-brand-300', text: 'text-brand-800', bar: 'bg-brand-500' },
-  FAIR: { bg: 'bg-amber-50', border: 'border-amber-300', text: 'text-amber-900', bar: 'bg-amber-500' },
-  POOR: { bg: 'bg-slate-50', border: 'border-slate-300', text: 'text-slate-600', bar: 'bg-slate-400' },
+  EXCELLENT: {
+    bg: 'bg-emerald-50',
+    border: 'border-emerald-300',
+    text: 'text-emerald-800',
+    bar: 'bg-emerald-500',
+  },
+  GOOD: {
+    bg: 'bg-brand-50',
+    border: 'border-brand-300',
+    text: 'text-brand-800',
+    bar: 'bg-brand-500',
+  },
+  FAIR: {
+    bg: 'bg-amber-50',
+    border: 'border-amber-300',
+    text: 'text-amber-900',
+    bar: 'bg-amber-500',
+  },
+  POOR: {
+    bg: 'bg-slate-50',
+    border: 'border-slate-300',
+    text: 'text-slate-600',
+    bar: 'bg-slate-400',
+  },
 } as const;
 
 function RecommendationsContent() {
@@ -65,16 +85,15 @@ function RecommendationsContent() {
     );
   }
 
-  const existing = new Set(
-    (currentFarm.crops ?? []).map((c) => c.cropName.toLowerCase()),
-  );
+  const existing = new Set((currentFarm.crops ?? []).map((c) => c.cropName.toLowerCase()));
 
   return (
     <div className="space-y-5 animate-fade-up">
       <div>
         <h1 className="text-xl font-bold text-slate-900">What to plant</h1>
         <p className="text-sm text-slate-600">
-          Crops ranked for your land, this season — scored on climate, timing, soil, water and price.
+          Crops ranked for your land, this season — scored on climate, timing, soil, water and
+          price.
         </p>
       </div>
 
@@ -161,7 +180,13 @@ function CropCard({
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-base font-bold text-slate-900">{crop.label}</h2>
-            <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-bold uppercase', style.text, 'bg-white/70')}>
+            <span
+              className={cn(
+                'rounded-full px-2 py-0.5 text-[10px] font-bold uppercase',
+                style.text,
+                'bg-white/70',
+              )}
+            >
               {crop.rating}
             </span>
             {alreadyGrowing ? <Badge tone="brand">Growing now</Badge> : null}
@@ -258,7 +283,13 @@ function Dimension({
   weight: string;
 }) {
   const tone =
-    dim.score >= 80 ? 'bg-emerald-500' : dim.score >= 60 ? 'bg-brand-500' : dim.score >= 40 ? 'bg-amber-500' : 'bg-red-400';
+    dim.score >= 80
+      ? 'bg-emerald-500'
+      : dim.score >= 60
+        ? 'bg-brand-500'
+        : dim.score >= 40
+          ? 'bg-amber-500'
+          : 'bg-red-400';
 
   return (
     <div className="flex items-start gap-2.5">
@@ -269,7 +300,9 @@ function Dimension({
             {label}
             <span className="ml-1.5 text-xs font-normal text-slate-400">{weight}</span>
           </span>
-          <span className="shrink-0 text-sm font-bold tabular-nums text-slate-600">{dim.score}</span>
+          <span className="shrink-0 text-sm font-bold tabular-nums text-slate-600">
+            {dim.score}
+          </span>
         </div>
         <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-white/80">
           <div className={cn('h-full rounded-full', tone)} style={{ width: `${dim.score}%` }} />

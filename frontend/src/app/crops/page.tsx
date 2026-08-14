@@ -79,9 +79,7 @@ function CropsContent() {
     <div className="space-y-5 animate-fade-up">
       <div>
         <h1 className="text-xl font-bold text-slate-900">{t('crops.title')}</h1>
-        <p className="text-sm text-slate-600">
-          {t('crops.subtitle')}
-        </p>
+        <p className="text-sm text-slate-600">{t('crops.subtitle')}</p>
       </div>
 
       {/* ── Farm summary ── */}
@@ -154,11 +152,7 @@ function CropsContent() {
         {loading ? (
           <SkeletonCard />
         ) : crops.length === 0 ? (
-          <EmptyState
-            icon={Sprout}
-            title={t('crops.emptyCrops')}
-            message="Your crops"
-          />
+          <EmptyState icon={Sprout} title={t('crops.emptyCrops')} message="Your crops" />
         ) : (
           <div className="space-y-3">
             {crops.map((crop) => (
@@ -397,18 +391,44 @@ function CropCard({
         {/* Details in the middle */}
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="font-extrabold text-base text-slate-800 truncate">{tCrop(crop.cropName)}</h3>
-            <Badge tone={crop.status === 'HARVESTED' ? 'neutral' : 'brand'} className="text-[10px] px-2 py-0.5 font-bold">
+            <h3 className="font-extrabold text-base text-slate-800 truncate">
+              {tCrop(crop.cropName)}
+            </h3>
+            <Badge
+              tone={crop.status === 'HARVESTED' ? 'neutral' : 'brand'}
+              className="text-[10px] px-2 py-0.5 font-bold"
+            >
               {tStage(crop.status)}
             </Badge>
-            {!recognised ? <Badge tone="warn" className="text-[10px] px-2 py-0.5 font-bold">Limited data</Badge> : null}
+            {!recognised ? (
+              <Badge tone="warn" className="text-[10px] px-2 py-0.5 font-bold">
+                Limited data
+              </Badge>
+            ) : null}
           </div>
 
           <div className="mt-1 space-y-0.5 text-xs text-slate-500 font-medium">
-            {crop.growthStage ? <p>Stage: <span className="text-slate-700 font-semibold">{tStage(crop.growthStage)}</span></p> : null}
-            {crop.plantingDate ? <p>Planted <span className="text-slate-700 font-semibold">{formatDate(crop.plantingDate)}</span></p> : null}
+            {crop.growthStage ? (
+              <p>
+                Stage:{' '}
+                <span className="text-slate-700 font-semibold">{tStage(crop.growthStage)}</span>
+              </p>
+            ) : null}
+            {crop.plantingDate ? (
+              <p>
+                Planted{' '}
+                <span className="text-slate-700 font-semibold">
+                  {formatDate(crop.plantingDate)}
+                </span>
+              </p>
+            ) : null}
             {crop.expectedHarvestDate ? (
-              <p>Expected harvest <span className="text-slate-700 font-semibold">{formatDate(crop.expectedHarvestDate)}</span></p>
+              <p>
+                Expected harvest{' '}
+                <span className="text-slate-700 font-semibold">
+                  {formatDate(crop.expectedHarvestDate)}
+                </span>
+              </p>
             ) : null}
           </div>
         </div>

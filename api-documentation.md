@@ -14,11 +14,13 @@ Base URL: `http://localhost:3001/api` (development)
 Every response uses the same shape, so the client has one parsing path.
 
 **Success**
+
 ```json
 { "success": true, "data": { ... } }
 ```
 
 **Failure**
+
 ```json
 {
   "success": false,
@@ -53,16 +55,16 @@ with a readable message rather than reaching the database.
 
 ### Error codes
 
-| Code | HTTP | Meaning |
-|---|---|---|
-| `VALIDATION_ERROR` | 400 | Request failed schema validation; see `details` |
-| `AUTHENTICATION_ERROR` | 401 | Missing, invalid or expired token |
-| `NOT_FOUND` | 404 | Resource absent, or not owned by this user |
-| `CONFLICT` | 409 | Unique constraint (e.g. email already registered) |
-| `RATE_LIMIT_EXCEEDED` | 429 | 300 req / 15 min in production |
-| `EXTERNAL_SERVICE_ERROR` | 502 | Upstream provider failed and no cache available |
-| `DATABASE_UNAVAILABLE` | 503 | Database unreachable |
-| `INTERNAL_SERVER_ERROR` | 500 | Unexpected; details suppressed in production |
+| Code                     | HTTP | Meaning                                           |
+| ------------------------ | ---- | ------------------------------------------------- |
+| `VALIDATION_ERROR`       | 400  | Request failed schema validation; see `details`   |
+| `AUTHENTICATION_ERROR`   | 401  | Missing, invalid or expired token                 |
+| `NOT_FOUND`              | 404  | Resource absent, or not owned by this user        |
+| `CONFLICT`               | 409  | Unique constraint (e.g. email already registered) |
+| `RATE_LIMIT_EXCEEDED`    | 429  | 300 req / 15 min in production                    |
+| `EXTERNAL_SERVICE_ERROR` | 502  | Upstream provider failed and no cache available   |
+| `DATABASE_UNAVAILABLE`   | 503  | Database unreachable                              |
+| `INTERNAL_SERVER_ERROR`  | 500  | Unexpected; details suppressed in production      |
 
 ---
 
@@ -92,15 +94,15 @@ Liveness probe. Returns `503` if the database is unreachable.
 
 One call creates the account and signs the farmer in.
 
-| Field | Type | Rules |
-|---|---|---|
-| `name` | string | 2–100 characters |
-| `username` | string | 3–20 chars, `a-z0-9._`, must start/end alphanumeric, no `..`/`__`; lowercased |
-| `email` | string | Must end `@gmail.com`; lowercased |
-| `phone` | string | Indian mobile. `9876543210`, `+91 98765 43210`, `098765-43210` all accepted; normalised to `+919876543210` |
-| `password` | string | Min 8 characters |
-| `confirmPassword` | string | Must equal `password` — compared server-side, not trusted from the browser |
-| `language` | string | Optional, defaults `en` |
+| Field             | Type   | Rules                                                                                                      |
+| ----------------- | ------ | ---------------------------------------------------------------------------------------------------------- |
+| `name`            | string | 2–100 characters                                                                                           |
+| `username`        | string | 3–20 chars, `a-z0-9._`, must start/end alphanumeric, no `..`/`__`; lowercased                              |
+| `email`           | string | Must end `@gmail.com`; lowercased                                                                          |
+| `phone`           | string | Indian mobile. `9876543210`, `+91 98765 43210`, `098765-43210` all accepted; normalised to `+919876543210` |
+| `password`        | string | Min 8 characters                                                                                           |
+| `confirmPassword` | string | Must equal `password` — compared server-side, not trusted from the browser                                 |
+| `language`        | string | Optional, defaults `en`                                                                                    |
 
 The password is hashed with bcrypt at `BCRYPT_ROUNDS` before it is stored; the
 plaintext is never written or logged. Username, Gmail address and mobile number
@@ -109,23 +111,28 @@ are each checked for availability before the insert.
 **`201`** — the same `{ user, tokens }` shape as login, which is what makes
 registration and sign-in one moment: the client stores these tokens and goes
 straight to the dashboard.
+
 ```json
 {
   "success": true,
   "data": {
     "user": {
-      "id": "6a7d…", "email": "ramesh@gmail.com", "username": "rameshkumar",
-      "name": "Ramesh Kumar", "phone": "+919876543210", "role": "FARMER"
+      "id": "6a7d…",
+      "email": "ramesh@gmail.com",
+      "username": "rameshkumar",
+      "name": "Ramesh Kumar",
+      "phone": "+919876543210",
+      "role": "FARMER"
     },
     "tokens": { "accessToken": "eyJ…", "refreshToken": "eyJ…", "expiresIn": 604800000 }
   }
 }
 ```
 
-| Response | Meaning |
-|---|---|
-| `400 VALIDATION_ERROR` | A field failed validation; `details` is keyed by field name |
-| `409 CONFLICT` | `details` names which of `username` / `email` / `phone` is taken |
+| Response               | Meaning                                                          |
+| ---------------------- | ---------------------------------------------------------------- |
+| `400 VALIDATION_ERROR` | A field failed validation; `details` is keyed by field name      |
+| `409 CONFLICT`         | `details` names which of `username` / `email` / `phone` is taken |
 
 ### `POST /api/auth/login`
 
@@ -158,7 +165,7 @@ created and `200` when an existing one was used:
 ```
 
 The ID token is verified server-side against Google's public keys, checking
-signature, issuer, expiry and that the audience is *our* client id. Only the
+signature, issuer, expiry and that the audience is _our_ client id. Only the
 client id is configured (`GOOGLE_CLIENT_ID`) — there is no client secret in this
 system, because the browser obtains the token and we merely verify it.
 
@@ -167,26 +174,30 @@ the Google identity is **linked** to that account rather than rejected — the
 alternative locks a farmer out of their own farm data. Tokens for unverified
 Google emails are refused, which is what makes that linking safe.
 
-| Response | Meaning |
-|---|---|
-| `400 VALIDATION_ERROR` | `idToken` missing, or `GOOGLE_CLIENT_ID` not configured on this server |
-| `401 AUTHENTICATION_ERROR` | Token invalid, expired, issued to another app, or email unverified |
+| Response                   | Meaning                                                                |
+| -------------------------- | ---------------------------------------------------------------------- |
+| `400 VALIDATION_ERROR`     | `idToken` missing, or `GOOGLE_CLIENT_ID` not configured on this server |
+| `401 AUTHENTICATION_ERROR` | Token invalid, expired, issued to another app, or email unverified     |
 
 Related: an account created this way has no password, so `POST /api/auth/login`
 against it returns `401` telling the farmer to use the Google button, and
 `POST /api/auth/change-password` returns `400`.
 
 ### `POST /api/auth/refresh`
+
 Body: `{ "refreshToken" }` → `{ "tokens": { … } }`. The old refresh token is
 invalidated (rotation).
 
 ### `POST /api/auth/logout`
+
 Body: `{ "refreshToken" }`. Invalidates that session.
 
 ### `GET /api/auth/me` 🔒
+
 Returns `{ "user": { … } }`.
 
 ### `PATCH /api/auth/me` 🔒
+
 Body: any of `name`, `phone`, `language`, `avatarUrl`.
 
 `phone` runs through the registration normaliser, so an edited number cannot
@@ -194,6 +205,7 @@ collide with another account's by being spelled differently. Changing it returns
 `409` if another account already holds that number.
 
 ### `POST /api/auth/change-password` 🔒
+
 Body: `{ "currentPassword", "newPassword" }`. Revokes all other sessions.
 
 ---
@@ -203,28 +215,33 @@ Body: `{ "currentPassword", "newPassword" }`. Revokes all other sessions.
 All 🔒. Ownership enforced per query.
 
 ### `GET /api/farms`
+
 `{ "farms": [ … ] }` — excludes archived farms, includes crops, plots and counts.
 
 ### `POST /api/farms`
 
-| Field | Type | Rules |
-|---|---|---|
-| `name` | string | 1–100 chars |
-| `latitude` | number | −90 … 90 |
-| `longitude` | number | −180 … 180 |
-| `totalAreaHectares` | number | > 0 |
-| `soilTypePrimary` | enum | Optional — `SANDY \| LOAMY \| CLAY \| SILTY \| PEATY \| CHALKY \| MIXED` |
-| `address` | string | Optional |
-| `boundary` | GeoJSON Polygon | Optional, display only |
+| Field               | Type            | Rules                                                                    |
+| ------------------- | --------------- | ------------------------------------------------------------------------ |
+| `name`              | string          | 1–100 chars                                                              |
+| `latitude`          | number          | −90 … 90                                                                 |
+| `longitude`         | number          | −180 … 180                                                               |
+| `totalAreaHectares` | number          | > 0                                                                      |
+| `soilTypePrimary`   | enum            | Optional — `SANDY \| LOAMY \| CLAY \| SILTY \| PEATY \| CHALKY \| MIXED` |
+| `address`           | string          | Optional                                                                 |
+| `boundary`          | GeoJSON Polygon | Optional, display only                                                   |
 
 **`201`** → `{ "farm": { … } }`
 
 ### `GET /api/farms/:farmId`
+
 ### `PATCH /api/farms/:farmId`
+
 ### `DELETE /api/farms/:farmId`
+
 Soft delete — sets status `ARCHIVED`, preserving history.
 
 ### `GET /api/farms/supported-crops`
+
 Crops with full agronomic backing (crop coefficients, disease profiles).
 
 ```json
@@ -245,14 +262,14 @@ conservative generic values and is flagged as approximate.
 
 #### `POST /api/farms/:farmId/crops`
 
-| Field | Type | Notes |
-|---|---|---|
-| `cropName` | string | Required |
-| `parcelId` | ObjectId | Optional |
-| `plantingDate` | date | Optional — enables growth-stage inference |
-| `expectedHarvestDate` | date | Optional |
-| `growthStage` | enum | `SEED \| GERMINATION \| VEGETATIVE \| FLOWERING \| FRUIT_SET \| RIPENING \| HARVEST_READY` |
-| `status` | enum | `PLANNED \| PLANTED \| GROWING \| FLOWERING \| FRUITING \| HARVESTED \| FAILED \| FALLOW` |
+| Field                 | Type     | Notes                                                                                      |
+| --------------------- | -------- | ------------------------------------------------------------------------------------------ |
+| `cropName`            | string   | Required                                                                                   |
+| `parcelId`            | ObjectId | Optional                                                                                   |
+| `plantingDate`        | date     | Optional — enables growth-stage inference                                                  |
+| `expectedHarvestDate` | date     | Optional                                                                                   |
+| `growthStage`         | enum     | `SEED \| GERMINATION \| VEGETATIVE \| FLOWERING \| FRUIT_SET \| RIPENING \| HARVEST_READY` |
+| `status`              | enum     | `PLANNED \| PLANTED \| GROWING \| FLOWERING \| FRUITING \| HARVESTED \| FAILED \| FALLOW`  |
 
 Response includes `isRecognised` — whether the crop matched the knowledge base.
 
@@ -279,9 +296,15 @@ Query: `days` (1–14, default 7), `force` (bypass the 1-hour cache).
   "location": { "latitude": 26.8467, "longitude": 80.9462, "timezone": "Asia/Kolkata" },
   "current": { "temperatureC": 32.4, "humidityPct": 73, "description": "Overcast" },
   "daily": [
-    { "date": "2026-08-13", "tempMaxC": 33.1, "tempMinC": 26.4,
-      "precipitationMm": 4.3, "precipitationProbability": 82,
-      "et0Mm": 4.53, "humidityMeanPct": 74.2 }
+    {
+      "date": "2026-08-13",
+      "tempMaxC": 33.1,
+      "tempMinC": 26.4,
+      "precipitationMm": 4.3,
+      "precipitationProbability": 82,
+      "et0Mm": 4.53,
+      "humidityMeanPct": 74.2
+    }
   ],
   "stale": false,
   "provider": "open-meteo"
@@ -319,14 +342,27 @@ Query: `cropId` (optional — defaults to the farm's primary active crop).
     "initialisedFrom": "soil-moisture-model"
   },
   "forecast": [
-    { "date": "2026-08-13", "isPast": false, "etcMm": 3.5, "effectiveRainMm": 3.7,
-      "rawRainMm": 4.3, "rainProbability": 82, "depletionMm": 5.5,
-      "stressRatio": 0.1, "tempMaxC": 33.1, "tempMinC": 26.4 }
+    {
+      "date": "2026-08-13",
+      "isPast": false,
+      "etcMm": 3.5,
+      "effectiveRainMm": 3.7,
+      "rawRainMm": 4.3,
+      "rainProbability": 82,
+      "depletionMm": 5.5,
+      "stressRatio": 0.1,
+      "tempMaxC": 33.1,
+      "tempMinC": 26.4
+    }
   ],
   "alerts": [
-    { "type": "HEAT_STRESS", "severity": "MEDIUM", "title": "High temperatures expected",
+    {
+      "type": "HEAT_STRESS",
+      "severity": "MEDIUM",
+      "title": "High temperatures expected",
       "message": "33°C forecast on Friday, above the 32°C comfort limit for wheat.",
-      "action": "Keep soil moisture topped up — well-watered crops tolerate heat far better." }
+      "action": "Keep soil moisture topped up — well-watered crops tolerate heat far better."
+    }
   ],
   "assumptions": ["Growth stage estimated as vegetative from the planting date."],
   "crop": { "id": "6a7d…", "name": "wheat", "label": "Wheat", "isKnown": true }
@@ -335,13 +371,13 @@ Query: `cropId` (optional — defaults to the farm's primary active crop).
 
 **Field notes**
 
-| Field | Meaning |
-|---|---|
-| `urgency` | `NONE \| PLAN \| SOON \| TODAY \| OVERDUE` |
-| `readilyAvailableWaterMm` | The irrigation trigger. Depletion above this means stress. |
-| `recommendation.depthMm` | Millimetres to apply; also given as litres and m³ for the farm's area |
-| `confidence` | Reduced for each assumption made (unknown soil, unknown crop, inferred stage) |
-| `assumptions` | Human-readable list of everything inferred rather than known |
+| Field                     | Meaning                                                                       |
+| ------------------------- | ----------------------------------------------------------------------------- |
+| `urgency`                 | `NONE \| PLAN \| SOON \| TODAY \| OVERDUE`                                    |
+| `readilyAvailableWaterMm` | The irrigation trigger. Depletion above this means stress.                    |
+| `recommendation.depthMm`  | Millimetres to apply; also given as litres and m³ for the farm's area         |
+| `confidence`              | Reduced for each assumption made (unknown soil, unknown crop, inferred stage) |
+| `assumptions`             | Human-readable list of everything inferred rather than known                  |
 
 `alerts` are also persisted to the alert feed, deduplicated per farm/type/day.
 
@@ -355,7 +391,9 @@ Recording irrigation feeds back into the water balance and dismisses any open
 "irrigate now" alert.
 
 ### `GET /api/weather/:farmId/irrigation-log` 🔒
+
 ### `PATCH /api/weather/alerts/:alertId/read` 🔒
+
 ### `PATCH /api/weather/alerts/:alertId/dismiss` 🔒
 
 ---
@@ -366,14 +404,15 @@ Recording irrigation feeds back into the water balance and dismisses any open
 
 **`multipart/form-data`**
 
-| Field | Type | Notes |
-|---|---|---|
-| `cropId` | ObjectId | Required |
-| `description` | string | Required, 5–2000 chars |
-| `observationType` | enum | `DISEASE \| PEST \| NUTRIENT \| GROWTH \| WEATHER_DAMAGE \| OTHER` |
-| `image` | file | Optional. JPG/PNG/WebP/HEIC, max 8 MB |
+| Field             | Type     | Notes                                                              |
+| ----------------- | -------- | ------------------------------------------------------------------ |
+| `cropId`          | ObjectId | Required                                                           |
+| `description`     | string   | Required, 5–2000 chars                                             |
+| `observationType` | enum     | `DISEASE \| PEST \| NUTRIENT \| GROWTH \| WEATHER_DAMAGE \| OTHER` |
+| `image`           | file     | Optional. JPG/PNG/WebP/HEIC, max 8 MB                              |
 
 **`201`**
+
 ```json
 {
   "log": { "id": "6a7d…", "severity": "SEVERE", "diseaseDetected": "Rice Blast", "imageUrl": "…" },
@@ -395,7 +434,8 @@ Recording irrigation feeds back into the water balance and dismisses any open
         "actions": ["Look for diamond/spindle-shaped lesions with grey centres…"],
         "explanation": "High humidity with moderate temperatures and prolonged leaf wetness is the classic blast trigger.",
         "signals": {
-          "symptomScore": 0.86, "weatherScore": 0.75,
+          "symptomScore": 0.86,
+          "weatherScore": 0.75,
           "matchedKeywords": ["diamond", "grey centre", "brown border"],
           "weatherFavourable": true
         }
@@ -423,10 +463,13 @@ match anything for that crop. `nextSteps` then explains what detail would help.
 Findings of `SEVERE` or above with ≥35% confidence also raise a dashboard alert.
 
 ### `GET /api/crop-health/:farmId/observations` 🔒
+
 Query: `cropId`, `status`, `limit` (default 20).
 
 ### `GET /api/crop-health/:farmId/observations/:logId` 🔒
+
 ### `PATCH /api/crop-health/:farmId/observations/:logId` 🔒
+
 Body: `{ "status": "ACTIVE" | "MONITORING" | "TREATED" | "RESOLVED" }`.
 Resolving clears the associated alert.
 
@@ -438,8 +481,11 @@ Anonymous aggregate of severe problems reported by farms within `radiusKm`
 (default 50, max 200) in the last 21 days. Individual farms are never identified.
 
 ```json
-{ "reports": [ { "name": "Rice Blast", "crop": "rice", "count": 3 } ],
-  "farmsInArea": 7, "radiusKm": 50 }
+{
+  "reports": [{ "name": "Rice Blast", "crop": "rice", "count": 3 }],
+  "farmsInArea": 7,
+  "radiusKm": 50
+}
 ```
 
 ---
@@ -447,22 +493,28 @@ Anonymous aggregate of severe problems reported by farms within `radiusKm`
 ## Market prices
 
 ### `GET /api/market/farm/:farmId` 🔒
+
 Price trends for every crop on the farm. Triggers a background refresh from
 data.gov.in when a key is configured; never blocks the read.
 
 ### `GET /api/market/commodity/:commodity` 🔒
+
 Query: `days` (7–180, default 60).
 
 ```json
 {
   "commodity": "Rice",
   "unit": "Rs/quintal",
-  "series": [ { "date": "2026-08-13", "modalPrice": 2120, "minPrice": 1993, "maxPrice": 2247 } ],
+  "series": [{ "date": "2026-08-13", "modalPrice": 2120, "minPrice": 1993, "maxPrice": 2247 }],
   "current": { "price": 2120, "date": "2026-08-13", "marketName": "Lucknow" },
   "statistics": {
-    "average7Day": 2135, "average30Day": 2201,
-    "change7DayPercent": -1.4, "change30DayPercent": -3.2,
-    "high30Day": 2310, "low30Day": 2098, "volatilityPercent": 3.1
+    "average7Day": 2135,
+    "average30Day": 2201,
+    "change7DayPercent": -1.4,
+    "change30DayPercent": -3.2,
+    "high30Day": 2310,
+    "low30Day": 2098,
+    "volatilityPercent": 3.1
   },
   "direction": "FALLING",
   "advice": {
@@ -476,14 +528,15 @@ Query: `days` (7–180, default 60).
 }
 ```
 
-| Field | Meaning |
-|---|---|
-| `direction` | `RISING \| FALLING \| STABLE`. Threshold widens in volatile markets. |
-| `advice.signal` | `SELL \| HOLD \| WATCH`. Compares today against the 30-day range — not a forecast. |
-| `volatilityPercent` | Coefficient of variation. High means an unpredictable market. |
-| `isSeeded` | **True if the series includes generated baseline data.** Surfaced in the UI. |
+| Field               | Meaning                                                                            |
+| ------------------- | ---------------------------------------------------------------------------------- |
+| `direction`         | `RISING \| FALLING \| STABLE`. Threshold widens in volatile markets.               |
+| `advice.signal`     | `SELL \| HOLD \| WATCH`. Compares today against the 30-day range — not a forecast. |
+| `volatilityPercent` | Coefficient of variation. High means an unpredictable market.                      |
+| `isSeeded`          | **True if the series includes generated baseline data.** Surfaced in the UI.       |
 
 ### `POST /api/market/sync/:commodity` 🔒
+
 Pulls the latest mandi snapshot on demand. Returns `{ "ingested": n }`; `0` means
 no key, no new data, or an upstream failure — all non-fatal.
 
@@ -492,22 +545,32 @@ no key, no new data, or an upstream failure — all non-fatal.
 ## Alerts
 
 ### `GET /api/alerts/:farmId` 🔒
+
 Query: `unreadOnly`, `severity`, `limit` (default 50).
 Sorted by severity, then recency.
 
 ```json
 {
   "alerts": [
-    { "id": "6a7d…", "alertType": "HEAT_STRESS", "severity": "MEDIUM",
-      "title": "High temperatures expected", "message": "…", "action": "…",
-      "crop": { "id": "…", "cropName": "rice" }, "isRead": false }
+    {
+      "id": "6a7d…",
+      "alertType": "HEAT_STRESS",
+      "severity": "MEDIUM",
+      "title": "High temperatures expected",
+      "message": "…",
+      "action": "…",
+      "crop": { "id": "…", "cropName": "rice" },
+      "isRead": false
+    }
   ],
   "counts": { "total": 3, "unread": 2, "critical": 0, "high": 1 }
 }
 ```
 
 ### `POST /api/alerts/:farmId/read-all` 🔒
+
 ### `PATCH /api/alerts/item/:alertId/read` 🔒
+
 ### `PATCH /api/alerts/item/:alertId/dismiss` 🔒
 
 ---
@@ -566,9 +629,13 @@ short-range forecast.
   "farm": { "id": "…", "soilType": "LOAMY", "areaHectares": 3.2 },
   "season": "kharif",
   "climate": {
-    "meanTempC": 25.5, "meanMinTempC": 22.1, "meanMaxTempC": 38.4,
-    "totalRainfallMm": 321, "frostDays": 0,
-    "yearsSampled": 3, "windowDays": 120
+    "meanTempC": 25.5,
+    "meanMinTempC": 22.1,
+    "meanMaxTempC": 38.4,
+    "totalRainfallMm": 321,
+    "frostDays": 0,
+    "yearsSampled": 3,
+    "windowDays": 120
   },
   "recommendations": [
     {
@@ -576,21 +643,34 @@ short-range forecast.
       "label": "Onion",
       "suitabilityScore": 91,
       "rating": "EXCELLENT",
-      "climate": { "score": 83, "reason": "Average 25.5°C sits comfortably in this crop's 13-32°C range." },
-      "season":  { "score": 100, "reason": "Kharif is a normal sowing season for this crop." },
-      "soil":    { "score": 100, "reason": "Grows well on loamy soil." },
-      "water":   { "score": 84, "reason": "Rainfall of about 321 mm leaves roughly 129 mm to make up by irrigation." },
-      "market":  { "score": 81, "reason": "Estimated gross income of about ₹5,57,250 per hectare at typical yield." },
+      "climate": {
+        "score": 83,
+        "reason": "Average 25.5°C sits comfortably in this crop's 13-32°C range."
+      },
+      "season": { "score": 100, "reason": "Kharif is a normal sowing season for this crop." },
+      "soil": { "score": 100, "reason": "Grows well on loamy soil." },
+      "water": {
+        "score": 84,
+        "reason": "Rainfall of about 321 mm leaves roughly 129 mm to make up by irrigation."
+      },
+      "market": {
+        "score": 81,
+        "reason": "Estimated gross income of about ₹5,57,250 per hectare at typical yield."
+      },
       "summary": "Strong choice for your farm this season — climate, soil and timing all line up.",
       "cautions": [],
       "agronomy": {
-        "growingDays": 130, "waterRequirementMm": 450,
-        "expectedRainfallMm": 321, "irrigationNeedMm": 129,
+        "growingDays": 130,
+        "waterRequirementMm": 450,
+        "expectedRainfallMm": 321,
+        "irrigationNeedMm": 129,
         "seasons": ["rabi", "kharif"]
       },
       "economics": {
-        "currentPrice": 2229, "unit": "Rs/quintal",
-        "estimatedIncomePerHa": 557250, "attainableYieldKgHa": 25000
+        "currentPrice": 2229,
+        "unit": "Rs/quintal",
+        "estimatedIncomePerHa": 557250,
+        "attainableYieldKgHa": 25000
       }
     }
   ],
@@ -611,6 +691,7 @@ alternatives.
 then fall back to season and soil only.
 
 ### `GET /api/recommendations/:farmId/history` 🔒
+
 Previously generated recommendations, so the farmer can see how advice has
 changed across seasons.
 
@@ -619,6 +700,7 @@ changed across seasons.
 ## Planning — fertiliser and yield
 
 ### `GET /api/planning/:farmId` 🔒
+
 Fertiliser plan and yield prediction for every active crop. Each crop resolves
 independently; a failure on one does not lose the others.
 
@@ -630,25 +712,57 @@ independently; a failure on one does not lose the others.
   "areaHectares": 2,
   "requirement": { "nitrogenKg": 240, "phosphorusKg": 150, "potassiumKg": 80 },
   "products": [
-    { "product": "Urea", "totalKg": 394, "bags": 9, "bagSizeKg": 45, "supplies": "181 kg nitrogen" },
-    { "product": "DAP",  "totalKg": 326, "bags": 7, "bagSizeKg": 50, "supplies": "150 kg phosphorus + 59 kg nitrogen" },
-    { "product": "MOP (Muriate of Potash)", "totalKg": 133, "bags": 3, "bagSizeKg": 50, "supplies": "80 kg potassium" }
+    {
+      "product": "Urea",
+      "totalKg": 394,
+      "bags": 9,
+      "bagSizeKg": 45,
+      "supplies": "181 kg nitrogen"
+    },
+    {
+      "product": "DAP",
+      "totalKg": 326,
+      "bags": 7,
+      "bagSizeKg": 50,
+      "supplies": "150 kg phosphorus + 59 kg nitrogen"
+    },
+    {
+      "product": "MOP (Muriate of Potash)",
+      "totalKg": 133,
+      "bags": 3,
+      "bagSizeKg": 50,
+      "supplies": "80 kg potassium"
+    }
   ],
   "schedule": [
-    { "timing": "At transplanting (basal)", "stage": "SEED",
-      "ureaKg": 197, "dapKg": 326, "mopKg": 133, "passed": true },
-    { "timing": "At active tillering, ~3 weeks after transplanting", "stage": "VEGETATIVE",
-      "ureaKg": 99, "dapKg": 0, "mopKg": 0, "passed": false }
+    {
+      "timing": "At transplanting (basal)",
+      "stage": "SEED",
+      "ureaKg": 197,
+      "dapKg": 326,
+      "mopKg": 133,
+      "passed": true
+    },
+    {
+      "timing": "At active tillering, ~3 weeks after transplanting",
+      "stage": "VEGETATIVE",
+      "ureaKg": 99,
+      "dapKg": 0,
+      "mopKg": 0,
+      "passed": false
+    }
   ],
   "adjustments": ["Phosphorus is low in your soil — dose increased by 25%."],
-  "notes": ["Apply nitrogen to a drained field, then re-flood after 24 hours — this cuts losses sharply."],
+  "notes": [
+    "Apply nitrogen to a drained field, then re-flood after 24 hours — this cuts losses sharply."
+  ],
   "basis": "Based on ICAR package-of-practices recommendations…"
 }
 ```
 
 **Two things worth noting in the arithmetic:**
 
-1. DAP supplies phosphorus *and* 18% nitrogen. That nitrogen is subtracted from
+1. DAP supplies phosphorus _and_ 18% nitrogen. That nitrogen is subtracted from
    the urea requirement — in the example above 181 + 59 = 240 kg N exactly.
    Skipping this step over-applies nitrogen by a meaningful margin.
 2. Soil test values scale the dose ±25% per nutrient, and sandy soil adds 10%
@@ -668,15 +782,27 @@ farmer sees what is still owed rather than the whole season's plan.
   "rangeTotalKg": { "low": 6854, "high": 10910 },
   "unit": "kg",
   "factors": [
-    { "name": "Water", "factor": 1, "lossPercent": 0, "severity": "none",
-      "reason": "Soil moisture has been kept in the comfortable range." },
-    { "name": "Crop health", "factor": 0.84, "lossPercent": 16, "severity": "moderate",
-      "reason": "2 unresolved issues, worst severity severe." }
+    {
+      "name": "Water",
+      "factor": 1,
+      "lossPercent": 0,
+      "severity": "none",
+      "reason": "Soil moisture has been kept in the comfortable range."
+    },
+    {
+      "name": "Crop health",
+      "factor": 0.84,
+      "lossPercent": 16,
+      "severity": "moderate",
+      "reason": "2 unresolved issues, worst severity severe."
+    }
   ],
   "confidence": 0.64,
   "seasonProgress": 0.46,
   "estimatedIncome": 193393,
-  "improvements": ["Treating the outstanding crop health issues would recover a meaningful share of this loss."],
+  "improvements": [
+    "Treating the outstanding crop health issues would recover a meaningful share of this loss."
+  ],
   "limitations": ["This is a data-driven estimate, not a guarantee…"]
 }
 ```
@@ -710,6 +836,7 @@ Because the client reads only the trailing filename, health-log rows written
 before the change still resolve.
 
 ## Project structure
+
 ```
 smart-farm-dss/
 ├── backend/          Express + Prisma + MongoDB

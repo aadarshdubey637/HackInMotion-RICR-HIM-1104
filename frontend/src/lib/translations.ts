@@ -66,8 +66,10 @@ export const translations = {
       noLoss: 'no loss',
       improvementsTitle: 'What would help most',
       historyTitle: 'How the estimate has moved',
-      noHistory: 'Once there are a few estimates for this crop, a line will appear here showing how it changed through the season.',
-      historyHint: 'Each point is one estimate. The line rising after you irrigate or treat a problem is the effect of that work.',
+      noHistory:
+        'Once there are a few estimates for this crop, a line will appear here showing how it changed through the season.',
+      historyHint:
+        'Each point is one estimate. The line rising after you irrigate or treat a problem is the effect of that work.',
       estimateLabel: 'Estimate',
       actualLabel: 'Actual',
       recordHarvest: 'Record what you actually harvested',
@@ -112,10 +114,12 @@ export const translations = {
       dictate: 'Speak instead of typing',
       dictateStop: 'Stop recording',
       dictateHint: 'Describe the problem in your own language.',
-      noVoiceInstalled: 'Your phone has no {language} voice installed, so this was read in English.',
+      noVoiceInstalled:
+        'Your phone has no {language} voice installed, so this was read in English.',
       close: 'Close',
       briefingIntro: 'Update for {farm}.',
-      briefingWeatherRain: 'Today, up to {temp} degrees, with about {rain} millimetres of rain expected.',
+      briefingWeatherRain:
+        'Today, up to {temp} degrees, with about {rain} millimetres of rain expected.',
       briefingWeatherDry: 'Today, up to {temp} degrees, no rain expected.',
       briefingNothing: 'Nothing needs your attention today. Everything looks fine.',
       briefingUrgent: 'You have {count} urgent items.',
@@ -153,7 +157,7 @@ export const translations = {
       greetingAfternoon: 'Good afternoon, farmer!',
       greetingEvening: 'Good evening, farmer!',
       greetingNight: 'Good night, farmer!',
-      actionsTitle: 'Today\'s Tasks',
+      actionsTitle: "Today's Tasks",
       emptyActions: 'All tasks completed for today!',
       weatherWarning: 'Weather Warning: {warning}',
       adviceIrrigate: 'Irrigation advised: Apply {amount}mm of water.',
@@ -223,7 +227,8 @@ export const translations = {
       markResolved: 'Resolved',
       reports: '{count} reports',
       onCrop: 'on',
-      notAPlant: 'That photo does not look like a plant. Please take another, close to the affected leaf.',
+      notAPlant:
+        'That photo does not look like a plant. Please take another, close to the affected leaf.',
       detailsInEnglish: 'Detailed descriptions are only available in English for this problem.',
     },
     prices: {
@@ -268,7 +273,7 @@ export const translations = {
       email: 'Email address',
       password: 'Password',
       signIn: 'Sign in',
-      noAccount: 'Don\'t have an account?',
+      noAccount: "Don't have an account?",
       register: 'Register',
       createAccount: 'Create your account',
       takesAMinute: 'Takes less than a minute.',
@@ -334,33 +339,47 @@ export const translations = {
       sunday: 'on Sunday',
     },
     narratives: {
-      'Irrigate today — your crop is water stressed': 'Irrigate today — your crop is water stressed',
-      'The root zone has lost {number} mm of water, past the {number} mm point where this crop starts to suffer. Every day you wait now costs yield. Apply about {number} mm.': 'The root zone has lost {number} mm of water, past the {number} mm point where this crop starts to suffer. Every day you wait now costs yield. Apply about {number} mm.',
+      'Irrigate today — your crop is water stressed':
+        'Irrigate today — your crop is water stressed',
+      'The root zone has lost {number} mm of water, past the {number} mm point where this crop starts to suffer. Every day you wait now costs yield. Apply about {number} mm.':
+        'The root zone has lost {number} mm of water, past the {number} mm point where this crop starts to suffer. Every day you wait now costs yield. Apply about {number} mm.',
       'Hold off — rain is coming {day}': 'Hold off — rain is coming {day}',
-      'Soil moisture is low ({percent} of the comfortable range used up), but about {number} mm of usable rain is forecast over the next {number} days. That should refill the root zone. Save the water and the pump cost — but check back if the rain does not arrive.': 'Soil moisture is low ({percent} of the comfortable range used up), but about {number} mm of usable rain is forecast over the next {number} days. That should refill the root zone. Save the water and the pump cost — but check back if the rain does not arrive.',
+      'Soil moisture is low ({percent} of the comfortable range used up), but about {number} mm of usable rain is forecast over the next {number} days. That should refill the root zone. Save the water and the pump cost — but check back if the rain does not arrive.':
+        'Soil moisture is low ({percent} of the comfortable range used up), but about {number} mm of usable rain is forecast over the next {number} days. That should refill the root zone. Save the water and the pump cost — but check back if the rain does not arrive.',
       'Irrigate today — about {number} mm': 'Irrigate today — about {number} mm',
-      'The soil has dried to {number} mm below field capacity, which has reached this crop\'s {number} mm trigger point. No useful rain is forecast in the next {number} days.': 'The soil has dried to {number} mm below field capacity, which has reached this crop\'s {number} mm trigger point. No useful rain is forecast in the next {number} days.',
+      "The soil has dried to {number} mm below field capacity, which has reached this crop's {number} mm trigger point. No useful rain is forecast in the next {number} days.":
+        "The soil has dried to {number} mm below field capacity, which has reached this crop's {number} mm trigger point. No useful rain is forecast in the next {number} days.",
       'No irrigation today — plan for {day}': 'No irrigation today — plan for {day}',
-      'Soil moisture is adequate for now ({percent} of the comfortable range used). At the current rate of water use, the crop will need irrigating {day}.': 'Soil moisture is adequate for now ({percent} of the comfortable range used). At the current rate of water use, the crop will need irrigating {day}.',
+      'Soil moisture is adequate for now ({percent} of the comfortable range used). At the current rate of water use, the crop will need irrigating {day}.':
+        'Soil moisture is adequate for now ({percent} of the comfortable range used). At the current rate of water use, the crop will need irrigating {day}.',
       'No irrigation needed for {number} days': 'No irrigation needed for {number} days',
-      'Soil moisture is comfortable ({percent} of the available range used). Based on the forecast, the next irrigation is due in about {number} days.': 'Soil moisture is comfortable ({percent} of the available range used). Based on the forecast, the next irrigation is due in about {number} days.',
+      'Soil moisture is comfortable ({percent} of the available range used). Based on the forecast, the next irrigation is due in about {number} days.':
+        'Soil moisture is comfortable ({percent} of the available range used). Based on the forecast, the next irrigation is due in about {number} days.',
       'No irrigation needed this week': 'No irrigation needed this week',
-      'Soil moisture is good and roughly {number} mm of rain is expected over the coming week. The crop\'s water needs are covered.': 'Soil moisture is good and roughly {number} mm of rain is expected over the coming week. The crop\'s water needs are covered.',
-      'Soil moisture is comfortable and water use is low enough that the crop will not need irrigating within the forecast window.': 'Soil moisture is comfortable and water use is low enough that the crop will not need irrigating within the forecast window.',
+      "Soil moisture is good and roughly {number} mm of rain is expected over the coming week. The crop's water needs are covered.":
+        "Soil moisture is good and roughly {number} mm of rain is expected over the coming week. The crop's water needs are covered.",
+      'Soil moisture is comfortable and water use is low enough that the crop will not need irrigating within the forecast window.':
+        'Soil moisture is comfortable and water use is low enough that the crop will not need irrigating within the forecast window.',
       'Extreme heat expected': 'Extreme heat expected',
       'High temperatures expected': 'High temperatures expected',
       'Frost warning': 'Frost warning',
       'Heavy rain expected': 'Heavy rain expected',
       'High wind warning': 'High wind warning',
       'Drought warning': 'Drought warning',
-      'Keep soil moisture topped up — well-watered crops tolerate heat far better. Irrigate early morning rather than midday.': 'Keep soil moisture topped up — well-watered crops tolerate heat far better. Irrigate early morning rather than midday.',
-      'Irrigate in the early morning or evening to cool the root zone. Avoid spraying in peak heat. If the crop is flowering, expect some flower drop.': 'Irrigate in the early morning or evening to cool the root zone. Avoid spraying in peak heat. If the crop is flowering, expect some flower drop.',
-      '{number}°C forecast {day}, above the {number}°C comfort limit for {crop}. {number} hot days are expected in total.': '{number}°C forecast {day}, above the {number}°C comfort limit for {crop}. {number} hot days are expected in total.',
+      'Keep soil moisture topped up — well-watered crops tolerate heat far better. Irrigate early morning rather than midday.':
+        'Keep soil moisture topped up — well-watered crops tolerate heat far better. Irrigate early morning rather than midday.',
+      'Irrigate in the early morning or evening to cool the root zone. Avoid spraying in peak heat. If the crop is flowering, expect some flower drop.':
+        'Irrigate in the early morning or evening to cool the root zone. Avoid spraying in peak heat. If the crop is flowering, expect some flower drop.',
+      '{number}°C forecast {day}, above the {number}°C comfort limit for {crop}. {number} hot days are expected in total.':
+        '{number}°C forecast {day}, above the {number}°C comfort limit for {crop}. {number} hot days are expected in total.',
       'Add your crop': 'Add your crop',
-      'Irrigation guidance, health checks and price tracking all depend on knowing what you are growing.': 'Irrigation guidance, health checks and price tracking all depend on knowing what you are growing.',
-      'Add the crop you are growing or planning to plant.': 'Add the crop you are growing or planning to plant.',
+      'Irrigation guidance, health checks and price tracking all depend on knowing what you are growing.':
+        'Irrigation guidance, health checks and price tracking all depend on knowing what you are growing.',
+      'Add the crop you are growing or planning to plant.':
+        'Add the crop you are growing or planning to plant.',
       'Add your soil type': 'Add your soil type',
-      'Soil type decides how much water your land can hold, which makes irrigation advice noticeably more accurate.': 'Soil type decides how much water your land can hold, which makes irrigation advice noticeably more accurate.',
+      'Soil type decides how much water your land can hold, which makes irrigation advice noticeably more accurate.':
+        'Soil type decides how much water your land can hold, which makes irrigation advice noticeably more accurate.',
       'Set your soil type in the farm profile.': 'Set your soil type in the farm profile.',
     },
   },
@@ -405,7 +424,8 @@ export const translations = {
       improvementsTitle: 'सबसे ज्यादा मदद क्या करेगी',
       historyTitle: 'अनुमान कैसे बदला',
       noHistory: 'इस फसल के कुछ अनुमान बन जाने पर यहाँ रेखा दिखेगी कि पूरे मौसम में वह कैसे बदला।',
-      historyHint: 'हर बिंदु एक अनुमान है। सिंचाई या इलाज के बाद रेखा ऊपर जाना उसी मेहनत का असर है।',
+      historyHint:
+        'हर बिंदु एक अनुमान है। सिंचाई या इलाज के बाद रेखा ऊपर जाना उसी मेहनत का असर है।',
       estimateLabel: 'अनुमान',
       actualLabel: 'वास्तविक',
       recordHarvest: 'असली कटाई दर्ज करें',
@@ -672,34 +692,50 @@ export const translations = {
       sunday: 'रविवार को',
     },
     narratives: {
-      'Irrigate today — your crop is water stressed': 'आज ही सिंचाई करें — आपकी फसल पानी की कमी के कारण तनाव में है',
-      'The root zone has lost {number} mm of water, past the {number} mm point where this crop starts to suffer. Every day you wait now costs yield. Apply about {number} mm.': 'रूट ज़ोन ने {number} mm पानी खो दिया है, जो इस फसल के शुरू होने के {number} mm ट्रिगर पॉइंट से अधिक है। अब हर दिन इंतजार करने से उपज का नुकसान होगा। लगभग {number} mm पानी दें।',
+      'Irrigate today — your crop is water stressed':
+        'आज ही सिंचाई करें — आपकी फसल पानी की कमी के कारण तनाव में है',
+      'The root zone has lost {number} mm of water, past the {number} mm point where this crop starts to suffer. Every day you wait now costs yield. Apply about {number} mm.':
+        'रूट ज़ोन ने {number} mm पानी खो दिया है, जो इस फसल के शुरू होने के {number} mm ट्रिगर पॉइंट से अधिक है। अब हर दिन इंतजार करने से उपज का नुकसान होगा। लगभग {number} mm पानी दें।',
       'Hold off — rain is coming {day}': 'अभी रुकें — {day} बारिश होने वाली है',
-      'Soil moisture is low ({percent} of the comfortable range used up), but about {number} mm of usable rain is forecast over the next {number} days. That should refill the root zone. Save the water and the pump cost — but check back if the rain does not arrive.': 'मिट्टी की नमी कम है (आरामदायक सीमा का {percent} उपयोग किया गया है), लेकिन अगले {number} दिनों में लगभग {number} mm उपयोगी बारिश का अनुमान है। इससे रूट ज़ोन फिर से भर जाना चाहिए। पानी और पंप की लागत बचाएं — लेकिन अगर बारिश नहीं होती है तो फिर से जांचें।',
+      'Soil moisture is low ({percent} of the comfortable range used up), but about {number} mm of usable rain is forecast over the next {number} days. That should refill the root zone. Save the water and the pump cost — but check back if the rain does not arrive.':
+        'मिट्टी की नमी कम है (आरामदायक सीमा का {percent} उपयोग किया गया है), लेकिन अगले {number} दिनों में लगभग {number} mm उपयोगी बारिश का अनुमान है। इससे रूट ज़ोन फिर से भर जाना चाहिए। पानी और पंप की लागत बचाएं — लेकिन अगर बारिश नहीं होती है तो फिर से जांचें।',
       'Irrigate today — about {number} mm': 'आज ही सिंचाई करें — लगभग {number} mm',
-      'The soil has dried to {number} mm below field capacity, which has reached this crop\'s {number} mm trigger point. No useful rain is forecast in the next {number} days.': 'मिट्टी सूखकर फील्ड क्षमता से {number} mm नीचे चली गई है, जो इस फसल के {number} mm ट्रिगर पॉइंट तक पहुँच गई है। अगले {number} दिनों में कोई उपयोगी बारिश का अनुमान नहीं है।',
-      'No irrigation today — plan for {day}': 'आज सिंचाई की जरूरत नहीं है — {day} के लिए योजना बनाएं',
-      'Soil moisture is adequate for now ({percent} of the comfortable range used). At the current rate of water use, the crop will need irrigating {day}.': 'मिट्टी की नमी अभी पर्याप्त है (आरामदायक सीमा का {percent} उपयोग किया गया है)। पानी के उपयोग की वर्तमान दर पर, फसल को {day} सिंचाई की आवश्यकता होगी।',
+      "The soil has dried to {number} mm below field capacity, which has reached this crop's {number} mm trigger point. No useful rain is forecast in the next {number} days.":
+        'मिट्टी सूखकर फील्ड क्षमता से {number} mm नीचे चली गई है, जो इस फसल के {number} mm ट्रिगर पॉइंट तक पहुँच गई है। अगले {number} दिनों में कोई उपयोगी बारिश का अनुमान नहीं है।',
+      'No irrigation today — plan for {day}':
+        'आज सिंचाई की जरूरत नहीं है — {day} के लिए योजना बनाएं',
+      'Soil moisture is adequate for now ({percent} of the comfortable range used). At the current rate of water use, the crop will need irrigating {day}.':
+        'मिट्टी की नमी अभी पर्याप्त है (आरामदायक सीमा का {percent} उपयोग किया गया है)। पानी के उपयोग की वर्तमान दर पर, फसल को {day} सिंचाई की आवश्यकता होगी।',
       'No irrigation needed for {number} days': '{number} दिनों तक सिंचाई की आवश्यकता नहीं है',
-      'Soil moisture is comfortable ({percent} of the available range used). Based on the forecast, the next irrigation is due in about {number} days.': 'मिट्टी की नमी आरामदायक है (उपलब्ध सीमा का {percent} उपयोग किया गया है)। पूर्वानुमान के आधार पर, अगली सिंचाई लगभग {number} दिनों में देय है।',
+      'Soil moisture is comfortable ({percent} of the available range used). Based on the forecast, the next irrigation is due in about {number} days.':
+        'मिट्टी की नमी आरामदायक है (उपलब्ध सीमा का {percent} उपयोग किया गया है)। पूर्वानुमान के आधार पर, अगली सिंचाई लगभग {number} दिनों में देय है।',
       'No irrigation needed this week': 'इस सप्ताह सिंचाई की आवश्यकता नहीं है',
-      'Soil moisture is good and roughly {number} mm of rain is expected over the coming week. The crop\'s water needs are covered.': 'मिट्टी की नमी अच्छी है और आने वाले सप्ताह में लगभग {number} mm बारिश की उम्मीद है। फसल की पानी की जरूरतें पूरी हो गई हैं।',
-      'Soil moisture is comfortable and water use is low enough that the crop will not need irrigating within the forecast window.': 'मिट्टी की नमी आरामदायक है और पानी का उपयोग काफी कम है, इसलिए फसल को पूर्वानुमान अवधि के भीतर सिंचाई की आवश्यकता नहीं होगी।',
+      "Soil moisture is good and roughly {number} mm of rain is expected over the coming week. The crop's water needs are covered.":
+        'मिट्टी की नमी अच्छी है और आने वाले सप्ताह में लगभग {number} mm बारिश की उम्मीद है। फसल की पानी की जरूरतें पूरी हो गई हैं।',
+      'Soil moisture is comfortable and water use is low enough that the crop will not need irrigating within the forecast window.':
+        'मिट्टी की नमी आरामदायक है और पानी का उपयोग काफी कम है, इसलिए फसल को पूर्वानुमान अवधि के भीतर सिंचाई की आवश्यकता नहीं होगी।',
       'Extreme heat expected': 'अत्यधिक गर्मी की आशंका',
       'High temperatures expected': 'उच्च तापमान की आशंका',
       'Frost warning': 'पाला पड़ने की चेतावनी',
       'Heavy rain expected': 'भारी बारिश की आशंका',
       'High wind warning': 'तेज हवा की चेतावनी',
       'Drought warning': 'सूखे की चेतावनी',
-      'Keep soil moisture topped up — well-watered crops tolerate heat far better. Irrigate early morning rather than midday.': 'मिट्टी में नमी बनाए रखें — पर्याप्त पानी वाली फसलें गर्मी को बेहतर ढंग से सहन करती हैं। दोपहर के बजाय सुबह जल्दी सिंचाई करें।',
-      'Irrigate in the early morning or evening to cool the root zone. Avoid spraying in peak heat. If the crop is flowering, expect some flower drop.': 'जड़ों को ठंडा करने के लिए सुबह जल्दी या शाम को सिंचाई करें। तेज धूप में छिड़काव से बचें। यदि फसल में फूल आ रहे हैं, तो कुछ फूल गिरने की आशंका है।',
-      '{number}°C forecast {day}, above the {number}°C comfort limit for {crop}. {number} hot days are expected in total.': '{day} {number}°C का पूर्वानुमान है, जो {crop} के लिए {number}°C की आरामदायक सीमा से अधिक है। कुल {number} गर्म दिन होने की आशंका है।',
+      'Keep soil moisture topped up — well-watered crops tolerate heat far better. Irrigate early morning rather than midday.':
+        'मिट्टी में नमी बनाए रखें — पर्याप्त पानी वाली फसलें गर्मी को बेहतर ढंग से सहन करती हैं। दोपहर के बजाय सुबह जल्दी सिंचाई करें।',
+      'Irrigate in the early morning or evening to cool the root zone. Avoid spraying in peak heat. If the crop is flowering, expect some flower drop.':
+        'जड़ों को ठंडा करने के लिए सुबह जल्दी या शाम को सिंचाई करें। तेज धूप में छिड़काव से बचें। यदि फसल में फूल आ रहे हैं, तो कुछ फूल गिरने की आशंका है।',
+      '{number}°C forecast {day}, above the {number}°C comfort limit for {crop}. {number} hot days are expected in total.':
+        '{day} {number}°C का पूर्वानुमान है, जो {crop} के लिए {number}°C की आरामदायक सीमा से अधिक है। कुल {number} गर्म दिन होने की आशंका है।',
       'Add your crop': 'अपनी फसल जोड़ें',
-      'Irrigation guidance, health checks and price tracking all depend on knowing what you are growing.': 'सिंचाई मार्गदर्शन, स्वास्थ्य जांच और मूल्य ट्रैकिंग सब कुछ यह जानने पर निर्भर करता है कि आप क्या उगा रहे हैं।',
-      'Add the crop you are growing or planning to plant.': 'वह फसल जोड़ें जो आप उगा रहे हैं या बोने की योजना बना रहे हैं।',
+      'Irrigation guidance, health checks and price tracking all depend on knowing what you are growing.':
+        'सिंचाई मार्गदर्शन, स्वास्थ्य जांच और मूल्य ट्रैकिंग सब कुछ यह जानने पर निर्भर करता है कि आप क्या उगा रहे हैं।',
+      'Add the crop you are growing or planning to plant.':
+        'वह फसल जोड़ें जो आप उगा रहे हैं या बोने की योजना बना रहे हैं।',
       'Add your soil type': 'अपनी मिट्टी का प्रकार जोड़ें',
-      'Soil type decides how much water your land can hold, which makes irrigation advice noticeably more accurate.': 'मिट्टी का प्रकार तय करता है कि आपकी भूमि कितना पानी रोक सकती है, जिससे सिंचाई की सलाह अधिक सटीक हो जाती है।',
-      'Set your soil type in the farm profile.': 'खेत के प्रोफाइल में अपनी मिट्टी का प्रकार दर्ज करें।',
+      'Soil type decides how much water your land can hold, which makes irrigation advice noticeably more accurate.':
+        'मिट्टी का प्रकार तय करता है कि आपकी भूमि कितना पानी रोक सकती है, जिससे सिंचाई की सलाह अधिक सटीक हो जाती है।',
+      'Set your soil type in the farm profile.':
+        'खेत के प्रोफाइल में अपनी मिट्टी का प्रकार दर्ज करें।',
     },
   },
   pa: {
@@ -742,8 +778,10 @@ export const translations = {
       noLoss: 'ਕੋਈ ਨੁਕਸਾਨ ਨਹੀਂ',
       improvementsTitle: 'ਸਭ ਤੋਂ ਵੱਧ ਮਦਦ ਕੀ ਕਰੇਗੀ',
       historyTitle: 'ਅੰਦਾਜ਼ਾ ਕਿਵੇਂ ਬਦਲਿਆ',
-      noHistory: 'ਇਸ ਫ�਼ਸਲ ਦੇ ਕੁਝ ਅੰਦਾਜ਼ੇ ਬਣ ਜਾਣ ਉੱਤੇ ਇੱਥੇ ਰੇਖਾ ਦਿਖੇਗੀ ਕਿ ਪੂਰੇ ਮੌਸਮ ਵਿੱਚ ਉਹ ਕਿਵੇਂ ਬਦਲਿਆ।',
-      historyHint: 'ਹਰ ਬਿੰਦੂ ਇੱਕ ਅੰਦਾਜ਼ਾ ਹੈ। ਸਿੰਚਾਈ ਜਾਂ ਇਲਾਜ ਤੋਂ ਬਾਅਦ ਰੇਖਾ ਉੱਪਰ ਜਾਣਾ ਉਸੇ ਮਿਹਨਤ ਦਾ ਅਸਰ ਹੈ।',
+      noHistory:
+        'ਇਸ ਫ�਼ਸਲ ਦੇ ਕੁਝ ਅੰਦਾਜ਼ੇ ਬਣ ਜਾਣ ਉੱਤੇ ਇੱਥੇ ਰੇਖਾ ਦਿਖੇਗੀ ਕਿ ਪੂਰੇ ਮੌਸਮ ਵਿੱਚ ਉਹ ਕਿਵੇਂ ਬਦਲਿਆ।',
+      historyHint:
+        'ਹਰ ਬਿੰਦੂ ਇੱਕ ਅੰਦਾਜ਼ਾ ਹੈ। ਸਿੰਚਾਈ ਜਾਂ ਇਲਾਜ ਤੋਂ ਬਾਅਦ ਰੇਖਾ ਉੱਪਰ ਜਾਣਾ ਉਸੇ ਮਿਹਨਤ ਦਾ ਅਸਰ ਹੈ।',
       estimateLabel: 'ਅੰਦਾਜ਼ਾ',
       actualLabel: 'ਅਸਲੀ',
       recordHarvest: 'ਅਸਲੀ ਵਾਢੀ ਦਰਜ ਕਰੋ',
@@ -788,10 +826,12 @@ export const translations = {
       dictate: 'ਲਿਖਣ ਦੀ ਥਾਂ ਬੋਲੋ',
       dictateStop: 'ਰਿਕਾਰਡਿੰਗ ਰੋਕੋ',
       dictateHint: 'ਆਪਣੀ ਭਾਸ਼ਾ ਵਿੱਚ ਦੱਸੋ ਕਿ ਕੀ ਦਿਸ ਰਿਹਾ ਹੈ।',
-      noVoiceInstalled: 'ਤੁਹਾਡੇ ਫ਼ੋਨ ਵਿੱਚ {language} ਆਵਾਜ਼ ਨਹੀਂ ਹੈ, ਇਸ ਲਈ ਅੰਗਰੇਜ਼ੀ ਵਿੱਚ ਪੜ੍ਹਿਆ ਗਿਆ।',
+      noVoiceInstalled:
+        'ਤੁਹਾਡੇ ਫ਼ੋਨ ਵਿੱਚ {language} ਆਵਾਜ਼ ਨਹੀਂ ਹੈ, ਇਸ ਲਈ ਅੰਗਰੇਜ਼ੀ ਵਿੱਚ ਪੜ੍ਹਿਆ ਗਿਆ।',
       close: 'ਬੰਦ ਕਰੋ',
       briefingIntro: '{farm} ਦੀ ਜਾਣਕਾਰੀ।',
-      briefingWeatherRain: 'ਅੱਜ ਵੱਧ ਤੋਂ ਵੱਧ {temp} ਡਿਗਰੀ, ਅਤੇ ਲਗਭਗ {rain} ਮਿਲੀਮੀਟਰ ਮੀਂਹ ਦੀ ਸੰਭਾਵਨਾ ਹੈ।',
+      briefingWeatherRain:
+        'ਅੱਜ ਵੱਧ ਤੋਂ ਵੱਧ {temp} ਡਿਗਰੀ, ਅਤੇ ਲਗਭਗ {rain} ਮਿਲੀਮੀਟਰ ਮੀਂਹ ਦੀ ਸੰਭਾਵਨਾ ਹੈ।',
       briefingWeatherDry: 'ਅੱਜ ਵੱਧ ਤੋਂ ਵੱਧ {temp} ਡਿਗਰੀ, ਮੀਂਹ ਦੀ ਸੰਭਾਵਨਾ ਨਹੀਂ।',
       briefingNothing: 'ਅੱਜ ਕਿਸੇ ਕੰਮ ਦੀ ਲੋੜ ਨਹੀਂ। ਸਭ ਠੀਕ ਲੱਗਦਾ ਹੈ।',
       briefingUrgent: 'ਤੁਹਾਡੇ ਕੋਲ {count} ਜ਼ਰੂਰੀ ਕੰਮ ਹਨ।',
@@ -1003,33 +1043,47 @@ export const translations = {
       sunday: 'रविवार को',
     },
     narratives: {
-      'Irrigate today — your crop is water stressed': 'ਅੱਜ ਹੀ ਸਿੰਚਾਈ ਕਰੋ — ਤੁਹਾਡੀ ਫਸਲ ਪਾਣੀ ਦੀ ਘਾਟ ਕਾਰਨ ਤਣਾਅ ਵਿੱਚ ਹੈ',
-      'The root zone has lost {number} mm of water, past the {number} mm point where this crop starts to suffer. Every day you wait now costs yield. Apply about {number} mm.': 'ਜੜ੍ਹਾਂ ਦੇ ਹਿੱਸੇ ਵਿੱਚੋਂ {number} mm ਪਾਣੀ ਘੱਟ ਗਿਆ ਹੈ, ਜੋ ਇਸ ਫਸਲ ਦੇ {number} mm ਟ੍ਰਿਗਰ ਪੁਆਇੰਟ ਤੋਂ ਵੱਧ ਹੈ। ਹੁਣ ਹਰ ਦਿਨ ਇੰਤਜ਼ਾਰ ਕਰਨ ਨਾਲ ਝਾੜ ਦਾ ਨੁਕਸਾਨ ਹੋਵੇਗਾ। ਲਗਭਗ {number} mm ਪਾਣੀ ਦਿਓ।',
+      'Irrigate today — your crop is water stressed':
+        'ਅੱਜ ਹੀ ਸਿੰਚਾਈ ਕਰੋ — ਤੁਹਾਡੀ ਫਸਲ ਪਾਣੀ ਦੀ ਘਾਟ ਕਾਰਨ ਤਣਾਅ ਵਿੱਚ ਹੈ',
+      'The root zone has lost {number} mm of water, past the {number} mm point where this crop starts to suffer. Every day you wait now costs yield. Apply about {number} mm.':
+        'ਜੜ੍ਹਾਂ ਦੇ ਹਿੱਸੇ ਵਿੱਚੋਂ {number} mm ਪਾਣੀ ਘੱਟ ਗਿਆ ਹੈ, ਜੋ ਇਸ ਫਸਲ ਦੇ {number} mm ਟ੍ਰਿਗਰ ਪੁਆਇੰਟ ਤੋਂ ਵੱਧ ਹੈ। ਹੁਣ ਹਰ ਦਿਨ ਇੰਤਜ਼ਾਰ ਕਰਨ ਨਾਲ ਝਾੜ ਦਾ ਨੁਕਸਾਨ ਹੋਵੇਗਾ। ਲਗਭਗ {number} mm ਪਾਣੀ ਦਿਓ।',
       'Hold off — rain is coming {day}': 'ਅਜੇ ਰੁਕੋ — {day} ਮੀਂਹ ਪੈਣ ਵਾਲਾ ਹੈ',
-      'Soil moisture is low ({percent} of the comfortable range used up), but about {number} mm of usable rain is forecast over the next {number} days. That should refill the root zone. Save the water and the pump cost — but check back if the rain does not arrive.': 'ਮਿੱਟੀ ਦੀ ਨਮੀ ਘੱਟ ਹੈ (ਸਿੰਚਾਈ ਸੀਮਾ ਦਾ {percent} ਵਰਤਿਆ ਗਿਆ ਹੈ), ਪਰ ਅਗਲੇ {number} ਦਿਨਾਂ ਵਿੱਚ ਲਗਭਗ {number} mm ਲਾਭਦਾਇਕ ਮੀਂਹ ਦਾ ਅਨੁਮਾਨ ਹੈ। ਇਸ ਨਾਲ ਜੜ੍ਹਾਂ ਨੂੰ ਪਾਣੀ ਮਿਲ ਜਾਵੇਗਾ। ਪਾਣੀ ਅਤੇ ਪੰਪ ਦਾ ਖਰਚਾ ਬਚਾਓ — ਪਰ ਜੇ ਮੀਂਹ ਨਹੀਂ ਪੈਂਦਾ ਤਾਂ ਦੁਬਾਰਾ ਚੈੱਕ ਕਰੋ।',
+      'Soil moisture is low ({percent} of the comfortable range used up), but about {number} mm of usable rain is forecast over the next {number} days. That should refill the root zone. Save the water and the pump cost — but check back if the rain does not arrive.':
+        'ਮਿੱਟੀ ਦੀ ਨਮੀ ਘੱਟ ਹੈ (ਸਿੰਚਾਈ ਸੀਮਾ ਦਾ {percent} ਵਰਤਿਆ ਗਿਆ ਹੈ), ਪਰ ਅਗਲੇ {number} ਦਿਨਾਂ ਵਿੱਚ ਲਗਭਗ {number} mm ਲਾਭਦਾਇਕ ਮੀਂਹ ਦਾ ਅਨੁਮਾਨ ਹੈ। ਇਸ ਨਾਲ ਜੜ੍ਹਾਂ ਨੂੰ ਪਾਣੀ ਮਿਲ ਜਾਵੇਗਾ। ਪਾਣੀ ਅਤੇ ਪੰਪ ਦਾ ਖਰਚਾ ਬਚਾਓ — ਪਰ ਜੇ ਮੀਂਹ ਨਹੀਂ ਪੈਂਦਾ ਤਾਂ ਦੁਬਾਰਾ ਚੈੱਕ ਕਰੋ।',
       'Irrigate today — about {number} mm': 'ਅੱਜ ਹੀ ਸਿੰਚਾਈ ਕਰੋ — ਲਗਭਗ {number} mm',
-      'The soil has dried to {number} mm below field capacity, which has reached this crop\'s {number} mm trigger point. No useful rain is forecast in the next {number} days.': 'ਮਿੱਟੀ ਸੁੱਕ ਕੇ ਫੀਲਡ ਸਮਰੱਥਾ ਤੋਂ {number} mm ਹੇਠਾਂ ਚਲੀ ਗਈ ਹੈ, ਜੋ ਇਸ ਫਸਲ ਦੇ {number} mm ਟ੍ਰਿਗਰ ਪੁਆਇੰਟ ਤੇ ਪਹੁੰਚ ਗਈ ਹੈ। ਅਗਲੇ {number} ਦਿਨਾਂ ਵਿੱਚ ਕੋਈ ਮੀਂਹ ਪੈਣ ਦਾ ਅਨੁਮਾਨ ਨਹੀਂ ਹੈ।',
+      "The soil has dried to {number} mm below field capacity, which has reached this crop's {number} mm trigger point. No useful rain is forecast in the next {number} days.":
+        'ਮਿੱਟੀ ਸੁੱਕ ਕੇ ਫੀਲਡ ਸਮਰੱਥਾ ਤੋਂ {number} mm ਹੇਠਾਂ ਚਲੀ ਗਈ ਹੈ, ਜੋ ਇਸ ਫਸਲ ਦੇ {number} mm ਟ੍ਰਿਗਰ ਪੁਆਇੰਟ ਤੇ ਪਹੁੰਚ ਗਈ ਹੈ। ਅਗਲੇ {number} ਦਿਨਾਂ ਵਿੱਚ ਕੋਈ ਮੀਂਹ ਪੈਣ ਦਾ ਅਨੁਮਾਨ ਨਹੀਂ ਹੈ।',
       'No irrigation today — plan for {day}': 'ਅੱਜ ਸਿੰਚਾਈ ਦੀ ਕੋਈ ਲੋੜ ਨਹੀਂ — {day} ਲਈ ਯੋਜਨਾ ਬਣਾਓ',
-      'Soil moisture is adequate for now ({percent} of the comfortable range used). At the current rate of water use, the crop will need irrigating {day}.': 'ਮਿੱਟੀ ਦੀ ਨਮੀ ਅਜੇ ਕਾਫੀ ਹੈ (ਸਿੰਚਾਈ ਸੀਮਾ ਦਾ {percent} ਵਰਤਿਆ ਗਿਆ ਹੈ)। ਪਾਣੀ ਦੀ ਵਰਤੋਂ ਦੀ ਮੌਜੂਦਾ ਦਰ ਤੇ, ਫਸਲ ਨੂੰ {day} ਸਿੰਚਾਈ ਦੀ ਲੋੜ ਪਵੇਗੀ।',
+      'Soil moisture is adequate for now ({percent} of the comfortable range used). At the current rate of water use, the crop will need irrigating {day}.':
+        'ਮਿੱਟੀ ਦੀ ਨਮੀ ਅਜੇ ਕਾਫੀ ਹੈ (ਸਿੰਚਾਈ ਸੀਮਾ ਦਾ {percent} ਵਰਤਿਆ ਗਿਆ ਹੈ)। ਪਾਣੀ ਦੀ ਵਰਤੋਂ ਦੀ ਮੌਜੂਦਾ ਦਰ ਤੇ, ਫਸਲ ਨੂੰ {day} ਸਿੰਚਾਈ ਦੀ ਲੋੜ ਪਵੇਗੀ।',
       'No irrigation needed for {number} days': '{number} ਦਿਨਾਂ ਤੱਕ ਸਿੰਚਾਈ ਦੀ ਕੋਈ ਲੋੜ ਨਹੀਂ',
-      'Soil moisture is comfortable ({percent} of the available range used). Based on the forecast, the next irrigation is due in about {number} days.': 'ਮਿੱਟੀ की नमी आरामदायक है (उपलब्ध सीमा का {percent} उपयोग किया गया है)। पूर्वानुमान के आधार पर, अगली सिंचाई लगभग {number} दिनों में देय है।',
+      'Soil moisture is comfortable ({percent} of the available range used). Based on the forecast, the next irrigation is due in about {number} days.':
+        'ਮਿੱਟੀ की नमी आरामदायक है (उपलब्ध सीमा का {percent} उपयोग किया गया है)। पूर्वानुमान के आधार पर, अगली सिंचाई लगभग {number} दिनों में देय है।',
       'No irrigation needed this week': 'ਇਸ ਹਫ਼ਤੇ ਸਿੰਚਾਈ ਦੀ ਕੋਈ ਲੋੜ ਨਹੀਂ',
-      'Soil moisture is good and roughly {number} mm of rain is expected over the coming week. The crop\'s water needs are covered.': 'ਮਿੱਟੀ ਦੀ ਨਮੀ ਚੰਗੀ ਹੈ ਅਤੇ ਆਉਣ ਵਾਲੇ ਹਫ਼ਤੇ ਵਿੱਚ ਲਗਭਗ {number} mm ਮੀਂਹ ਪੈਣ ਦੀ ਉਮੀਦ ਹੈ। ਫਸਲ ਦੀਆਂ ਪਾਣੀ ਦੀਆਂ ਲੋੜਾਂ ਪੂਰੀਆਂ ਹੋ ਗਈਆਂ ਹਨ।',
-      'Soil moisture is comfortable and water use is low enough that the crop will not need irrigating within the forecast window.': 'ਮਿੱਟੀ ਦੀ ਨਮੀ ਤਸੱਲੀਬਖਸ਼ ਹੈ ਅਤੇ ਪਾਣੀ ਦੀ ਵਰਤੋਂ ਕਾਫ਼ੀ ਘੱਟ ਹੈ, ਇਸ ਲਈ ਫਸਲ ਨੂੰ ਭਵਿੱਖਬਾਣੀ ਦੀ ਮਿਆਦ ਦੇ ਅੰਦਰ ਸਿੰਚਾਈ ਦੀ ਲੋੜ ਨਹੀਂ ਪਵੇਗੀ।',
+      "Soil moisture is good and roughly {number} mm of rain is expected over the coming week. The crop's water needs are covered.":
+        'ਮਿੱਟੀ ਦੀ ਨਮੀ ਚੰਗੀ ਹੈ ਅਤੇ ਆਉਣ ਵਾਲੇ ਹਫ਼ਤੇ ਵਿੱਚ ਲਗਭਗ {number} mm ਮੀਂਹ ਪੈਣ ਦੀ ਉਮੀਦ ਹੈ। ਫਸਲ ਦੀਆਂ ਪਾਣੀ ਦੀਆਂ ਲੋੜਾਂ ਪੂਰੀਆਂ ਹੋ ਗਈਆਂ ਹਨ।',
+      'Soil moisture is comfortable and water use is low enough that the crop will not need irrigating within the forecast window.':
+        'ਮਿੱਟੀ ਦੀ ਨਮੀ ਤਸੱਲੀਬਖਸ਼ ਹੈ ਅਤੇ ਪਾਣੀ ਦੀ ਵਰਤੋਂ ਕਾਫ਼ੀ ਘੱਟ ਹੈ, ਇਸ ਲਈ ਫਸਲ ਨੂੰ ਭਵਿੱਖਬਾਣੀ ਦੀ ਮਿਆਦ ਦੇ ਅੰਦਰ ਸਿੰਚਾਈ ਦੀ ਲੋੜ ਨਹੀਂ ਪਵੇਗੀ।',
       'Extreme heat expected': 'ਬਹੁਤ ਜ਼ਿਆਦਾ ਗਰਮੀ ਦੀ ਚੇਤਾਵਨੀ',
       'High temperatures expected': 'ਉੱਚ ਤਾਪਮਾਨ ਦੀ ਚੇਤਾਵਨੀ',
       'Frost warning': 'ਕੋਰਾ ਪੈਣ ਦੀ ਚੇਤਾਵਨੀ',
       'Heavy rain expected': 'ਭਾਰੀ ਮੀਂਹ ਦੀ ਚੇਤਾਵਨੀ',
       'High wind warning': 'ਤੇਜ਼ ਹਵਾ ਦੀ ਚੇਤਾਵਨੀ',
       'Drought warning': 'ਸੋਕੇ ਦੀ ਚੇਤਾਵਨੀ',
-      'Keep soil moisture topped up — well-watered crops tolerate heat far better. Irrigate early morning rather than midday.': 'ਮਿੱਟੀ ਵਿੱਚ ਨਮੀ ਬਣਾਈ ਰੱਖੋ — ਪਾਣੀ ਵਾਲੀਆਂ ਫਸਲਾਂ ਗਰਮੀ ਨੂੰ ਚੰਗੀ ਤਰ੍ਹਾਂ ਸਹਿਣ ਕਰਦੀਆਂ ਹਨ। ਦੁਪਹਿਰ ਦੀ ਬਜਾਏ ਸਵੇਰੇ ਜਲਦੀ ਸਿੰਚਾਈ ਕਰੋ।',
-      'Irrigate in the early morning or evening to cool the root zone. Avoid spraying in peak heat. If the crop is flowering, expect some flower drop.': 'ਜੜ੍ਹਾਂ ਨੂੰ ਠੰਡਾ ਰੱਖਣ ਲਈ ਸਵੇਰੇ ਜਲਦੀ ਜਾਂ ਸ਼ਾਮ ਨੂੰ ਸਿੰਚਾਈ ਕਰੋ। ਤੇਜ਼ ਗਰਮੀ ਵਿੱਚ ਛਿੜਕਾਅ ਨਾ ਕਰੋ। ਜੇਕਰ ਫਸਲ ਫੁੱਲ ਰਹੀ ਹੈ, ਤਾਂ ਕੁਝ ਫੁੱਲ ਡਿੱਗਣ ਦੀ ਉਮੀਦ ਕਰੋ।',
-      '{number}°C forecast {day}, above the {number}°C comfort limit for {crop}. {number} hot days are expected in total.': '{day} {number}°C ਦੀ ਭਵਿੱਖਬਾਣੀ ਹੈ, ਜੋ {crop} ਲਈ {number}°C ਦੀ ਸੀਮਾ ਤੋਂ ਵੱਧ ਹੈ। ਕੁੱਲ {number} ਗਰਮ ਦਿਨ ਹੋਣ ਦਾ ਖਦਸ਼ਾ ਹੈ।',
+      'Keep soil moisture topped up — well-watered crops tolerate heat far better. Irrigate early morning rather than midday.':
+        'ਮਿੱਟੀ ਵਿੱਚ ਨਮੀ ਬਣਾਈ ਰੱਖੋ — ਪਾਣੀ ਵਾਲੀਆਂ ਫਸਲਾਂ ਗਰਮੀ ਨੂੰ ਚੰਗੀ ਤਰ੍ਹਾਂ ਸਹਿਣ ਕਰਦੀਆਂ ਹਨ। ਦੁਪਹਿਰ ਦੀ ਬਜਾਏ ਸਵੇਰੇ ਜਲਦੀ ਸਿੰਚਾਈ ਕਰੋ।',
+      'Irrigate in the early morning or evening to cool the root zone. Avoid spraying in peak heat. If the crop is flowering, expect some flower drop.':
+        'ਜੜ੍ਹਾਂ ਨੂੰ ਠੰਡਾ ਰੱਖਣ ਲਈ ਸਵੇਰੇ ਜਲਦੀ ਜਾਂ ਸ਼ਾਮ ਨੂੰ ਸਿੰਚਾਈ ਕਰੋ। ਤੇਜ਼ ਗਰਮੀ ਵਿੱਚ ਛਿੜਕਾਅ ਨਾ ਕਰੋ। ਜੇਕਰ ਫਸਲ ਫੁੱਲ ਰਹੀ ਹੈ, ਤਾਂ ਕੁਝ ਫੁੱਲ ਡਿੱਗਣ ਦੀ ਉਮੀਦ ਕਰੋ।',
+      '{number}°C forecast {day}, above the {number}°C comfort limit for {crop}. {number} hot days are expected in total.':
+        '{day} {number}°C ਦੀ ਭਵਿੱਖਬਾਣੀ ਹੈ, ਜੋ {crop} ਲਈ {number}°C ਦੀ ਸੀਮਾ ਤੋਂ ਵੱਧ ਹੈ। ਕੁੱਲ {number} ਗਰਮ ਦਿਨ ਹੋਣ ਦਾ ਖਦਸ਼ਾ ਹੈ।',
       'Add your crop': 'ਆਪਣੀ ਫਸਲ ਜੋੜੋ',
-      'Irrigation guidance, health checks and price tracking all depend on knowing what you are growing.': 'ਸਿੰਚਾਈ ਮਾਰਗਦਰਸ਼ਨ, ਸਿਹਤ ਜਾਂਚ ਅਤੇ ਭਾਅ ਟ੍ਰੈਕਿੰਗ ਸਭ ਕੁਝ ਇਹ ਜਾਣਨ ਤੇ ਨਿਰਭਰ ਕਰਦਾ ਹੈ ਕਿ ਤੁਸੀਂ ਕੀ ਉਗਾ ਰਹੇ ਹੋ।',
-      'Add the crop you are growing or planning to plant.': 'ਉਹ ਫਸਲ ਜੋੜੋ ਜੋ ਤੁਸੀਂ ਉਗਾ ਰਹੇ ਹੋ ਜਾਂ ਬੀਜਣ ਦੀ ਯੋਜਨਾ ਬਣਾ ਰਹੇ ਹੋ।',
+      'Irrigation guidance, health checks and price tracking all depend on knowing what you are growing.':
+        'ਸਿੰਚਾਈ ਮਾਰਗਦਰਸ਼ਨ, ਸਿਹਤ ਜਾਂਚ ਅਤੇ ਭਾਅ ਟ੍ਰੈਕਿੰਗ ਸਭ ਕੁਝ ਇਹ ਜਾਣਨ ਤੇ ਨਿਰਭਰ ਕਰਦਾ ਹੈ ਕਿ ਤੁਸੀਂ ਕੀ ਉਗਾ ਰਹੇ ਹੋ।',
+      'Add the crop you are growing or planning to plant.':
+        'ਉਹ ਫਸਲ ਜੋੜੋ ਜੋ ਤੁਸੀਂ ਉਗਾ ਰਹੇ ਹੋ ਜਾਂ ਬੀਜਣ ਦੀ ਯੋਜਨਾ ਬਣਾ ਰਹੇ ਹੋ।',
       'Add your soil type': 'ਆਪਣੀ ਮਿੱਟੀ ਦੀ ਕਿਸਮ ਜੋੜੋ',
-      'Soil type decides how much water your land can hold, which makes irrigation advice noticeably more accurate.': 'ਮਿੱਟੀ ਦੀ ਕਿਸਮ ਤੈਅ ਕਰਦੀ ਹੈ ਕਿ ਤੁਹਾਡੀ ਜ਼ਮੀਨ ਕਿੰਨਾ ਪਾਣੀ ਰੋਕ ਸਕਦੀ ਹੈ, ਜਿਸ ਨਾਲ ਸਿੰਚਾਈ ਦੀ ਸਲਾਹ ਵਧੇਰੇ ਸਹੀ ਹੋ ਜਾਂਦੀ ਹੈ।',
+      'Soil type decides how much water your land can hold, which makes irrigation advice noticeably more accurate.':
+        'ਮਿੱਟੀ ਦੀ ਕਿਸਮ ਤੈਅ ਕਰਦੀ ਹੈ ਕਿ ਤੁਹਾਡੀ ਜ਼ਮੀਨ ਕਿੰਨਾ ਪਾਣੀ ਰੋਕ ਸਕਦੀ ਹੈ, ਜਿਸ ਨਾਲ ਸਿੰਚਾਈ ਦੀ ਸਲਾਹ ਵਧੇਰੇ ਸਹੀ ਹੋ ਜਾਂਦੀ ਹੈ।',
       'Set your soil type in the farm profile.': 'ਖੇਤ ਦੇ ਪ੍ਰੋਫਾਈਲ ਵਿੱਚ ਆਪਣੀ ਮਿੱਟੀ ਦੀ ਕਿਸਮ ਦਰਜ ਕਰੋ।',
     },
   },
@@ -1073,13 +1127,16 @@ export const translations = {
       noLoss: 'నష్టం లేదు',
       improvementsTitle: 'ఏది ఎక్కువ సహాయపడుతుంది',
       historyTitle: 'అంచనా ఎలా మారింది',
-      noHistory: 'ఈ పంటకు కొన్ని అంచనాలు వచ్చిన తర్వాత, సీజన్ అంతటా అది ఎలా మారిందో ఇక్కడ రేఖ చూపుతుంది.',
-      historyHint: 'ప్రతి బిందువు ఒక అంచనా. నీరు పెట్టిన లేదా సమస్యకు చికిత్స చేసిన తర్వాత రేఖ పెరగడం ఆ శ్రమ ఫలితం.',
+      noHistory:
+        'ఈ పంటకు కొన్ని అంచనాలు వచ్చిన తర్వాత, సీజన్ అంతటా అది ఎలా మారిందో ఇక్కడ రేఖ చూపుతుంది.',
+      historyHint:
+        'ప్రతి బిందువు ఒక అంచనా. నీరు పెట్టిన లేదా సమస్యకు చికిత్స చేసిన తర్వాత రేఖ పెరగడం ఆ శ్రమ ఫలితం.',
       estimateLabel: 'అంచనా',
       actualLabel: 'వాస్తవం',
       recordHarvest: 'నిజమైన కోతను నమోదు చేయండి',
       actualYield: 'వాస్తవ కోత బరువు',
-      harvestHint: 'ఇది సేవ్ చేస్తే పంట కోసినట్టు గుర్తించబడుతుంది, అంచనా ఎంత దగ్గరగా ఉందో తెలుస్తుంది.',
+      harvestHint:
+        'ఇది సేవ్ చేస్తే పంట కోసినట్టు గుర్తించబడుతుంది, అంచనా ఎంత దగ్గరగా ఉందో తెలుస్తుంది.',
       harvestSaved: 'కోత నమోదైంది: {kg} కిలోలు.',
       withinRange: 'అంచనా {percent}% తేడాలో ఉంది — మేము చెప్పిన పరిధిలోనే.',
       outsideRange: 'అంచనా {percent}% తేడాలో ఉంది, మేము చెప్పిన పరిధి వెలుపల.',
@@ -1122,7 +1179,8 @@ export const translations = {
       noVoiceInstalled: 'మీ ఫోన్‌లో {language} వాయిస్ లేదు, అందుకే ఇంగ్లీష్‌లో చదవబడింది.',
       close: 'మూసివేయి',
       briefingIntro: '{farm} గురించి సమాచారం.',
-      briefingWeatherRain: 'ఈరోజు గరిష్ఠంగా {temp} డిగ్రీలు, సుమారు {rain} మిల్లీమీటర్ల వర్షం ఉండవచ్చు.',
+      briefingWeatherRain:
+        'ఈరోజు గరిష్ఠంగా {temp} డిగ్రీలు, సుమారు {rain} మిల్లీమీటర్ల వర్షం ఉండవచ్చు.',
       briefingWeatherDry: 'ఈరోజు గరిష్ఠంగా {temp} డిగ్రీలు, వర్షం ఉండదు.',
       briefingNothing: 'ఈరోజు మీ శ్రద్ధ అవసరం లేదు. అంతా బాగానే ఉంది.',
       briefingUrgent: 'మీకు {count} అత్యవసర పనులు ఉన్నాయి.',
@@ -1279,7 +1337,8 @@ export const translations = {
       serverError: 'సర్వర్‌ను కనెక్ట్ చేయలేకపోయాము. మీ నెట్‌వర్క్ తనిఖీ చేయండి.',
       continueWithGoogle: 'Google తో కొనసాగించండి',
       or: 'లేదా',
-      googleError: 'Google సైన్-ఇన్ పని చేయలేదు. దయచేసి మళ్లీ ప్రయత్నించండి, లేదా ఈమెయిల్ ఉపయోగించండి.',
+      googleError:
+        'Google సైన్-ఇన్ పని చేయలేదు. దయచేసి మళ్లీ ప్రయత్నించండి, లేదా ఈమెయిల్ ఉపయోగించండి.',
       otpTitle: 'మీ ఈమెయిల్‌ను ధృవీకరించండి',
       otpSubtitle: 'మేము 6 అంకెల కోడ్‌ను పంపాము',
       otpLabel: 'కోడ్‌ను నమోదు చేయండి',
@@ -1334,33 +1393,48 @@ export const translations = {
       sunday: 'ఆదివారం నాడు',
     },
     narratives: {
-      'Irrigate today — your crop is water stressed': 'ఈరోజే నీరు పెట్టండి — మీ పంట నీటి కొరత వల్ల ఒత్తిడికి గురవుతోంది',
-      'The root zone has lost {number} mm of water, past the {number} mm point where this crop starts to suffer. Every day you wait now costs yield. Apply about {number} mm.': 'వేరు భాగం {number} mm నీటిని కోల్పోయింది, ఇది ఈ పంటకు అవసరమైన {number} mm పరిమితి కంటే ఎక్కువ. ఇప్పుడు ఆలస్యం చేస్తే దిగుబడి తగ్గుతుంది. సుమారు {number} mm నీరు పెట్టండి.',
+      'Irrigate today — your crop is water stressed':
+        'ఈరోజే నీరు పెట్టండి — మీ పంట నీటి కొరత వల్ల ఒత్తిడికి గురవుతోంది',
+      'The root zone has lost {number} mm of water, past the {number} mm point where this crop starts to suffer. Every day you wait now costs yield. Apply about {number} mm.':
+        'వేరు భాగం {number} mm నీటిని కోల్పోయింది, ఇది ఈ పంటకు అవసరమైన {number} mm పరిమితి కంటే ఎక్కువ. ఇప్పుడు ఆలస్యం చేస్తే దిగుబడి తగ్గుతుంది. సుమారు {number} mm నీరు పెట్టండి.',
       'Hold off — rain is coming {day}': 'ఆగండి — {day} వర్షం పడబోతోంది',
-      'Soil moisture is low ({percent} of the comfortable range used up), but about {number} mm of usable rain is forecast over the next {number} days. That should refill the root zone. Save the water and the pump cost — but check back if the rain does not arrive.': 'నేల తేమ తక్కువగా ఉంది (సౌకర్యవంతమైన పరిమితిలో {percent} వాడబడింది), కానీ వచ్చే {number} రోజుల్లో సుమారు {number} mm ఉపయోగపడే వర్షపాతం నమోదయ్యే అవకాశం ఉంది. ఇది తేమను పెంచుతుంది. నీరు మరియు పంపు ఖర్చు ఆదా చేయండి — కానీ వర్షం పడకపోతే మళ్ళీ తనిఖీ చేయండి.',
+      'Soil moisture is low ({percent} of the comfortable range used up), but about {number} mm of usable rain is forecast over the next {number} days. That should refill the root zone. Save the water and the pump cost — but check back if the rain does not arrive.':
+        'నేల తేమ తక్కువగా ఉంది (సౌకర్యవంతమైన పరిమితిలో {percent} వాడబడింది), కానీ వచ్చే {number} రోజుల్లో సుమారు {number} mm ఉపయోగపడే వర్షపాతం నమోదయ్యే అవకాశం ఉంది. ఇది తేమను పెంచుతుంది. నీరు మరియు పంపు ఖర్చు ఆదా చేయండి — కానీ వర్షం పడకపోతే మళ్ళీ తనిఖీ చేయండి.',
       'Irrigate today — about {number} mm': 'ఈరోజే నీరు పెట్టండి — సుమారు {number} mm',
-      'The soil has dried to {number} mm below field capacity, which has reached this crop\'s {number} mm trigger point. No useful rain is forecast in the next {number} days.': 'నేల ఎండిపోయి సాధారణ సామర్థ్యం కంటే {number} mm తక్కువకు చేరుకుంది, ఇది ఈ పంట యొక్క {number} mm పరిమితికి చేరింది. వచ్చే {number} రోజుల్లో ఉపయోగపడే వర్ష సూచన లేదు.',
-      'No irrigation today — plan for {day}': 'ఈరోజు నీరు పెట్టాల్సిన అవసరం లేదు — {day} ప్లాన్ చేసుకోండి',
-      'Soil moisture is adequate for now ({percent} of the comfortable range used). At the current rate of water use, the crop will need irrigating {day}.': 'నేల తేమ ప్రస్తుతానికి తగినంతగా ఉంది (సౌకర్యవంతమైన పరిమితిలో {percent} వాడబడింది). నీటి వినియోగం ఇదే విధంగా ఉంటే, పంటకు {day} నీరు పెట్టాల్సి ఉంటుంది.',
+      "The soil has dried to {number} mm below field capacity, which has reached this crop's {number} mm trigger point. No useful rain is forecast in the next {number} days.":
+        'నేల ఎండిపోయి సాధారణ సామర్థ్యం కంటే {number} mm తక్కువకు చేరుకుంది, ఇది ఈ పంట యొక్క {number} mm పరిమితికి చేరింది. వచ్చే {number} రోజుల్లో ఉపయోగపడే వర్ష సూచన లేదు.',
+      'No irrigation today — plan for {day}':
+        'ఈరోజు నీరు పెట్టాల్సిన అవసరం లేదు — {day} ప్లాన్ చేసుకోండి',
+      'Soil moisture is adequate for now ({percent} of the comfortable range used). At the current rate of water use, the crop will need irrigating {day}.':
+        'నేల తేమ ప్రస్తుతానికి తగినంతగా ఉంది (సౌకర్యవంతమైన పరిమితిలో {percent} వాడబడింది). నీటి వినియోగం ఇదే విధంగా ఉంటే, పంటకు {day} నీరు పెట్టాల్సి ఉంటుంది.',
       'No irrigation needed for {number} days': '{number} రోజుల వరకు నీరు పెట్టాల్సిన అవసరం లేదు',
-      'Soil moisture is comfortable ({percent} of the available range used). Based on the forecast, the next irrigation is due in about {number} days.': 'నేల తేమ సౌకర్యవంతంగా ఉంది (అందుబాటులో ఉన్న పరిమితిలో {percent} వాడబడింది). వర్ష సూచన ఆధారంగా, తదుపరి నీటి పారుదల సుమారు {number} రోజుల్లో అవసరమవుతుంది.',
+      'Soil moisture is comfortable ({percent} of the available range used). Based on the forecast, the next irrigation is due in about {number} days.':
+        'నేల తేమ సౌకర్యవంతంగా ఉంది (అందుబాటులో ఉన్న పరిమితిలో {percent} వాడబడింది). వర్ష సూచన ఆధారంగా, తదుపరి నీటి పారుదల సుమారు {number} రోజుల్లో అవసరమవుతుంది.',
       'No irrigation needed this week': 'ఈ వారం నీరు పెట్టాల్సిన అవసరం లేదు',
-      'Soil moisture is good and roughly {number} mm of rain is expected over the coming week. The crop\'s water needs are covered.': 'నేల తేమ బాగుంది మరియు రాబోయే వారంలో సుమారు {number} mm వర్షపాతం నమోదయ్యే అవకాశం ఉంది. పంట నీటి అవసరాలు తీరాయి.',
-      'Soil moisture is comfortable and water use is low enough that the crop will not need irrigating within the forecast window.': 'నేల తేమ సౌకర్యవంతంగా ఉంది మరియు నీటి వినియోగం తక్కువగా ఉంది, కాబట్టి వర్ష సూచన వ్యవధిలో పంటకు నీరు పెట్టాల్సిన అవసరం లేదు.',
+      "Soil moisture is good and roughly {number} mm of rain is expected over the coming week. The crop's water needs are covered.":
+        'నేల తేమ బాగుంది మరియు రాబోయే వారంలో సుమారు {number} mm వర్షపాతం నమోదయ్యే అవకాశం ఉంది. పంట నీటి అవసరాలు తీరాయి.',
+      'Soil moisture is comfortable and water use is low enough that the crop will not need irrigating within the forecast window.':
+        'నేల తేమ సౌకర్యవంతంగా ఉంది మరియు నీటి వినియోగం తక్కువగా ఉంది, కాబట్టి వర్ష సూచన వ్యవధిలో పంటకు నీరు పెట్టాల్సిన అవసరం లేదు.',
       'Extreme heat expected': 'అత్యధిక వేడి హెచ్చరిక',
       'High temperatures expected': 'అధిక ఉష్ణోగ్రత హెచ్చరిక',
       'Frost warning': 'తుషార హెచ్చరిక',
       'Heavy rain expected': 'భారీ వర్ష సూచన',
       'High wind warning': 'తీవ్ర గాలి హెచ్చరిక',
       'Drought warning': 'కరవు హెచ్చరిక',
-      'Keep soil moisture topped up — well-watered crops tolerate heat far better. Irrigate early morning rather than midday.': 'నేలలో తేమను నిర్వహించండి — తగినంత నీరు ఉన్న పంటలు వేడిని బాగా తట్టుకుంటాయి. మధ్యాహ్నం కంటే ఉదయాన్నే నీరు పెట్టండి.',
-      'Irrigate in the early morning or evening to cool the root zone. Avoid spraying in peak heat. If the crop is flowering, expect some flower drop.': 'వేరు భాగాన్ని చల్లబరచడానికి ఉదయాన్నే లేదా సాయంత్రం నీరు పెట్టండి. తీవ్రమైన ఎండలో స్ప్రే చేయవద్దు. పంట పూత దశలో ఉంటే, పూత రాలిపోయే అవకాశం ఉంది.',
-      '{number}°C forecast {day}, above the {number}°C comfort limit for {crop}. {number} hot days are expected in total.': '{day} {number}°C గరిష్ట ఉష్ణోగ్రత నమోదవుతుంది, ఇది {crop} పంటకు అనుకూలమైన {number}°C పరిమితి కంటే ఎక్కువ. మొత్తంగా {number} రోజులు వేడి వాతావరణ ఉంటుంది.',
+      'Keep soil moisture topped up — well-watered crops tolerate heat far better. Irrigate early morning rather than midday.':
+        'నేలలో తేమను నిర్వహించండి — తగినంత నీరు ఉన్న పంటలు వేడిని బాగా తట్టుకుంటాయి. మధ్యాహ్నం కంటే ఉదయాన్నే నీరు పెట్టండి.',
+      'Irrigate in the early morning or evening to cool the root zone. Avoid spraying in peak heat. If the crop is flowering, expect some flower drop.':
+        'వేరు భాగాన్ని చల్లబరచడానికి ఉదయాన్నే లేదా సాయంత్రం నీరు పెట్టండి. తీవ్రమైన ఎండలో స్ప్రే చేయవద్దు. పంట పూత దశలో ఉంటే, పూత రాలిపోయే అవకాశం ఉంది.',
+      '{number}°C forecast {day}, above the {number}°C comfort limit for {crop}. {number} hot days are expected in total.':
+        '{day} {number}°C గరిష్ట ఉష్ణోగ్రత నమోదవుతుంది, ఇది {crop} పంటకు అనుకూలమైన {number}°C పరిమితి కంటే ఎక్కువ. మొత్తంగా {number} రోజులు వేడి వాతావరణ ఉంటుంది.',
       'Add your crop': 'మీ పంటను జోడించండి',
-      'Irrigation guidance, health checks and price tracking all depend on knowing what you are growing.': 'సిఫార్సులు, ఆరోగ్య పరీక్షలు మరియు ధరల సమాచారం మీరు పండించే పంటల ఆధారంగా నిర్ణయించబడతాయి.',
-      'Add the crop you are growing or planning to plant.': 'మీరు పండించే లేదా పండించాలనుకుంటున్న పంటను జోడించండి.',
+      'Irrigation guidance, health checks and price tracking all depend on knowing what you are growing.':
+        'సిఫార్సులు, ఆరోగ్య పరీక్షలు మరియు ధరల సమాచారం మీరు పండించే పంటల ఆధారంగా నిర్ణయించబడతాయి.',
+      'Add the crop you are growing or planning to plant.':
+        'మీరు పండించే లేదా పండించాలనుకుంటున్న పంటను జోడించండి.',
       'Add your soil type': 'నేల రకాన్ని జోడించండి',
-      'Soil type decides how much water your land can hold, which makes irrigation advice noticeably more accurate.': 'నేల రకం మీ భూమి ఎంత నీటిని నిల్వ చేయగలదో నిర్ణయిస్తుంది, ఇది నీటి పారుదల సలహాలను మరింత ఖచ్చితంగా చేస్తుంది.',
+      'Soil type decides how much water your land can hold, which makes irrigation advice noticeably more accurate.':
+        'నేల రకం మీ భూమి ఎంత నీటిని నిల్వ చేయగలదో నిర్ణయిస్తుంది, ఇది నీటి పారుదల సలహాలను మరింత ఖచ్చితంగా చేస్తుంది.',
       'Set your soil type in the farm profile.': 'పొలం ప్రొఫైల్‌లో మీ నేల రకాన్ని సెట్ చేయండి.',
     },
   },
@@ -1404,8 +1478,10 @@ export const translations = {
       noLoss: 'नुकसान नाही',
       improvementsTitle: 'सर्वात जास्त मदत काय करेल',
       historyTitle: 'अंदाज कसा बदलला',
-      noHistory: 'या पिकाचे काही अंदाज तयार झाल्यावर संपूर्ण हंगामात तो कसा बदलला हे येथे रेषेने दिसेल.',
-      historyHint: 'प्रत्येक बिंदू एक अंदाज आहे. पाणी दिल्यावर किंवा उपचार केल्यावर रेषा वर जाणे हा त्या कष्टाचा परिणाम आहे.',
+      noHistory:
+        'या पिकाचे काही अंदाज तयार झाल्यावर संपूर्ण हंगामात तो कसा बदलला हे येथे रेषेने दिसेल.',
+      historyHint:
+        'प्रत्येक बिंदू एक अंदाज आहे. पाणी दिल्यावर किंवा उपचार केल्यावर रेषा वर जाणे हा त्या कष्टाचा परिणाम आहे.',
       estimateLabel: 'अंदाज',
       actualLabel: 'प्रत्यक्ष',
       recordHarvest: 'खरी कापणी नोंदवा',
@@ -1665,33 +1741,47 @@ export const translations = {
       sunday: 'रविवारी',
     },
     narratives: {
-      'Irrigate today — your crop is water stressed': 'आजच सिंचन करा — तुमच्या पिकाला पाण्याची टंचाई जाणवत आहे',
-      'The root zone has lost {number} mm of water, past the {number} mm point where this crop starts to suffer. Every day you wait now costs yield. Apply about {number} mm.': 'मुळांच्या भागातील {number} mm पाणी कमी झाले आहे, जे या पिकाच्या {number} mm ट्रिगर पॉईंटपेक्षा जास्त आहे. आता प्रत्येक दिवशी वाट पाहिल्याने उत्पादनाचे नुकसान होईल. सुमारे {number} mm पाणी द्या।',
+      'Irrigate today — your crop is water stressed':
+        'आजच सिंचन करा — तुमच्या पिकाला पाण्याची टंचाई जाणवत आहे',
+      'The root zone has lost {number} mm of water, past the {number} mm point where this crop starts to suffer. Every day you wait now costs yield. Apply about {number} mm.':
+        'मुळांच्या भागातील {number} mm पाणी कमी झाले आहे, जे या पिकाच्या {number} mm ट्रिगर पॉईंटपेक्षा जास्त आहे. आता प्रत्येक दिवशी वाट पाहिल्याने उत्पादनाचे नुकसान होईल. सुमारे {number} mm पाणी द्या।',
       'Hold off — rain is coming {day}': 'थांबा — {day} पाऊस पडणार आहे',
-      'Soil moisture is low ({percent} of the comfortable range used up), but about {number} mm of usable rain is forecast over the next {number} days. That should refill the root zone. Save the water and the pump cost — but check back if the rain does not arrive.': 'मातीतील ओलावा कमी आहे (आरामदायक मर्यादेपैकी {percent} वापरले गेले आहे), परंतु पुढील {number} दिवसांत सुमारे {number} mm उपयुक्त पावसाचा अंदाज आहे. यामुळे मुळांना पाणी मिळेल. पाणी आणि पंपाचा खर्च वाचवा — पण पाऊस पडला नाही तर पुन्हा तपासा।',
+      'Soil moisture is low ({percent} of the comfortable range used up), but about {number} mm of usable rain is forecast over the next {number} days. That should refill the root zone. Save the water and the pump cost — but check back if the rain does not arrive.':
+        'मातीतील ओलावा कमी आहे (आरामदायक मर्यादेपैकी {percent} वापरले गेले आहे), परंतु पुढील {number} दिवसांत सुमारे {number} mm उपयुक्त पावसाचा अंदाज आहे. यामुळे मुळांना पाणी मिळेल. पाणी आणि पंपाचा खर्च वाचवा — पण पाऊस पडला नाही तर पुन्हा तपासा।',
       'Irrigate today — about {number} mm': 'आजच सिंचन करा — सुमारे {number} mm',
-      'The soil has dried to {number} mm below field capacity, which has reached this crop\'s {number} mm trigger point. No useful rain is forecast in the next {number} days.': 'माती वाळून शेत क्षमतेपेक्षा {number} mm खाली गेली आहे, जी या पिकाच्या {number} mm ट्रिगर पॉईंटवर पोहोचली आहे. पुढील {number} दिवसांत पावसाचा अंदाज नाही।',
+      "The soil has dried to {number} mm below field capacity, which has reached this crop's {number} mm trigger point. No useful rain is forecast in the next {number} days.":
+        'माती वाळून शेत क्षमतेपेक्षा {number} mm खाली गेली आहे, जी या पिकाच्या {number} mm ट्रिगर पॉईंटवर पोहोचली आहे. पुढील {number} दिवसांत पावसाचा अंदाज नाही।',
       'No irrigation today — plan for {day}': 'आज सिंचनाची गरज नाही — {day} नियोजन करा',
-      'Soil moisture is adequate for now ({percent} of the comfortable range used). At the current rate of water use, the crop will need irrigating {day}.': 'मातीतील ओलावा सध्या पुरेसा आहे (आरामदायक मर्यादेपैकी {percent} वापरले आहे). पाण्याच्या वापराच्या सध्याच्या दरानुसार, पिकाला {day} सिंचनाची आवश्यकता असेल।',
+      'Soil moisture is adequate for now ({percent} of the comfortable range used). At the current rate of water use, the crop will need irrigating {day}.':
+        'मातीतील ओलावा सध्या पुरेसा आहे (आरामदायक मर्यादेपैकी {percent} वापरले आहे). पाण्याच्या वापराच्या सध्याच्या दरानुसार, पिकाला {day} सिंचनाची आवश्यकता असेल।',
       'No irrigation needed for {number} days': '{number} दिवसांपर्यंत सिंचनाची गरज नाही',
-      'Soil moisture is comfortable ({percent} of the available range used). Based on the forecast, the next irrigation is due in about {number} days.': 'मातीतील ओलावा चांगला आहे (उपलब्ध मर्यादेपैकी {percent} वापरले आहे). अंदाजानुसार, पुढील सिंचन सुमारे {number} दिवसांनी करावे लागेल।',
+      'Soil moisture is comfortable ({percent} of the available range used). Based on the forecast, the next irrigation is due in about {number} days.':
+        'मातीतील ओलावा चांगला आहे (उपलब्ध मर्यादेपैकी {percent} वापरले आहे). अंदाजानुसार, पुढील सिंचन सुमारे {number} दिवसांनी करावे लागेल।',
       'No irrigation needed this week': 'या आठवड्यात सिंचनाची गरज नाही',
-      'Soil moisture is good and roughly {number} mm of rain is expected over the coming week. The crop\'s water needs are covered.': 'मातीतील ओलावा चांगला आहे आणि येत्या आठवड्यात सुमारे {number} mm पावसाची शक्यता आहे. पिकाची पाण्याची गरज पूर्ण झाली आहे।',
-      'Soil moisture is comfortable and water use is low enough that the crop will not need irrigating within the forecast window.': 'मातीतील ओलावा चांगला आहे आणि पाण्याचा वापर कमी आहे, त्यामुळे पिकाला अंदाज कालावधीत सिंचनाची गरज भासणार नाही।',
+      "Soil moisture is good and roughly {number} mm of rain is expected over the coming week. The crop's water needs are covered.":
+        'मातीतील ओलावा चांगला आहे आणि येत्या आठवड्यात सुमारे {number} mm पावसाची शक्यता आहे. पिकाची पाण्याची गरज पूर्ण झाली आहे।',
+      'Soil moisture is comfortable and water use is low enough that the crop will not need irrigating within the forecast window.':
+        'मातीतील ओलावा चांगला आहे आणि पाण्याचा वापर कमी आहे, त्यामुळे पिकाला अंदाज कालावधीत सिंचनाची गरज भासणार नाही।',
       'Extreme heat expected': 'अति उष्णतेचा इशारा',
       'High temperatures expected': 'उच्च तापमानाचा इशारा',
       'Frost warning': 'धुके / थंडीचा इशारा',
       'Heavy rain expected': 'मुसळधार पावसाचा इशारा',
       'High wind warning': 'वेगवान वाऱ्याचा इशारा',
       'Drought warning': 'दुष्काळाचा इशारा',
-      'Keep soil moisture topped up — well-watered crops tolerate heat far better. Irrigate early morning rather than midday.': 'मातीतील ओलावा टिकवून ठेवा — पाणी दिलेली पिके उष्णता चांगली सहन करतात. दुपारऐवजी सकाळी लवकर सिंचन करा।',
-      'Irrigate in the early morning or evening to cool the root zone. Avoid spraying in peak heat. If the crop is flowering, expect some flower drop.': 'मुळांचा भाग थंड करण्यासाठी सकाळी लवकर किंवा संध्याकाळी सिंचन करा. जास्त उष्णतेत फवारणी टाळा. पीक फुलोऱ्यात असल्यास काही फुले गळण्याची शक्यता आहे।',
-      '{number}°C forecast {day}, above the {number}°C comfort limit for {crop}. {number} hot days are expected in total.': '{day} {number}°C तापमानाचा अंदाज आहे, जे {crop} पिकासाठी {number}°C च्या मर्यादेपेक्षा जास्त आहे. एकूण {number} उष्ण दिवस राहण्याची शक्यता आहे।',
+      'Keep soil moisture topped up — well-watered crops tolerate heat far better. Irrigate early morning rather than midday.':
+        'मातीतील ओलावा टिकवून ठेवा — पाणी दिलेली पिके उष्णता चांगली सहन करतात. दुपारऐवजी सकाळी लवकर सिंचन करा।',
+      'Irrigate in the early morning or evening to cool the root zone. Avoid spraying in peak heat. If the crop is flowering, expect some flower drop.':
+        'मुळांचा भाग थंड करण्यासाठी सकाळी लवकर किंवा संध्याकाळी सिंचन करा. जास्त उष्णतेत फवारणी टाळा. पीक फुलोऱ्यात असल्यास काही फुले गळण्याची शक्यता आहे।',
+      '{number}°C forecast {day}, above the {number}°C comfort limit for {crop}. {number} hot days are expected in total.':
+        '{day} {number}°C तापमानाचा अंदाज आहे, जे {crop} पिकासाठी {number}°C च्या मर्यादेपेक्षा जास्त आहे. एकूण {number} उष्ण दिवस राहण्याची शक्यता आहे।',
       'Add your crop': 'तुमचे पीक जोडा',
-      'Irrigation guidance, health checks and price tracking all depend on knowing what you are growing.': 'पिकांविषयी शिफारसी आणि माहिती तुम्ही कोणते पीक लावले आहे यावर अवलंबून असते।',
-      'Add the crop you are growing or planning to plant.': 'तुम्ही घेतलेले किंवा घेण्याचे नियोजन केलेले पीक जोडा।',
+      'Irrigation guidance, health checks and price tracking all depend on knowing what you are growing.':
+        'पिकांविषयी शिफारसी आणि माहिती तुम्ही कोणते पीक लावले आहे यावर अवलंबून असते।',
+      'Add the crop you are growing or planning to plant.':
+        'तुम्ही घेतलेले किंवा घेण्याचे नियोजन केलेले पीक जोडा।',
       'Add your soil type': 'मातीचा प्रकार जोडा',
-      'Soil type decides how much water your land can hold, which makes irrigation advice noticeably more accurate.': 'मातीचा प्रकार जमीन किती पाणी धरून ठेवू शकते हे ठरवतो, ज्यामुळे सिंचनाचा सल्ला अचूक होतो।',
+      'Soil type decides how much water your land can hold, which makes irrigation advice noticeably more accurate.':
+        'मातीचा प्रकार जमीन किती पाणी धरून ठेवू शकते हे ठरवतो, ज्यामुळे सिंचनाचा सल्ला अचूक होतो।',
       'Set your soil type in the farm profile.': 'शेताच्या प्रोफाईलमध्ये मातीचा प्रकार निवडा।',
     },
   },
@@ -1735,13 +1825,16 @@ export const translations = {
       noLoss: 'কোনো ক্ষতি নেই',
       improvementsTitle: 'সবচেয়ে বেশি কী সাহায্য করবে',
       historyTitle: 'অনুমান কীভাবে বদলেছে',
-      noHistory: 'এই ফসলের কয়েকটি অনুমান তৈরি হলে সারা মৌসুমে তা কীভাবে বদলেছে তা এখানে রেখায় দেখা যাবে।',
-      historyHint: 'প্রতিটি বিন্দু একটি অনুমান। জল দেওয়ার বা চিকিৎসার পরে রেখা উপরে ওঠা সেই পরিশ্রমেরই ফল।',
+      noHistory:
+        'এই ফসলের কয়েকটি অনুমান তৈরি হলে সারা মৌসুমে তা কীভাবে বদলেছে তা এখানে রেখায় দেখা যাবে।',
+      historyHint:
+        'প্রতিটি বিন্দু একটি অনুমান। জল দেওয়ার বা চিকিৎসার পরে রেখা উপরে ওঠা সেই পরিশ্রমেরই ফল।',
       estimateLabel: 'অনুমান',
       actualLabel: 'প্রকৃত',
       recordHarvest: 'আসল ফসল কাটা নথিভুক্ত করুন',
       actualYield: 'প্রকৃত কাটা ওজন',
-      harvestHint: 'এটি সংরক্ষণ করলে ফসল কাটা হয়েছে বলে ধরা হবে এবং অনুমান কত কাছাকাছি ছিল তা দেখা যাবে।',
+      harvestHint:
+        'এটি সংরক্ষণ করলে ফসল কাটা হয়েছে বলে ধরা হবে এবং অনুমান কত কাছাকাছি ছিল তা দেখা যাবে।',
       harvestSaved: 'ফসল কাটা নথিভুক্ত: {kg} কিলো।',
       withinRange: 'অনুমানে {percent}% পার্থক্য ছিল — আমাদের দেওয়া সীমার ভিতরেই।',
       outsideRange: 'অনুমানে {percent}% পার্থক্য ছিল, আমাদের দেওয়া সীমার বাইরে।',
@@ -1784,7 +1877,8 @@ export const translations = {
       noVoiceInstalled: 'আপনার ফোনে {language} ভয়েস নেই, তাই ইংরেজিতে পড়া হয়েছে।',
       close: 'বন্ধ করুন',
       briefingIntro: '{farm} এর তথ্য।',
-      briefingWeatherRain: 'আজ সর্বোচ্চ {temp} ডিগ্রি, এবং প্রায় {rain} মিলিমিটার বৃষ্টির সম্ভাবনা আছে।',
+      briefingWeatherRain:
+        'আজ সর্বোচ্চ {temp} ডিগ্রি, এবং প্রায় {rain} মিলিমিটার বৃষ্টির সম্ভাবনা আছে।',
       briefingWeatherDry: 'আজ সর্বোচ্চ {temp} ডিগ্রি, বৃষ্টির সম্ভাবনা নেই।',
       briefingNothing: 'আজ কিছু করার দরকার নেই। সব ঠিক আছে।',
       briefingUrgent: 'আপনার {count} টি জরুরি কাজ আছে।',
@@ -1892,7 +1986,8 @@ export const translations = {
       markResolved: 'সমাধান হয়েছে',
       reports: '{count} রিপোর্ট',
       onCrop: 'তে',
-      notAPlant: 'এই ছবিটি গাছের বলে মনে হচ্ছে না। অনুগ্রহ করে আক্রান্ত পাতার কাছ থেকে আরেকটি ছবি তুলুন।',
+      notAPlant:
+        'এই ছবিটি গাছের বলে মনে হচ্ছে না। অনুগ্রহ করে আক্রান্ত পাতার কাছ থেকে আরেকটি ছবি তুলুন।',
       detailsInEnglish: 'এই সমস্যার বিস্তারিত বিবরণ শুধুমাত্র ইংরেজিতে উপলব্ধ।',
     },
     prices: {
@@ -1996,33 +2091,47 @@ export const translations = {
       sunday: 'রবিবার',
     },
     narratives: {
-      'Irrigate today — your crop is water stressed': 'আজই জল সেচ দিন — আপনার ফসল জলের অভাবে সংকটে রয়েছে',
-      'The root zone has lost {number} mm of water, past the {number} mm point where this crop starts to suffer. Every day you wait now costs yield. Apply about {number} mm.': 'শিকড়ের অংশ থেকে {number} mm जल কমে গেছে, যা এই ফসলের {number} mm ট্রিগার পয়েন্টের চেয়ে বেশি। এখন প্রতিদিন অপেক্ষা করলে फलন ক্ষতিগ্রস্ত হবে। প্রায় {number} mm জল দিন।',
+      'Irrigate today — your crop is water stressed':
+        'আজই জল সেচ দিন — আপনার ফসল জলের অভাবে সংকটে রয়েছে',
+      'The root zone has lost {number} mm of water, past the {number} mm point where this crop starts to suffer. Every day you wait now costs yield. Apply about {number} mm.':
+        'শিকড়ের অংশ থেকে {number} mm जल কমে গেছে, যা এই ফসলের {number} mm ট্রিগার পয়েন্টের চেয়ে বেশি। এখন প্রতিদিন অপেক্ষা করলে फलন ক্ষতিগ্রস্ত হবে। প্রায় {number} mm জল দিন।',
       'Hold off — rain is coming {day}': 'অপেক্ষা করুন — {day} বৃষ্টি আসছে',
-      'Soil moisture is low ({percent} of the comfortable range used up), but about {number} mm of usable rain is forecast over the next {number} days. That should refill the root zone. Save the water and the pump cost — but check back if the rain does not arrive.': 'মাটির আর্দ্রতা কম (স্বস্তিদায়ক সীমার {percent} ব্যবহৃত হয়েছে), কিন্তু আগামী {number} দিনে প্রায় {number} mm বৃষ্টিপাতের পূর্বাভাস রয়েছে। এতে শিকড়ে জল পৌঁছে যাবে। জল এবং পাম্পের খরচ বাঁচান — তবে বৃষ্টি না হলে পুনরায় পরীক্ষা করুন।',
+      'Soil moisture is low ({percent} of the comfortable range used up), but about {number} mm of usable rain is forecast over the next {number} days. That should refill the root zone. Save the water and the pump cost — but check back if the rain does not arrive.':
+        'মাটির আর্দ্রতা কম (স্বস্তিদায়ক সীমার {percent} ব্যবহৃত হয়েছে), কিন্তু আগামী {number} দিনে প্রায় {number} mm বৃষ্টিপাতের পূর্বাভাস রয়েছে। এতে শিকড়ে জল পৌঁছে যাবে। জল এবং পাম্পের খরচ বাঁচান — তবে বৃষ্টি না হলে পুনরায় পরীক্ষা করুন।',
       'Irrigate today — about {number} mm': 'আজই জল সেচ দিন — প্রায় {number} mm',
-      'The soil has dried to {number} mm below field capacity, which has reached this crop\'s {number} mm trigger point. No useful rain is forecast in the next {number} days.': 'মাটি শুকিয়ে সাধারণ ধারণ ক্ষমতার চেয়ে {number} mm নিচে চলে গেছে, যা এই ফসলের {number} mm ট্রিগার পয়েন্টে পৌঁছেছে। আগামী {number} দিনে কোনো বৃষ্টিপাতের পূর্বাভাস নেই।',
+      "The soil has dried to {number} mm below field capacity, which has reached this crop's {number} mm trigger point. No useful rain is forecast in the next {number} days.":
+        'মাটি শুকিয়ে সাধারণ ধারণ ক্ষমতার চেয়ে {number} mm নিচে চলে গেছে, যা এই ফসলের {number} mm ট্রিগার পয়েন্টে পৌঁছেছে। আগামী {number} দিনে কোনো বৃষ্টিপাতের পূর্বাভাস নেই।',
       'No irrigation today — plan for {day}': 'আজ জল সেচের প্রয়োজন নেই — {day} পরিকল্পনা করুন',
-      'Soil moisture is adequate for now ({percent} of the comfortable range used). At the current rate of water use, the crop will need irrigating {day}.': 'মাটির আর্দ্রতা এখন পর্যাপ্ত (স্বস্তিদায়ক সীমার {percent} ব্যবহৃত হয়েছে)। জল ব্যবহারের বর্তমান হার অনুযায়ী, ফসলে {day} জল সেচ দিতে হবে।',
+      'Soil moisture is adequate for now ({percent} of the comfortable range used). At the current rate of water use, the crop will need irrigating {day}.':
+        'মাটির আর্দ্রতা এখন পর্যাপ্ত (স্বস্তিদায়ক সীমার {percent} ব্যবহৃত হয়েছে)। জল ব্যবহারের বর্তমান হার অনুযায়ী, ফসলে {day} জল সেচ দিতে হবে।',
       'No irrigation needed for {number} days': '{number} দিন জল সেচের প্রয়োজন নেই',
-      'Soil moisture is comfortable ({percent} of the available range used). Based on the forecast, the next irrigation is due in about {number} days.': 'মাটির আর্দ্রতা সন্তোষজনক (উপলব্ধ সীমার {percent} ব্যবহৃত হয়েছে)। পূর্বাভাসের ওপর ভিত্তি করে, পরবর্তী সেচ প্রায় {number} দিন পর প্রয়োজন হবে।',
+      'Soil moisture is comfortable ({percent} of the available range used). Based on the forecast, the next irrigation is due in about {number} days.':
+        'মাটির আর্দ্রতা সন্তোষজনক (উপলব্ধ সীমার {percent} ব্যবহৃত হয়েছে)। পূর্বাভাসের ওপর ভিত্তি করে, পরবর্তী সেচ প্রায় {number} দিন পর প্রয়োজন হবে।',
       'No irrigation needed this week': 'এই সপ্তাহে জল সেচের প্রয়োজন নেই',
-      'Soil moisture is good and roughly {number} mm of rain is expected over the coming week. The crop\'s water needs are covered.': 'মাটির আর্দ্রতা ভালো এবং আগামী সপ্তাহে প্রায় {number} mm বৃষ্টিপাতের সম্ভাবনা রয়েছে। ফসলের জলের চাহিদা পূরণ হয়েছে।',
-      'Soil moisture is comfortable and water use is low enough that the crop will not need irrigating within the forecast window.': 'মাটির আর্দ্রতা ভালো এবং জলের ব্যবহার যথেষ্ট কম, তাই পূর্বাভাসের সময়ের মধ্যে ফসলে জল সেচের প্রয়োজন হবে না।',
+      "Soil moisture is good and roughly {number} mm of rain is expected over the coming week. The crop's water needs are covered.":
+        'মাটির আর্দ্রতা ভালো এবং আগামী সপ্তাহে প্রায় {number} mm বৃষ্টিপাতের সম্ভাবনা রয়েছে। ফসলের জলের চাহিদা পূরণ হয়েছে।',
+      'Soil moisture is comfortable and water use is low enough that the crop will not need irrigating within the forecast window.':
+        'মাটির আর্দ্রতা ভালো এবং জলের ব্যবহার যথেষ্ট কম, তাই পূর্বাভাসের সময়ের মধ্যে ফসলে জল সেচের প্রয়োজন হবে না।',
       'Extreme heat expected': 'অতিরিক্ত গরমের সতর্কতা',
       'High temperatures expected': 'উচ্চ তাপমাত্রার সতর্কতা',
       'Frost warning': 'তুষারপাতের সতর্কতা',
       'Heavy rain expected': 'ভারী বৃষ্টির সতর্কতা',
       'High wind warning': 'ঝড়ো হাওয়ার সতর্কতা',
       'Drought warning': 'খরা সতর্কতা',
-      'Keep soil moisture topped up — well-watered crops tolerate heat far better. Irrigate early morning rather than midday.': 'মাটিতে আর্দ্রতা বজায় রাখুন — পর্যাপ্ত জল দেওয়া ফসল গরম ভালো সহ্য করতে পারে। দুপুরের চেয়ে ভোরে জল সেচ দিন।',
-      'Irrigate in the early morning or evening to cool the root zone. Avoid spraying in peak heat. If the crop is flowering, expect some flower drop.': 'শিকড় ঠাণ্ডা রাখতে ভোরে বা সন্ধ্যায় জল সেচ দিন। তীব্র গরমে স্প্রে করা এড়িয়ে চলুন। ফসলে ফুল ফুটে থাকলে কিছু ফুল ঝরে যাওয়ার সম্ভাবনা রয়েছে।',
-      '{number}°C forecast {day}, above the {number}°C comfort limit for {crop}. {number} hot days are expected in total.': '{day} {number}°C তাপমাত্রার পূর্বাভাস রয়েছে, যা {crop} চাষের জন্য {number}°C স্বস্তিদায়ক সীমার চেয়ে বেশি। মোট {number} দিন গরম আবহাওয়া থাকবে।',
+      'Keep soil moisture topped up — well-watered crops tolerate heat far better. Irrigate early morning rather than midday.':
+        'মাটিতে আর্দ্রতা বজায় রাখুন — পর্যাপ্ত জল দেওয়া ফসল গরম ভালো সহ্য করতে পারে। দুপুরের চেয়ে ভোরে জল সেচ দিন।',
+      'Irrigate in the early morning or evening to cool the root zone. Avoid spraying in peak heat. If the crop is flowering, expect some flower drop.':
+        'শিকড় ঠাণ্ডা রাখতে ভোরে বা সন্ধ্যায় জল সেচ দিন। তীব্র গরমে স্প্রে করা এড়িয়ে চলুন। ফসলে ফুল ফুটে থাকলে কিছু ফুল ঝরে যাওয়ার সম্ভাবনা রয়েছে।',
+      '{number}°C forecast {day}, above the {number}°C comfort limit for {crop}. {number} hot days are expected in total.':
+        '{day} {number}°C তাপমাত্রার পূর্বাভাস রয়েছে, যা {crop} চাষের জন্য {number}°C স্বস্তিদায়ক সীমার চেয়ে বেশি। মোট {number} দিন গরম আবহাওয়া থাকবে।',
       'Add your crop': 'আপনার ফসল যোগ করুন',
-      'Irrigation guidance, health checks and price tracking all depend on knowing what you are growing.': 'ফসল সম্পর্কিত পরামর্শ ও বিশদ আপনি কি ফসল চাষ করছেন তার ওপর ভিত্তি করে তৈরি হয়।',
-      'Add the crop you are growing or planning to plant.': 'আপনার চাষ করা বা রোপণের জন্য পরিকল্পিত ফসলটি যোগ করুন।',
+      'Irrigation guidance, health checks and price tracking all depend on knowing what you are growing.':
+        'ফসল সম্পর্কিত পরামর্শ ও বিশদ আপনি কি ফসল চাষ করছেন তার ওপর ভিত্তি করে তৈরি হয়।',
+      'Add the crop you are growing or planning to plant.':
+        'আপনার চাষ করা বা রোপণের জন্য পরিকল্পিত ফসলটি যোগ করুন।',
       'Add your soil type': 'মাটির ধরন যোগ করুন',
-      'Soil type decides how much water your land can hold, which makes irrigation advice noticeably more accurate.': 'মাটির ধরন ঠিক করে আপনার জমি কতটা জল ধরে রাখতে পারবে, যা সেচের পরামর্শকে আরও সঠিক করে তোলে।',
+      'Soil type decides how much water your land can hold, which makes irrigation advice noticeably more accurate.':
+        'মাটির ধরন ঠিক করে আপনার জমি কতটা জল ধরে রাখতে পারবে, যা সেচের পরামর্শকে আরও সঠিক করে তোলে।',
       'Set your soil type in the farm profile.': 'খামার প্রোফাইলে মাটির ধরন যোগ করুন।',
     },
   },

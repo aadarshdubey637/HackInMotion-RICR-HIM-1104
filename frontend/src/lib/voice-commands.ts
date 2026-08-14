@@ -178,7 +178,10 @@ const COMMANDS: CommandSpec[] = [
  * for Punjabi while speaking Hindi.
  */
 const LANGUAGE_REQUESTS: Array<{ language: Language; phrases: string[] }> = [
-  { language: 'en', phrases: ['english', 'अंग्रेज़ी', 'अंग्रेजी', 'ਅੰਗਰੇਜ਼ੀ', 'ইংরেজি', 'ఇంగ్లీష్', 'angrezi'] },
+  {
+    language: 'en',
+    phrases: ['english', 'अंग्रेज़ी', 'अंग्रेजी', 'ਅੰਗਰੇਜ਼ੀ', 'ইংরেজি', 'ఇంగ్లీష్', 'angrezi'],
+  },
   { language: 'hi', phrases: ['hindi', 'हिंदी', 'हिन्दी', 'ਹਿੰਦੀ', 'হিন্দি', 'హిందీ'] },
   { language: 'pa', phrases: ['punjabi', 'panjabi', 'पंजाबी', 'ਪੰਜਾਬੀ', 'পাঞ্জাবি', 'పంజాబీ'] },
   { language: 'te', phrases: ['telugu', 'तेलुगु', 'ਤੇਲਗੂ', 'তেলুগু', 'తెలుగు'] },
@@ -264,7 +267,7 @@ export function commandExamples(language: Language): string[] {
       language
     ]?.[0];
 
-  return [pick('/weather'), pick('/market'), pick('/health')].filter(
-    (phrase): phrase is string => Boolean(phrase),
+  return [pick('/weather'), pick('/market'), pick('/health')].filter((phrase): phrase is string =>
+    Boolean(phrase),
   );
 }

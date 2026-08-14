@@ -33,7 +33,11 @@ interface SoilGridsResponse {
 const NOMINATIM_BASE = 'https://nominatim.openstreetmap.org/reverse';
 const SOILGRIDS_BASE = 'https://rest.isric.org/soilgrids/v2.0/properties/query';
 
-async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs = 10000): Promise<Response> {
+async function fetchWithTimeout(
+  url: string,
+  options: RequestInit = {},
+  timeoutMs = 10000,
+): Promise<Response> {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -66,8 +70,20 @@ export async function reverseGeocode(latitude: number, longitude: number): Promi
     const address = data.address || {};
 
     return {
-      village: address.neighbourhood || address.suburb || address.quarter || address.village || address.hamlet || null,
-      district: address.city || address.town || address.district || address.county || address.city_district || null,
+      village:
+        address.neighbourhood ||
+        address.suburb ||
+        address.quarter ||
+        address.village ||
+        address.hamlet ||
+        null,
+      district:
+        address.city ||
+        address.town ||
+        address.district ||
+        address.county ||
+        address.city_district ||
+        null,
       state: address.state || address.province || null,
       country: address.country || null,
       formattedAddress: data.display_name || null,
@@ -147,7 +163,10 @@ function classifySoilTexture(sand: number, silt: number, clay: number): string {
   return 'MIXED';
 }
 
-export async function getLocationAndSoil(latitude: number, longitude: number): Promise<{
+export async function getLocationAndSoil(
+  latitude: number,
+  longitude: number,
+): Promise<{
   location: LocationInfo;
   soil: SoilInfo;
 }> {

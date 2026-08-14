@@ -8,7 +8,7 @@ export class AppError extends Error {
     message: string,
     statusCode: number,
     code: string,
-    details?: Record<string, unknown>
+    details?: Record<string, unknown>,
   ) {
     super(message);
     this.statusCode = statusCode;
@@ -41,12 +41,7 @@ export class AuthorizationError extends AppError {
 
 export class NotFoundError extends AppError {
   constructor(resource: string, id?: string) {
-    super(
-      `${resource}${id ? ` with id ${id}` : ''} not found`,
-      404,
-      'NOT_FOUND',
-      { resource, id }
-    );
+    super(`${resource}${id ? ` with id ${id}` : ''} not found`, 404, 'NOT_FOUND', { resource, id });
   }
 }
 
@@ -64,12 +59,10 @@ export class RateLimitError extends AppError {
 
 export class ExternalServiceError extends AppError {
   constructor(service: string, message: string, details?: Record<string, unknown>) {
-    super(
-      `External service error (${service}): ${message}`,
-      502,
-      'EXTERNAL_SERVICE_ERROR',
-      { service, ...details }
-    );
+    super(`External service error (${service}): ${message}`, 502, 'EXTERNAL_SERVICE_ERROR', {
+      service,
+      ...details,
+    });
   }
 }
 

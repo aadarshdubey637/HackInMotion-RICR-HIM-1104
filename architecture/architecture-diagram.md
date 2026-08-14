@@ -82,7 +82,7 @@ graph TB
     D --> K
     D --> L
     D --> M
-    
+
     E --> N
     E --> O
     F --> N
@@ -111,7 +111,7 @@ graph TB
     L --> X
     M --> N
     M --> O
-    
+
     Z --> H
     AA --> J
     AB --> M
@@ -140,17 +140,17 @@ sequenceDiagram
     Farmer->>Frontend: Login & Select Farm
     Frontend->>FarmAPI: GET /farms/:id
     FarmAPI-->>Frontend: Farm details + crop list
-    
+
     Farmer->>Frontend: Navigate between crops (tabs/swipe)
     Frontend->>CropAPI: GET /crops?farm_id=:id
     CropAPI-->>Frontend: All crops for farm
-    
+
     Farmer->>Frontend: View Crop Dashboard
     Frontend->>CropAPI: GET /crops/:cropId/dashboard
     Frontend->>WeatherAPI: GET /weather/irrigation/:farmId?crop=:cropId
     Frontend->>MarketAPI: GET /prices/:cropName
     CropAPI-->>Frontend: Crop-specific data
-    
+
     Farmer->>Frontend: Request Crop Suggestions
     Frontend->>RecommendationAPI: POST /recommendations
     Note right of RecommendationAPI: Input: location, soil, land size,<br/>season, weather history, market prices
@@ -159,7 +159,7 @@ sequenceDiagram
     RecommendationAPI->>CropCalendarAPI: Get planting windows
     RecommendationAPI->>DB: Query historical yields
     RecommendationAPI-->>Frontend: Ranked crop recommendations<br/>with suitability scores
-    
+
     Farmer->>Frontend: Request Land Division Plan
     Frontend->>LandOptAPI: POST /optimize
     Note right of LandOptAPI: Input: farm boundary, land size,<br/>recommended crops, constraints
@@ -167,7 +167,7 @@ sequenceDiagram
     LandOptAPI->>SoilAPI: Fetch soil variability map
     LandOptAPI->>DB: Fetch crop compatibility matrix
     LandOptAPI-->>Frontend: Optimized land parcels<br/>with crop assignments,<br/>expected yields, ROI
-    
+
     Farmer->>Frontend: Apply Land Division
     Frontend->>FarmAPI: POST /farms/:id/parcels
     FarmAPI->>DB: Create parcel geometry
@@ -460,34 +460,34 @@ flowchart TD
     B --> D[Soil Properties<br/>SoilGrids + Local]
     B --> E[Crop Calendar<br/>FAO + Local]
     B --> F[Market Prices<br/>3-year trends]
-    
+
     C --> G[Climate Suitability Model]
     D --> H[Soil Compatibility Model]
     F --> I[Market Profitability Model]
     E --> J[Seasonal Window Filter]
-    
+
     G --> K[Crop Candidates<br/>from Crop Varieties DB]
     H --> K
     I --> K
     J --> K
-    
+
     K --> L[Scoring Engine]
     L --> M[Climate Score 0-100]
     L --> N[Soil Score 0-100]
     L --> O[Water Score 0-100]
     L --> P[Market Score 0-100]
     L --> Q[Risk Score 0-100]
-    
+
     M --> R[Weighted Composite<br/>Configurable Weights]
     N --> R
     O --> R
     P --> R
     Q --> R
-    
+
     R --> S[Rank & Filter]
     S --> T[Top N Recommendations]
     T --> U[Explainable Output<br/>SHAP Values + Rules]
-    
+
     U --> V[Store in DB]
     V --> W[Return to Farmer]
 ```
@@ -498,45 +498,45 @@ flowchart TD
 flowchart TD
     A[Input: Farm Boundary<br/>+ Recommended Crops] --> B[Spatial Discretization]
     B --> C[Generate Grid/Hexagonal<br/>Parcels 0.1-0.5 ha]
-    
+
     C --> D[Fetch Spatial Data]
     D --> E[Soil Variability Map<br/>SoilGrids + Interpolation]
     D --> F[Microclimate Zones<br/>Elevation + Aspect + Weather]
     D --> G[Water Access Points<br/>Irrigation Infrastructure]
     D --> H[Existing Boundaries<br/>Roads, Fences, Trees]
-    
+
     E --> I[Parcel Attributes]
     F --> I
     G --> I
     H --> I
-    
+
     I --> J[Crop-Parcels Compatibility<br/>Matrix]
-    
+
     J --> K[Optimization Problem]
     K --> L[Variables: x_ij = 1 if crop i on parcel j]
-    
+
     L --> M[Objective 1: Maximize Profit]
     L --> N[Objective 2: Minimize Risk]
     L --> O[Objective 3: Balance Workload]
     L --> P[Objective 4: Crop Rotation]
-    
+
     M --> Q[Constraints]
     N --> Q
     O --> Q
     P --> Q
-    
+
     Q --> R[Area Constraints<br/>Sum x_ij * area_j = target]
     Q --> S[Compatibility Constraints<br/>x_ij = 0 if incompatible]
     Q --> T[Adjacency Constraints<br/>Companion/Allelopathy]
     Q --> U[Rotation Constraints<br/>No same crop adjacent years]
     Q --> V[Infrastructure Constraints<br/>Irrigation, Access]
-    
+
     R --> W[Multi-Objective Solver<br/>NSGA-II / OR-Tools CP-SAT]
     S --> W
     T --> W
     U --> W
     V --> W
-    
+
     W --> X[Pareto Frontier]
     X --> Y[Generate K Solutions]
     Y --> Z[Score & Rank Solutions]
@@ -551,12 +551,12 @@ flowchart TD
 ```mermaid
 stateDiagram-v2
     [*] --> FarmOverview: Login/Select Farm
-    
+
     FarmOverview --> CropList: View All Crops
     FarmOverview --> AddCrop: Add New Crop
     FarmOverview --> LandOptimization: Optimize Land Use
     FarmOverview --> Recommendations: Get Crop Suggestions
-    
+
     CropList --> CropDetail: Select Crop
     CropDetail --> CropDetail: Swipe/Tab Next/Prev
     CropDetail --> CropHealth: Health Tab
@@ -564,26 +564,26 @@ stateDiagram-v2
     CropDetail --> MarketPrices: Market Tab
     CropDetail --> WeatherRisk: Weather Tab
     CropDetail --> Management: Management Tab
-    
+
     CropHealth --> CropDetail
     Irrigation --> CropDetail
     MarketPrices --> CropDetail
     WeatherRisk --> CropDetail
     Management --> CropDetail
-    
+
     AddCrop --> CropRecommendations: Browse Suggestions
     CropRecommendations --> AddCrop: Select & Configure
     AddCrop --> ParcelSelection: Choose Parcel
     ParcelSelection --> CropDetail: Create & View
-    
+
     LandOptimization --> OptimizationResults: Run Optimization
     OptimizationResults --> SolutionComparison: Compare Options
     SolutionComparison --> ApplySolution: Select & Apply
     ApplySolution --> FarmOverview: Refresh View
-    
+
     Recommendations --> CropRecommendations: View Ranked List
     CropRecommendations --> AddCrop: Add Recommended
-    
+
     FarmOverview --> [*]: Logout/Switch Farm
 ```
 

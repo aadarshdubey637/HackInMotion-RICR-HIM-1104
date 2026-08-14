@@ -124,7 +124,9 @@ export function predictYield(input: YieldInputs): YieldPrediction {
     seasonProgress: round2(progress),
     // Prices are Rs/quintal (100 kg).
     estimatedIncome:
-      input.currentPrice === null ? null : Math.round((predictedTotalKg / 100) * input.currentPrice),
+      input.currentPrice === null
+        ? null
+        : Math.round((predictedTotalKg / 100) * input.currentPrice),
     improvements: buildImprovements(factors, input),
     limitations: buildLimitations(input, isKnown, progress),
   };
@@ -213,7 +215,13 @@ function waterFactor(input: YieldInputs): StressFactor {
 /** Heat stress — days above the crop's tolerance, weighted by how far above. */
 function heatFactor(input: YieldInputs, crop: CropProfile): StressFactor {
   if (input.weather.length === 0) {
-    return { name: 'Heat', factor: 1, lossPercent: 0, reason: 'No temperature data.', severity: 'none' };
+    return {
+      name: 'Heat',
+      factor: 1,
+      lossPercent: 0,
+      reason: 'No temperature data.',
+      severity: 'none',
+    };
   }
 
   const limit = crop.tempRangeC.max;
@@ -267,7 +275,12 @@ function healthFactor(input: YieldInputs): StressFactor {
   }
 
   // Weight by severity — a critical unresolved disease is far worse than a mild one.
-  const weights: Record<string, number> = { MILD: 0.02, MODERATE: 0.06, SEVERE: 0.14, CRITICAL: 0.25 };
+  const weights: Record<string, number> = {
+    MILD: 0.02,
+    MODERATE: 0.06,
+    SEVERE: 0.14,
+    CRITICAL: 0.25,
+  };
   const loss = clamp(
     unresolved.reduce((sum, l) => sum + (weights[l.severity] ?? 0.05), 0),
     0,
@@ -352,17 +365,23 @@ function buildImprovements(factors: StressFactor[], input: YieldInputs): string[
 
   const water = factors.find((f) => f.name === 'Water');
   if (water && water.factor < 0.95) {
-    out.push('Keeping soil moisture above the irrigation trigger is the single biggest lever you have right now.');
+    out.push(
+      'Keeping soil moisture above the irrigation trigger is the single biggest lever you have right now.',
+    );
   }
 
   const health = factors.find((f) => f.name === 'Crop health');
   if (health && health.factor < 0.95) {
-    out.push('Treating the outstanding crop health issues would recover a meaningful share of this loss.');
+    out.push(
+      'Treating the outstanding crop health issues would recover a meaningful share of this loss.',
+    );
   }
 
   const heat = factors.find((f) => f.name === 'Heat');
   if (heat && heat.factor < 0.95) {
-    out.push('Irrigate early morning during hot spells — well-watered crops tolerate heat far better.');
+    out.push(
+      'Irrigate early morning during hot spells — well-watered crops tolerate heat far better.',
+    );
   }
 
   if (input.irrigationCount === 0) {
@@ -370,7 +389,9 @@ function buildImprovements(factors: StressFactor[], input: YieldInputs): string[
   }
 
   if (out.length === 0) {
-    out.push('No major stress detected. Keep following the irrigation guidance and scouting regularly.');
+    out.push(
+      'No major stress detected. Keep following the irrigation guidance and scouting regularly.',
+    );
   }
 
   return out;
@@ -380,7 +401,9 @@ function buildLimitations(input: YieldInputs, isKnown: boolean, progress: number
   const out: string[] = [];
 
   if (progress < 0.3) {
-    out.push('The crop is early in its season, so this estimate will change substantially as it grows.');
+    out.push(
+      'The crop is early in its season, so this estimate will change substantially as it grows.',
+    );
   }
   if (!input.plantingDate) {
     out.push('No planting date recorded — season progress is estimated from the growth stage.');

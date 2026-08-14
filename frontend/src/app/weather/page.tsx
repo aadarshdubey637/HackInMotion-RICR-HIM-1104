@@ -1,15 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import {
-  Droplets,
-  CloudSun,
-  AlertTriangle,
-  Info,
-  Check,
-  Beaker,
-  CloudRain,
-} from 'lucide-react';
+import { Droplets, CloudSun, AlertTriangle, Info, Check, Beaker, CloudRain } from 'lucide-react';
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -69,9 +61,7 @@ function WeatherContent() {
         setGuidance(result);
         if (result.crop.id) setSelectedCropId(result.crop.id);
       } catch (err) {
-        setError(
-          err instanceof ApiError ? err.message : 'Could not load irrigation guidance.',
-        );
+        setError(err instanceof ApiError ? err.message : 'Could not load irrigation guidance.');
       }
     },
     [currentFarm],
@@ -146,9 +136,7 @@ function WeatherContent() {
     <div className="space-y-5 animate-fade-up">
       <div>
         <h1 className="text-xl font-bold text-slate-900">{t('water.title')}</h1>
-        <p className="text-sm text-slate-600">
-          {t('water.subtitle')}
-        </p>
+        <p className="text-sm text-slate-600">{t('water.subtitle')}</p>
       </div>
 
       {guidance.stale && guidance.warning ? <Notice tone="warn">{guidance.warning}</Notice> : null}
@@ -184,12 +172,18 @@ function WeatherContent() {
         <div className="flex items-start gap-3">
           <Droplets className={cn('mt-0.5 h-7 w-7 shrink-0', urgencyStyle.text)} aria-hidden />
           <div className="min-w-0 flex-1">
-            <h2 className={cn('text-lg font-bold', urgencyStyle.text)}>{tNarrative(guidance.headline)}</h2>
+            <h2 className={cn('text-lg font-bold', urgencyStyle.text)}>
+              {tNarrative(guidance.headline)}
+            </h2>
             <p className="mt-1 text-sm text-slate-700">{tNarrative(guidance.reason)}</p>
 
             {guidance.recommendation ? (
               <div className="mt-3 grid grid-cols-2 gap-3 rounded-xl bg-white/70 p-3 sm:grid-cols-3">
-                <Stat label={t('water.amountNeeded')} value={guidance.recommendation.depthMm} unit="mm" />
+                <Stat
+                  label={t('water.amountNeeded')}
+                  value={guidance.recommendation.depthMm}
+                  unit="mm"
+                />
                 <Stat
                   label="Total water"
                   value={guidance.recommendation.totalCubicMetres.toLocaleString('en-IN')}
@@ -206,9 +200,7 @@ function WeatherContent() {
             {guidance.recommendation && guidance.crop.id ? (
               logged ? (
                 <div className="mt-3">
-                  <Notice tone="success">
-                    {t('water.logSuccess')}
-                  </Notice>
+                  <Notice tone="success">{t('water.logSuccess')}</Notice>
                 </div>
               ) : (
                 <button
@@ -234,7 +226,10 @@ function WeatherContent() {
             {guidance.alerts.map((alert, i) => {
               const style = severityStyles[alert.severity];
               return (
-                <Card key={`${alert.type}-${i}`} className={cn('border-l-4', style.bg, style.border)}>
+                <Card
+                  key={`${alert.type}-${i}`}
+                  className={cn('border-l-4', style.bg, style.border)}
+                >
                   <div className="flex items-start justify-between gap-2">
                     <h3 className={cn('font-bold', style.text)}>{tNarrative(alert.title)}</h3>
                     <span
@@ -247,7 +242,9 @@ function WeatherContent() {
                     </span>
                   </div>
                   <p className="mt-1 text-sm text-slate-700">{tNarrative(alert.message)}</p>
-                  <p className={cn('mt-2 text-sm font-semibold', style.text)}>{tNarrative(alert.action)}</p>
+                  <p className={cn('mt-2 text-sm font-semibold', style.text)}>
+                    {tNarrative(alert.action)}
+                  </p>
                 </Card>
               );
             })}
@@ -260,7 +257,9 @@ function WeatherContent() {
         <SectionHeading icon={Beaker} title={t('water.chartTitle')} />
         <Card>
           <p className="mb-3 text-xs text-slate-500">
-            {tNarrative("The line shows how much water the soil has lost. When it crosses the dashed line, your crop starts to feel stress and needs irrigating. Bars show expected rain.")}
+            {tNarrative(
+              'The line shows how much water the soil has lost. When it crosses the dashed line, your crop starts to feel stress and needs irrigating. Bars show expected rain.',
+            )}
           </p>
 
           <div className="h-56 w-full">
@@ -282,7 +281,11 @@ function WeatherContent() {
                   // The irrigation trigger line is the point of this chart, so the
                   // axis must always include it — otherwise it renders off-canvas
                   // and the caption refers to a line the farmer cannot see.
-                  domain={[0, (dataMax: number) => Math.ceil(Math.max(dataMax, wb.readilyAvailableWaterMm) * 1.12)]}
+                  domain={[
+                    0,
+                    (dataMax: number) =>
+                      Math.ceil(Math.max(dataMax, wb.readilyAvailableWaterMm) * 1.12),
+                  ]}
                 />
                 <Tooltip
                   contentStyle={{
@@ -319,7 +322,13 @@ function WeatherContent() {
                   fill="#16a34a"
                   fillOpacity={0.12}
                 />
-                <Line type="monotone" dataKey="water" stroke="#d97706" strokeWidth={1.5} dot={false} />
+                <Line
+                  type="monotone"
+                  dataKey="water"
+                  stroke="#d97706"
+                  strokeWidth={1.5}
+                  dot={false}
+                />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
@@ -374,10 +383,9 @@ function WeatherContent() {
         <SectionHeading icon={Info} title="How this was worked out" />
         <Card className="space-y-3 text-sm text-slate-600">
           <p>
-            We track a running water budget for your soil. Each day the crop uses water
-            (evaporation plus transpiration, scaled by growth stage) and rain puts some back. When
-            the shortfall reaches the point where your crop starts to struggle, we tell you to
-            irrigate.
+            We track a running water budget for your soil. Each day the crop uses water (evaporation
+            plus transpiration, scaled by growth stage) and rain puts some back. When the shortfall
+            reaches the point where your crop starts to struggle, we tell you to irrigate.
           </p>
 
           <div className="flex flex-wrap gap-2">

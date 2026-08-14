@@ -108,13 +108,18 @@ export default function RegisterPage() {
       {/* Left panel: Desktop only hero illustration with glassmorphism overlays */}
       <div
         className="relative hidden flex-col justify-between p-12 text-white bg-cover bg-center lg:flex"
-        style={{ backgroundImage: 'linear-gradient(to right, rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.45)), url("/images/smart_farm_hero.png")' }}
+        style={{
+          backgroundImage:
+            'linear-gradient(to right, rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.45)), url("/images/smart_farm_hero.png")',
+        }}
       >
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-600 shadow-md">
             <Sprout className="h-6 w-6 text-white" aria-hidden />
           </div>
-          <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-emerald-400 to-green-500 bg-clip-text text-transparent">Smart Farm</span>
+          <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-emerald-400 to-green-500 bg-clip-text text-transparent">
+            Smart Farm
+          </span>
         </div>
 
         <div className="space-y-6 max-w-md">
@@ -122,7 +127,8 @@ export default function RegisterPage() {
             Empowering growth through smart advisories.
           </h2>
           <p className="text-slate-300 text-base">
-            Get weather-based irrigation guides, automatic crop health checks, and local market prices directly in your language.
+            Get weather-based irrigation guides, automatic crop health checks, and local market
+            prices directly in your language.
           </p>
 
           {/* Interactive glassmorphism stats cards */}
@@ -132,7 +138,9 @@ export default function RegisterPage() {
                 <Droplet className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Soil Moisture</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  Soil Moisture
+                </p>
                 <p className="text-sm font-bold text-white">64% — Optimal level for Tomato</p>
               </div>
             </div>
@@ -142,7 +150,9 @@ export default function RegisterPage() {
                 <TrendingUp className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Market Price Trend</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  Market Price Trend
+                </p>
                 <p className="text-sm font-bold text-white">Wheat prices rising by 5% in Lucknow</p>
               </div>
             </div>
@@ -155,7 +165,9 @@ export default function RegisterPage() {
                 <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
                   Today&rsquo;s Advisory
                 </p>
-                <p className="text-sm font-bold text-white">Irrigate early morning to prevent evaporation</p>
+                <p className="text-sm font-bold text-white">
+                  Irrigate early morning to prevent evaporation
+                </p>
               </div>
             </div>
           </div>
@@ -179,9 +191,7 @@ export default function RegisterPage() {
           <h2 className="text-center text-3xl font-extrabold tracking-tight text-white">
             {t('auth.createAccount')}
           </h2>
-          <p className="mt-2 text-center text-sm text-slate-400">
-            {t('auth.takesAMinute')}
-          </p>
+          <p className="mt-2 text-center text-sm text-slate-400">{t('auth.takesAMinute')}</p>
         </div>
 
         <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
@@ -248,7 +258,10 @@ export default function RegisterPage() {
               />
 
               <div>
-                <label htmlFor="password" className="block text-sm font-semibold text-slate-300 mb-1">
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-semibold text-slate-300 mb-1"
+                >
                   {t('auth.password')}
                 </label>
                 <div className="relative">
@@ -320,7 +333,10 @@ export default function RegisterPage() {
             <div className="pt-4 border-t border-slate-800 text-center">
               <p className="text-sm text-slate-400">
                 {t('auth.alreadyAccount')}{' '}
-                <Link href="/login" className="font-bold text-brand-400 hover:text-brand-300 underline underline-offset-4">
+                <Link
+                  href="/login"
+                  className="font-bold text-brand-400 hover:text-brand-300 underline underline-offset-4"
+                >
                   {t('auth.signIn')}
                 </Link>
               </p>
@@ -360,7 +376,9 @@ function Field({
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? `${id}-error` : hint ? `${id}-hint` : undefined}
         className={`w-full rounded-xl border bg-slate-800/80 px-4 py-3 text-white placeholder-slate-500 transition duration-200 focus:outline-none focus:ring-2 focus:ring-brand-500/20 ${
-          error ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : 'border-slate-700 focus:border-brand-500'
+          error
+            ? 'border-red-400 focus:border-red-500 focus:ring-red-500'
+            : 'border-slate-700 focus:border-brand-500'
         }`}
         {...rest}
       />

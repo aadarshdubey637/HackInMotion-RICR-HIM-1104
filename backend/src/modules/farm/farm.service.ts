@@ -156,7 +156,11 @@ export async function updateParcel(
   return parcel;
 }
 
-export async function deleteParcel(farmId: string, parcelId: string, userId: string): Promise<void> {
+export async function deleteParcel(
+  farmId: string,
+  parcelId: string,
+  userId: string,
+): Promise<void> {
   await getParcelById(farmId, parcelId, userId);
   // Detach crops rather than cascading — the crop history stays valuable.
   await prisma.crop.updateMany({ where: { parcelId }, data: { parcelId: null } });
@@ -213,7 +217,11 @@ export async function getFarmCrops(farmId: string, userId: string) {
   await assertFarmOwned(farmId, userId);
   return prisma.crop.findMany({
     where: { farmId },
-    include: { variety: true, parcel: true, _count: { select: { healthLogs: true, irrigationLogs: true } } },
+    include: {
+      variety: true,
+      parcel: true,
+      _count: { select: { healthLogs: true, irrigationLogs: true } },
+    },
     orderBy: { createdAt: 'desc' },
   });
 }
@@ -250,7 +258,11 @@ export async function updateCrop(
       ...input,
       cropName: input.cropName?.trim(),
       plantingDate:
-        input.plantingDate === undefined ? undefined : input.plantingDate ? new Date(input.plantingDate) : null,
+        input.plantingDate === undefined
+          ? undefined
+          : input.plantingDate
+            ? new Date(input.plantingDate)
+            : null,
       expectedHarvestDate:
         input.expectedHarvestDate === undefined
           ? undefined

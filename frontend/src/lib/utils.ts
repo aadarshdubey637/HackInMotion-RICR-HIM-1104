@@ -61,7 +61,9 @@ export function cropLabel(name: string): string {
 }
 
 /** Pick a weather icon name from the provider's text description. */
-export function weatherIcon(description: string): 'sun' | 'cloud' | 'rain' | 'storm' | 'snow' | 'fog' {
+export function weatherIcon(
+  description: string,
+): 'sun' | 'cloud' | 'rain' | 'storm' | 'snow' | 'fog' {
   const d = description.toLowerCase();
   if (d.includes('thunder')) return 'storm';
   if (d.includes('snow')) return 'snow';

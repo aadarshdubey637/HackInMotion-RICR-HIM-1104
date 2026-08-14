@@ -120,7 +120,15 @@ function round2(n: number): number {
 
 const APHID: PestProfile = {
   name: 'Aphids',
-  keywords: ['aphid', 'sticky', 'honeydew', 'curling leaves', 'small green insects', 'sooty mould', 'ants'],
+  keywords: [
+    'aphid',
+    'sticky',
+    'honeydew',
+    'curling leaves',
+    'small green insects',
+    'sooty mould',
+    'ants',
+  ],
   favouredBy: { minTempC: 15, maxTempC: 30, maxRecentRainMm: 20 },
   severity: 'MODERATE',
   actions: [
@@ -134,7 +142,14 @@ const APHID: PestProfile = {
 
 const WHITEFLY: PestProfile = {
   name: 'Whitefly',
-  keywords: ['whitefly', 'white fly', 'tiny white insects', 'yellowing', 'sticky leaves', 'flying white'],
+  keywords: [
+    'whitefly',
+    'white fly',
+    'tiny white insects',
+    'yellowing',
+    'sticky leaves',
+    'flying white',
+  ],
   favouredBy: { minTempC: 25, maxRecentRainMm: 15 },
   severity: 'MODERATE',
   actions: [
@@ -148,7 +163,15 @@ const WHITEFLY: PestProfile = {
 
 const STEM_BORER: PestProfile = {
   name: 'Stem Borer',
-  keywords: ['borer', 'dead heart', 'deadheart', 'hollow stem', 'white ear', 'holes in stem', 'drying centre'],
+  keywords: [
+    'borer',
+    'dead heart',
+    'deadheart',
+    'hollow stem',
+    'white ear',
+    'holes in stem',
+    'drying centre',
+  ],
   favouredBy: { minTempC: 25, minHumidity: 60 },
   severity: 'SEVERE',
   actions: [
@@ -181,7 +204,16 @@ export const CROPS: CropProfile[] = [
     diseases: [
       {
         name: 'Rice Blast',
-        keywords: ['blast', 'diamond', 'spindle', 'grey centre', 'gray center', 'neck rot', 'lesion on leaf', 'brown border'],
+        keywords: [
+          'blast',
+          'diamond',
+          'spindle',
+          'grey centre',
+          'gray center',
+          'neck rot',
+          'lesion on leaf',
+          'brown border',
+        ],
         favouredBy: { minHumidity: 85, minTempC: 20, maxTempC: 30, minWetDays: 2 },
         severity: 'SEVERE',
         actions: [
@@ -191,11 +223,20 @@ export const CROPS: CropProfile[] = [
           'Drain the field for 2–3 days if the crop is at tillering stage.',
           'Tricyclazole spray is the standard control — confirm dose with your extension officer.',
         ],
-        explanation: 'High humidity with moderate temperatures and prolonged leaf wetness is the classic blast trigger.',
+        explanation:
+          'High humidity with moderate temperatures and prolonged leaf wetness is the classic blast trigger.',
       },
       {
         name: 'Bacterial Leaf Blight',
-        keywords: ['blight', 'yellowing margin', 'wavy margin', 'drying from tip', 'water soaked', 'ooze', 'wilting seedling'],
+        keywords: [
+          'blight',
+          'yellowing margin',
+          'wavy margin',
+          'drying from tip',
+          'water soaked',
+          'ooze',
+          'wilting seedling',
+        ],
         favouredBy: { minHumidity: 80, minTempC: 25, minRecentRainMm: 40 },
         severity: 'SEVERE',
         actions: [
@@ -205,7 +246,8 @@ export const CROPS: CropProfile[] = [
           'Stop nitrogen top-dressing.',
           'There is no effective chemical cure — focus on drainage and avoid injuring plants.',
         ],
-        explanation: 'Heavy recent rain plus warm humid weather spreads this bacterium through standing water.',
+        explanation:
+          'Heavy recent rain plus warm humid weather spreads this bacterium through standing water.',
       },
       {
         name: 'Brown Spot',
@@ -224,7 +266,14 @@ export const CROPS: CropProfile[] = [
       STEM_BORER,
       {
         name: 'Brown Planthopper',
-        keywords: ['hopper', 'planthopper', 'hopperburn', 'circular drying', 'brown patch in field', 'insects at base'],
+        keywords: [
+          'hopper',
+          'planthopper',
+          'hopperburn',
+          'circular drying',
+          'brown patch in field',
+          'insects at base',
+        ],
         favouredBy: { minTempC: 25, minHumidity: 80 },
         severity: 'CRITICAL',
         actions: [
@@ -234,7 +283,8 @@ export const CROPS: CropProfile[] = [
           'Widen plant spacing in future sowings to improve airflow.',
           'Avoid pyrethroid sprays; they kill natural predators and cause resurgence.',
         ],
-        explanation: 'Dense canopy, standing water and warm humid air create ideal planthopper conditions.',
+        explanation:
+          'Dense canopy, standing water and warm humid air create ideal planthopper conditions.',
       },
       {
         name: 'Leaf Folder',
@@ -268,7 +318,14 @@ export const CROPS: CropProfile[] = [
     diseases: [
       {
         name: 'Yellow Rust',
-        keywords: ['rust', 'yellow stripe', 'orange powder', 'yellow powder', 'stripes on leaf', 'powder on fingers'],
+        keywords: [
+          'rust',
+          'yellow stripe',
+          'orange powder',
+          'yellow powder',
+          'stripes on leaf',
+          'powder on fingers',
+        ],
         favouredBy: { minHumidity: 70, minTempC: 8, maxTempC: 20 },
         severity: 'SEVERE',
         actions: [
@@ -278,7 +335,8 @@ export const CROPS: CropProfile[] = [
           'Propiconazole is the standard spray; confirm dose locally.',
           'Report to your extension office — rust outbreaks are tracked regionally.',
         ],
-        explanation: 'Cool temperatures with high humidity are exactly the conditions yellow rust needs.',
+        explanation:
+          'Cool temperatures with high humidity are exactly the conditions yellow rust needs.',
       },
       {
         name: 'Powdery Mildew',
@@ -309,7 +367,13 @@ export const CROPS: CropProfile[] = [
       APHID,
       {
         name: 'Termites',
-        keywords: ['termite', 'white ant', 'plants dying in patches', 'roots eaten', 'hollow roots'],
+        keywords: [
+          'termite',
+          'white ant',
+          'plants dying in patches',
+          'roots eaten',
+          'hollow roots',
+        ],
         favouredBy: { maxRecentRainMm: 10 },
         severity: 'MODERATE',
         actions: [
@@ -339,8 +403,23 @@ export const CROPS: CropProfile[] = [
     diseases: [
       {
         name: 'Late Blight',
-        keywords: ['late blight', 'water soaked', 'dark patch', 'white fuzz', 'rotting fruit', 'black stem', 'rapid wilting', 'greasy spot'],
-        favouredBy: { minHumidity: 85, minTempC: 10, maxTempC: 24, minRecentRainMm: 20, minWetDays: 2 },
+        keywords: [
+          'late blight',
+          'water soaked',
+          'dark patch',
+          'white fuzz',
+          'rotting fruit',
+          'black stem',
+          'rapid wilting',
+          'greasy spot',
+        ],
+        favouredBy: {
+          minHumidity: 85,
+          minTempC: 10,
+          maxTempC: 24,
+          minRecentRainMm: 20,
+          minWetDays: 2,
+        },
         severity: 'CRITICAL',
         actions: [
           'Look for dark water-soaked patches on leaves, often with white fuzzy growth on the underside in the morning.',
@@ -349,11 +428,19 @@ export const CROPS: CropProfile[] = [
           'Stop overhead irrigation; water at the base only.',
           'Apply mancozeb or a copper-based fungicide without delay.',
         ],
-        explanation: 'Cool wet weather with prolonged leaf wetness is the precise trigger for late blight — the same disease that caused the Irish potato famine.',
+        explanation:
+          'Cool wet weather with prolonged leaf wetness is the precise trigger for late blight — the same disease that caused the Irish potato famine.',
       },
       {
         name: 'Early Blight',
-        keywords: ['early blight', 'target', 'concentric ring', 'bullseye', 'brown spot lower leaves', 'yellowing bottom'],
+        keywords: [
+          'early blight',
+          'target',
+          'concentric ring',
+          'bullseye',
+          'brown spot lower leaves',
+          'yellowing bottom',
+        ],
         favouredBy: { minHumidity: 75, minTempC: 24, minRecentRainMm: 10 },
         severity: 'MODERATE',
         actions: [
@@ -362,11 +449,20 @@ export const CROPS: CropProfile[] = [
           'Mulch around the base — the fungus splashes up from the soil.',
           'Apply mancozeb if it is spreading upward.',
         ],
-        explanation: 'Warm humid weather after rain favours early blight, which starts low and moves up.',
+        explanation:
+          'Warm humid weather after rain favours early blight, which starts low and moves up.',
       },
       {
         name: 'Leaf Curl Virus',
-        keywords: ['curl', 'curled leaf', 'stunted', 'small leaves', 'crinkled', 'upward curling', 'bushy'],
+        keywords: [
+          'curl',
+          'curled leaf',
+          'stunted',
+          'small leaves',
+          'crinkled',
+          'upward curling',
+          'bushy',
+        ],
         favouredBy: { minTempC: 25, maxRecentRainMm: 20 },
         severity: 'SEVERE',
         actions: [
@@ -379,7 +475,13 @@ export const CROPS: CropProfile[] = [
       },
       {
         name: 'Blossom End Rot',
-        keywords: ['blossom end', 'black bottom', 'sunken bottom', 'rot at base of fruit', 'leathery patch'],
+        keywords: [
+          'blossom end',
+          'black bottom',
+          'sunken bottom',
+          'rot at base of fruit',
+          'leathery patch',
+        ],
         favouredBy: { maxRecentRainMm: 15 },
         severity: 'MILD',
         actions: [
@@ -396,7 +498,14 @@ export const CROPS: CropProfile[] = [
       APHID,
       {
         name: 'Fruit Borer',
-        keywords: ['fruit borer', 'hole in fruit', 'caterpillar', 'worm in fruit', 'boring', 'helicoverpa'],
+        keywords: [
+          'fruit borer',
+          'hole in fruit',
+          'caterpillar',
+          'worm in fruit',
+          'boring',
+          'helicoverpa',
+        ],
         favouredBy: { minTempC: 20 },
         severity: 'SEVERE',
         actions: [
@@ -440,7 +549,13 @@ export const CROPS: CropProfile[] = [
       },
       {
         name: 'Verticillium Wilt',
-        keywords: ['wilt', 'yellowing between veins', 'one sided wilt', 'brown vascular', 'drying leaves'],
+        keywords: [
+          'wilt',
+          'yellowing between veins',
+          'one sided wilt',
+          'brown vascular',
+          'drying leaves',
+        ],
         favouredBy: { maxTempC: 28 },
         severity: 'SEVERE',
         actions: [
@@ -456,7 +571,14 @@ export const CROPS: CropProfile[] = [
       APHID,
       {
         name: 'Pink Bollworm',
-        keywords: ['bollworm', 'pink worm', 'rosette flower', 'damaged boll', 'holes in boll', 'stained lint'],
+        keywords: [
+          'bollworm',
+          'pink worm',
+          'rosette flower',
+          'damaged boll',
+          'holes in boll',
+          'stained lint',
+        ],
         favouredBy: { minTempC: 25 },
         severity: 'CRITICAL',
         actions: [
@@ -503,7 +625,15 @@ export const CROPS: CropProfile[] = [
       STEM_BORER,
       {
         name: 'Fall Armyworm',
-        keywords: ['armyworm', 'ragged leaf', 'window pane', 'frass', 'sawdust in whorl', 'holes in whorl', 'inverted y'],
+        keywords: [
+          'armyworm',
+          'ragged leaf',
+          'window pane',
+          'frass',
+          'sawdust in whorl',
+          'holes in whorl',
+          'inverted y',
+        ],
         favouredBy: { minTempC: 20 },
         severity: 'CRITICAL',
         actions: [
@@ -535,8 +665,22 @@ export const CROPS: CropProfile[] = [
     diseases: [
       {
         name: 'Late Blight',
-        keywords: ['late blight', 'water soaked', 'white fuzz', 'dark patch', 'rotting tuber', 'black stem', 'foul smell'],
-        favouredBy: { minHumidity: 85, minTempC: 10, maxTempC: 24, minRecentRainMm: 20, minWetDays: 2 },
+        keywords: [
+          'late blight',
+          'water soaked',
+          'white fuzz',
+          'dark patch',
+          'rotting tuber',
+          'black stem',
+          'foul smell',
+        ],
+        favouredBy: {
+          minHumidity: 85,
+          minTempC: 10,
+          maxTempC: 24,
+          minRecentRainMm: 20,
+          minWetDays: 2,
+        },
         severity: 'CRITICAL',
         actions: [
           'Look for dark water-soaked patches with white fuzzy growth on the leaf underside.',
@@ -594,7 +738,14 @@ export const CROPS: CropProfile[] = [
     diseases: [
       {
         name: 'Red Rot',
-        keywords: ['red rot', 'red inside', 'white patches', 'alcoholic smell', 'sour smell', 'drying cane'],
+        keywords: [
+          'red rot',
+          'red inside',
+          'white patches',
+          'alcoholic smell',
+          'sour smell',
+          'drying cane',
+        ],
         favouredBy: { minHumidity: 75, minTempC: 25, minRecentRainMm: 30 },
         severity: 'CRITICAL',
         actions: [
@@ -695,7 +846,14 @@ export const CROPS: CropProfile[] = [
     pests: [
       {
         name: 'Thrips',
-        keywords: ['thrips', 'silver streaks', 'white streaks', 'curled tips', 'distorted leaves', 'tiny insects'],
+        keywords: [
+          'thrips',
+          'silver streaks',
+          'white streaks',
+          'curled tips',
+          'distorted leaves',
+          'tiny insects',
+        ],
         favouredBy: { minTempC: 25, maxRecentRainMm: 10 },
         severity: 'SEVERE',
         actions: [
@@ -726,7 +884,14 @@ export const CROPS: CropProfile[] = [
     diseases: [
       {
         name: 'Wilt',
-        keywords: ['wilt', 'drooping', 'yellowing whole plant', 'sudden death', 'brown roots', 'dying plants'],
+        keywords: [
+          'wilt',
+          'drooping',
+          'yellowing whole plant',
+          'sudden death',
+          'brown roots',
+          'dying plants',
+        ],
         favouredBy: { minTempC: 25, maxRecentRainMm: 15 },
         severity: 'SEVERE',
         actions: [
@@ -739,7 +904,14 @@ export const CROPS: CropProfile[] = [
       },
       {
         name: 'Ascochyta Blight',
-        keywords: ['blight', 'brown lesion', 'concentric', 'dark spots on pods', 'stem lesion', 'breaking stem'],
+        keywords: [
+          'blight',
+          'brown lesion',
+          'concentric',
+          'dark spots on pods',
+          'stem lesion',
+          'breaking stem',
+        ],
         favouredBy: { minHumidity: 80, minTempC: 15, maxTempC: 25, minRecentRainMm: 20 },
         severity: 'SEVERE',
         actions: [
@@ -785,7 +957,13 @@ export const CROPS: CropProfile[] = [
     diseases: [
       {
         name: 'White Rust',
-        keywords: ['white rust', 'white pustule', 'white blister', 'swollen stem', 'deformed flower'],
+        keywords: [
+          'white rust',
+          'white pustule',
+          'white blister',
+          'swollen stem',
+          'deformed flower',
+        ],
         favouredBy: { minHumidity: 85, minTempC: 10, maxTempC: 20 },
         severity: 'MODERATE',
         actions: [
@@ -811,7 +989,14 @@ export const CROPS: CropProfile[] = [
     pests: [
       {
         name: 'Mustard Aphid',
-        keywords: ['aphid', 'sticky', 'curling', 'grey insects', 'covered stem', 'clusters on pods'],
+        keywords: [
+          'aphid',
+          'sticky',
+          'curling',
+          'grey insects',
+          'covered stem',
+          'clusters on pods',
+        ],
         favouredBy: { minTempC: 10, maxTempC: 25, maxRecentRainMm: 10 },
         severity: 'SEVERE',
         actions: [
@@ -842,7 +1027,14 @@ export const CROPS: CropProfile[] = [
     diseases: [
       {
         name: 'Tikka Leaf Spot',
-        keywords: ['leaf spot', 'tikka', 'dark spot', 'yellow halo', 'defoliation', 'falling leaves'],
+        keywords: [
+          'leaf spot',
+          'tikka',
+          'dark spot',
+          'yellow halo',
+          'defoliation',
+          'falling leaves',
+        ],
         favouredBy: { minHumidity: 80, minTempC: 22, minRecentRainMm: 20 },
         severity: 'MODERATE',
         actions: [
@@ -893,7 +1085,10 @@ const ALIASES: Record<string, string> = {
 };
 
 function normalise(name: string): string {
-  return name.trim().toLowerCase().replace(/[\s_-]+/g, '');
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, '');
 }
 
 /**

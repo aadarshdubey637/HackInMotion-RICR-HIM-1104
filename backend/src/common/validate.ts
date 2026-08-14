@@ -74,10 +74,15 @@ export function validateParams<T extends ZodTypeAny>(schema: T): RequestHandler 
 
 /** Typed accessor for whatever `validateQuery` parsed. */
 export function query<T extends ZodTypeAny>(req: Request, _schema?: T): z.infer<T> {
-  return (req as Request & { validatedQuery?: z.infer<T> }).validatedQuery ?? (req.query as z.infer<T>);
+  return (
+    (req as Request & { validatedQuery?: z.infer<T> }).validatedQuery ?? (req.query as z.infer<T>)
+  );
 }
 
 /** Typed accessor for whatever `validateParams` parsed. */
 export function params<T extends ZodTypeAny>(req: Request, _schema?: T): z.infer<T> {
-  return (req as Request & { validatedParams?: z.infer<T> }).validatedParams ?? (req.params as z.infer<T>);
+  return (
+    (req as Request & { validatedParams?: z.infer<T> }).validatedParams ??
+    (req.params as z.infer<T>)
+  );
 }

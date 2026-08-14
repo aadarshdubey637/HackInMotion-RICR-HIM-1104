@@ -107,10 +107,7 @@ export async function sendMail(message: MailMessage): Promise<boolean> {
       html: message.html,
     });
 
-    logger.info(
-      { to: redactEmail(message.to), messageId: info.messageId },
-      'Email sent',
-    );
+    logger.info({ to: redactEmail(message.to), messageId: info.messageId }, 'Email sent');
     return true;
   } catch (error) {
     // `code` distinguishes the two failures worth telling apart in logs:
@@ -175,4 +172,3 @@ function redactEmail(address: string): string {
   if (!domain) return '***';
   return `${local.slice(0, 2)}***@${domain}`;
 }
-

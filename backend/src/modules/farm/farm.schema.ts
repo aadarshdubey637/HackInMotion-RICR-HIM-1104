@@ -88,9 +88,7 @@ export const parcelIdParams = z.object({ farmId: objectId, parcelId: objectId })
 // ─────────────────────────── Crop ───────────────────────────
 
 /** Accepts either a full ISO datetime or a plain YYYY-MM-DD from a date input. */
-const dateInput = z
-  .string()
-  .refine((v) => !Number.isNaN(Date.parse(v)), 'Not a valid date');
+const dateInput = z.string().refine((v) => !Number.isNaN(Date.parse(v)), 'Not a valid date');
 
 export const createCropBody = z.object({
   cropName: z.string().trim().min(1, 'Please choose a crop').max(100),

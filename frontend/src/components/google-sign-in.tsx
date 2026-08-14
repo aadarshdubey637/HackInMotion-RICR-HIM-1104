@@ -99,7 +99,11 @@ function loadGoogleScript(): Promise<void> {
   return scriptPromise;
 }
 
-export function GoogleSignIn({ text = 'continue_with' }: { text?: 'continue_with' | 'signup_with' }) {
+export function GoogleSignIn({
+  text = 'continue_with',
+}: {
+  text?: 'continue_with' | 'signup_with';
+}) {
   const { loginWithGoogle } = useAuth();
   const { language, t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);

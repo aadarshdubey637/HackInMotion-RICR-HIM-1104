@@ -45,7 +45,15 @@ import {
   severityStyles,
   healthSeverityStyles,
 } from '@/components/ui';
-import { cn, formatDay, formatRupees, cropLabel, humanise, weatherIcon, timeAgo } from '@/lib/utils';
+import {
+  cn,
+  formatDay,
+  formatRupees,
+  cropLabel,
+  humanise,
+  weatherIcon,
+  timeAgo,
+} from '@/lib/utils';
 
 export default function DashboardPage() {
   return (
@@ -301,8 +309,8 @@ function DashboardContent() {
         {data.health.recent.length === 0 ? (
           <Card>
             <p className="text-sm text-slate-600">
-              No health issues logged. If you spot something on your plants, take a photo and log it —
-              you will get guidance on what to check.
+              No health issues logged. If you spot something on your plants, take a photo and log it
+              — you will get guidance on what to check.
             </p>
             <Link href="/health" className="btn-secondary mt-3 w-full sm:w-auto">
               Check a plant
@@ -315,7 +323,13 @@ function DashboardContent() {
               return (
                 <Link key={issue.id} href="/health">
                   <Card className="flex items-start gap-3 transition hover:border-brand-300">
-                    <span className={cn('mt-0.5 rounded-lg px-2 py-1 text-xs font-bold', style.bg, style.text)}>
+                    <span
+                      className={cn(
+                        'mt-0.5 rounded-lg px-2 py-1 text-xs font-bold',
+                        style.bg,
+                        style.text,
+                      )}
+                    >
                       {style.label}
                     </span>
                     <div className="min-w-0 flex-1">
@@ -339,8 +353,8 @@ function DashboardContent() {
           <SectionHeading icon={Users} title="Reported near you" />
           <Card className="border-amber-200 bg-amber-50">
             <p className="text-sm text-amber-900">
-              Farmers within {nearby.radiusKm} km have reported these in the last 7 days.
-              Worth checking your own crop.
+              Farmers within {nearby.radiusKm} km have reported these in the last 7 days. Worth
+              checking your own crop.
             </p>
             <div className="mt-2.5 space-y-1.5">
               {nearby.outbreaks.slice(0, 3).map((outbreak) => (
@@ -414,7 +428,10 @@ function DashboardContent() {
             {data.crops.map((crop) => {
               const imageUrl = getCropThumbnail(crop.cropName);
               return (
-                <Card key={crop.id} className="flex items-center justify-between gap-4 p-4 hover:shadow-md transition-shadow duration-300">
+                <Card
+                  key={crop.id}
+                  className="flex items-center justify-between gap-4 p-4 hover:shadow-md transition-shadow duration-300"
+                >
                   <div className="flex items-center gap-3 min-w-0 flex-1">
                     <div className="relative w-12 h-12 shrink-0 rounded-xl overflow-hidden shadow-inner border border-soil-100 bg-soil-50">
                       <Image
@@ -426,7 +443,9 @@ function DashboardContent() {
                       />
                     </div>
                     <div className="min-w-0">
-                      <p className="truncate font-extrabold text-slate-800 text-sm">{cropLabel(crop.cropName)}</p>
+                      <p className="truncate font-extrabold text-slate-800 text-sm">
+                        {cropLabel(crop.cropName)}
+                      </p>
                       <p className="text-xs text-slate-500 font-semibold mt-0.5">
                         {humanise(crop.growthStage) || humanise(crop.status)}
                         {crop.daysToHarvest !== null && crop.daysToHarvest > 0
@@ -574,12 +593,12 @@ function IrrigationCard({ data }: { data: Dashboard }) {
 
   return (
     <Link href="/weather">
-      <Card 
+      <Card
         className={cn(
-          'h-full transition-all duration-300 hover:shadow-md hover:border-brand-300 relative overflow-hidden', 
-          urgent 
-            ? 'border-red-200 bg-gradient-to-br from-orange-50 via-red-50/40 to-orange-50/30 shadow-sm shadow-red-50' 
-            : 'border-blue-100 bg-gradient-to-br from-blue-50/40 via-sky-50/20 to-white shadow-sm shadow-blue-50'
+          'h-full transition-all duration-300 hover:shadow-md hover:border-brand-300 relative overflow-hidden',
+          urgent
+            ? 'border-red-200 bg-gradient-to-br from-orange-50 via-red-50/40 to-orange-50/30 shadow-sm shadow-red-50'
+            : 'border-blue-100 bg-gradient-to-br from-blue-50/40 via-sky-50/20 to-white shadow-sm shadow-blue-50',
         )}
       >
         {/* Subtle droplet shimmer overlay for urgent state */}
@@ -588,13 +607,15 @@ function IrrigationCard({ data }: { data: Dashboard }) {
             <Droplets className="h-20 w-20" />
           </div>
         )}
-        
+
         <SectionHeading icon={Droplets} title="Water" />
 
         <p className={cn('font-extrabold text-base', urgent ? 'text-red-950' : 'text-slate-800')}>
           {irrigation.headline}
         </p>
-        <p className="mt-1 line-clamp-3 text-sm text-slate-600 leading-relaxed">{irrigation.reason}</p>
+        <p className="mt-1 line-clamp-3 text-sm text-slate-600 leading-relaxed">
+          {irrigation.reason}
+        </p>
 
         {/* Soil moisture depletion bar — how much of the crop's comfortable
             water range has been used up. */}
@@ -607,7 +628,11 @@ function IrrigationCard({ data }: { data: Dashboard }) {
             <div
               className={cn(
                 'h-full rounded-full transition-all duration-500',
-                pct >= 100 ? 'bg-gradient-to-r from-red-500 to-rose-600' : pct >= 75 ? 'bg-gradient-to-r from-orange-500 to-amber-600' : 'bg-gradient-to-r from-blue-500 to-sky-600',
+                pct >= 100
+                  ? 'bg-gradient-to-r from-red-500 to-rose-600'
+                  : pct >= 75
+                    ? 'bg-gradient-to-r from-orange-500 to-amber-600'
+                    : 'bg-gradient-to-r from-blue-500 to-sky-600',
               )}
               style={{ width: `${pct}%` }}
             />
@@ -642,19 +667,28 @@ function WeatherCard({ data }: { data: Dashboard }) {
   const today = weather.today;
   const todayUpcoming = weather.upcoming?.[0];
   const iconName = todayUpcoming ? weatherIcon(todayUpcoming.description || '') : 'cloud';
-  
-  const gradientClass = {
-    sun: 'border-orange-200 bg-gradient-to-br from-amber-50/60 via-orange-50/35 to-white shadow-sm shadow-orange-50',
-    cloud: 'border-slate-200 bg-gradient-to-br from-slate-50/80 via-slate-100/30 to-white shadow-sm shadow-slate-50',
-    rain: 'border-blue-200 bg-gradient-to-br from-blue-50/60 via-sky-50/30 to-white shadow-sm shadow-blue-50',
-    storm: 'border-purple-200 bg-gradient-to-br from-purple-50/40 via-slate-50/30 to-white shadow-sm shadow-purple-50',
-    fog: 'border-zinc-200 bg-gradient-to-br from-zinc-100/40 via-slate-50/20 to-white shadow-sm shadow-zinc-50',
-    snow: 'border-sky-200 bg-gradient-to-br from-sky-50/40 via-blue-50/20 to-white shadow-sm shadow-sky-50',
-  }[iconName] || 'border-slate-200 bg-gradient-to-br from-slate-50/80 to-white shadow-sm shadow-slate-50';
+
+  const gradientClass =
+    {
+      sun: 'border-orange-200 bg-gradient-to-br from-amber-50/60 via-orange-50/35 to-white shadow-sm shadow-orange-50',
+      cloud:
+        'border-slate-200 bg-gradient-to-br from-slate-50/80 via-slate-100/30 to-white shadow-sm shadow-slate-50',
+      rain: 'border-blue-200 bg-gradient-to-br from-blue-50/60 via-sky-50/30 to-white shadow-sm shadow-blue-50',
+      storm:
+        'border-purple-200 bg-gradient-to-br from-purple-50/40 via-slate-50/30 to-white shadow-sm shadow-purple-50',
+      fog: 'border-zinc-200 bg-gradient-to-br from-zinc-100/40 via-slate-50/20 to-white shadow-sm shadow-zinc-50',
+      snow: 'border-sky-200 bg-gradient-to-br from-sky-50/40 via-blue-50/20 to-white shadow-sm shadow-sky-50',
+    }[iconName] ||
+    'border-slate-200 bg-gradient-to-br from-slate-50/80 to-white shadow-sm shadow-slate-50';
 
   return (
     <Link href="/weather">
-      <Card className={cn('h-full transition-all duration-300 hover:shadow-md hover:border-brand-300', gradientClass)}>
+      <Card
+        className={cn(
+          'h-full transition-all duration-300 hover:shadow-md hover:border-brand-300',
+          gradientClass,
+        )}
+      >
         <SectionHeading icon={CloudSun} title="Weather" />
 
         {today ? (
@@ -682,7 +716,10 @@ function WeatherCard({ data }: { data: Dashboard }) {
           {weather.upcoming.slice(0, 5).map((day) => {
             const Icon = WEATHER_ICONS[weatherIcon(day.description)];
             return (
-              <div key={day.date} className="flex flex-col items-center gap-1 rounded-xl py-2 bg-white/40 border border-white/20 shadow-sm backdrop-blur-[1px]">
+              <div
+                key={day.date}
+                className="flex flex-col items-center gap-1 rounded-xl py-2 bg-white/40 border border-white/20 shadow-sm backdrop-blur-[1px]"
+              >
                 <span className="text-[10px] font-bold text-slate-500">{formatDay(day.date)}</span>
                 <Icon className="h-5 w-5 text-brand-600" aria-hidden />
                 <span className="text-xs font-bold tabular-nums text-slate-800">
@@ -706,7 +743,11 @@ function WeatherCard({ data }: { data: Dashboard }) {
 
 function PriceCard({ trend }: { trend: Dashboard['market']['trends'][number] }) {
   const TrendIcon =
-    trend.direction === 'RISING' ? TrendingUp : trend.direction === 'FALLING' ? TrendingDown : Minus;
+    trend.direction === 'RISING'
+      ? TrendingUp
+      : trend.direction === 'FALLING'
+        ? TrendingDown
+        : Minus;
 
   const tone =
     trend.direction === 'RISING'

@@ -23,4 +23,3 @@ export const farmTrendsQuery = z.object(scopeShape);
 
 export type TrendQuery = z.infer<typeof trendQuery>;
 export type FarmTrendsQuery = z.infer<typeof farmTrendsQuery>;
-

@@ -143,10 +143,7 @@ export async function sendVerificationOtp(userId: string): Promise<SendOtpResult
   }
 
   if (recent.length >= MAX_SENDS_PER_HOUR) {
-    throw new RateLimitError(
-      'Too many codes requested. Please try again in an hour.',
-      60 * 60,
-    );
+    throw new RateLimitError('Too many codes requested. Please try again in an hour.', 60 * 60);
   }
 
   const code = generateCode();

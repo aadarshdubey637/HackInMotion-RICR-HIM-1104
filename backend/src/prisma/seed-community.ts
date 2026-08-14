@@ -30,8 +30,12 @@ const NEIGHBOURS = [
     areaHa: 2.4,
     crop: 'rice',
     reports: [
-      { disease: 'Rice Blast', severity: 'SEVERE' as const, daysAgo: 4,
-        description: 'Diamond shaped lesions with grey centres spreading fast across the field' },
+      {
+        disease: 'Rice Blast',
+        severity: 'SEVERE' as const,
+        daysAgo: 4,
+        description: 'Diamond shaped lesions with grey centres spreading fast across the field',
+      },
     ],
   },
   {
@@ -44,8 +48,12 @@ const NEIGHBOURS = [
     areaHa: 1.6,
     crop: 'rice',
     reports: [
-      { disease: 'Rice Blast', severity: 'SEVERE' as const, daysAgo: 7,
-        description: 'Grey spindle shaped spots on leaves, neck of some panicles turning black' },
+      {
+        disease: 'Rice Blast',
+        severity: 'SEVERE' as const,
+        daysAgo: 7,
+        description: 'Grey spindle shaped spots on leaves, neck of some panicles turning black',
+      },
     ],
   },
   {
@@ -58,10 +66,18 @@ const NEIGHBOURS = [
     areaHa: 3.1,
     crop: 'rice',
     reports: [
-      { disease: 'Rice Blast', severity: 'CRITICAL' as const, daysAgo: 2,
-        description: 'Blast has taken hold, neck rot visible on many panicles, spreading daily' },
-      { pest: 'Brown Planthopper', severity: 'SEVERE' as const, daysAgo: 9,
-        description: 'Circular patches of drying plants, hoppers visible at the base above water' },
+      {
+        disease: 'Rice Blast',
+        severity: 'CRITICAL' as const,
+        daysAgo: 2,
+        description: 'Blast has taken hold, neck rot visible on many panicles, spreading daily',
+      },
+      {
+        pest: 'Brown Planthopper',
+        severity: 'SEVERE' as const,
+        daysAgo: 9,
+        description: 'Circular patches of drying plants, hoppers visible at the base above water',
+      },
     ],
   },
   {
@@ -74,8 +90,12 @@ const NEIGHBOURS = [
     areaHa: 2.0,
     crop: 'tomato',
     reports: [
-      { disease: 'Late Blight', severity: 'CRITICAL' as const, daysAgo: 3,
-        description: 'Dark water soaked patches with white fuzzy growth underneath the leaves' },
+      {
+        disease: 'Late Blight',
+        severity: 'CRITICAL' as const,
+        daysAgo: 3,
+        description: 'Dark water soaked patches with white fuzzy growth underneath the leaves',
+      },
     ],
   },
   {
@@ -88,8 +108,12 @@ const NEIGHBOURS = [
     areaHa: 4.2,
     crop: 'rice',
     reports: [
-      { pest: 'Brown Planthopper', severity: 'SEVERE' as const, daysAgo: 6,
-        description: 'Hopperburn patches appearing, dense population at plant base' },
+      {
+        pest: 'Brown Planthopper',
+        severity: 'SEVERE' as const,
+        daysAgo: 6,
+        description: 'Hopperburn patches appearing, dense population at plant base',
+      },
     ],
   },
 ];
@@ -171,7 +195,9 @@ async function main(): Promise<void> {
     }
 
     const distance = haversineKm(26.8467, 80.9462, n.latitude, n.longitude);
-    console.log(`  ${n.farmName.padEnd(14)} ${distance.toFixed(1).padStart(5)} km  ${n.reports.length} report(s)`);
+    console.log(
+      `  ${n.farmName.padEnd(14)} ${distance.toFixed(1).padStart(5)} km  ${n.reports.length} report(s)`,
+    );
   }
 
   console.log(`\n  ${farms} neighbouring farms, ${reports} new reports.\n`);

@@ -67,7 +67,13 @@ export interface DashboardResult {
     available: boolean;
     current?: { temperatureC: number; humidityPct: number; description: string };
     today?: { tempMaxC: number; tempMinC: number; rainMm: number; rainProbability: number | null };
-    upcoming?: Array<{ date: string; tempMaxC: number; tempMinC: number; rainMm: number; description: string }>;
+    upcoming?: Array<{
+      date: string;
+      tempMaxC: number;
+      tempMinC: number;
+      rainMm: number;
+      description: string;
+    }>;
     warning?: string;
   };
   irrigation: {
@@ -215,7 +221,12 @@ export async function getDashboard(farmId: string, userId: string): Promise<Dash
       if (alert.type === 'IRRIGATION_NEEDED') continue; // already covered above
       actions.push({
         id: `weather-${alert.type}-${alert.date ?? 'now'}`,
-        priority: alert.severity === 'CRITICAL' ? 'CRITICAL' : alert.severity === 'HIGH' ? 'HIGH' : 'MEDIUM',
+        priority:
+          alert.severity === 'CRITICAL'
+            ? 'CRITICAL'
+            : alert.severity === 'HIGH'
+              ? 'HIGH'
+              : 'MEDIUM',
         category: 'WEATHER',
         title: alert.title,
         detail: alert.message,
@@ -224,7 +235,8 @@ export async function getDashboard(farmId: string, userId: string): Promise<Dash
       });
     }
   } else {
-    weather.warning = 'Weather data is unavailable right now. Irrigation guidance will return once it is back.';
+    weather.warning =
+      'Weather data is unavailable right now. Irrigation guidance will return once it is back.';
     irrigation.warning = weather.warning;
   }
 
@@ -280,7 +292,8 @@ export async function getDashboard(farmId: string, userId: string): Promise<Dash
       priority: 'HIGH',
       category: 'SETUP',
       title: 'Add your crop',
-      detail: 'Irrigation guidance, health checks and price tracking all depend on knowing what you are growing.',
+      detail:
+        'Irrigation guidance, health checks and price tracking all depend on knowing what you are growing.',
       action: 'Add the crop you are growing or planning to plant.',
       link: `/farms/${farmId}/crops/new`,
     });
@@ -291,7 +304,8 @@ export async function getDashboard(farmId: string, userId: string): Promise<Dash
       priority: 'LOW',
       category: 'SETUP',
       title: 'Add your soil type',
-      detail: 'Soil type decides how much water your land can hold, which makes irrigation advice noticeably more accurate.',
+      detail:
+        'Soil type decides how much water your land can hold, which makes irrigation advice noticeably more accurate.',
       action: 'Set your soil type in the farm profile.',
       link: `/farms/${farmId}/edit`,
     });

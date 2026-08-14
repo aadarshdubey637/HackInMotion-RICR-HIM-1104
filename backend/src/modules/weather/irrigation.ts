@@ -257,7 +257,9 @@ export function generateIrrigationGuidance(input: IrrigationInputs): IrrigationG
   } else {
     depletion = round1(raw * 0.5);
     initialisedFrom = 'assumed-midpoint';
-    assumptions.push('Soil moisture unavailable for this location — starting the balance at half-depleted.');
+    assumptions.push(
+      'Soil moisture unavailable for this location — starting the balance at half-depleted.',
+    );
   }
 
   // The balance is seeded at the start of the historical window, then rolled
@@ -317,16 +319,14 @@ export function generateIrrigationGuidance(input: IrrigationInputs): IrrigationG
   // First future day the crop crosses the stress threshold.
   const crossingIdx = futureProjections.findIndex((p) => p.depletionMm >= raw);
   const nextIrrigationDate = shouldIrrigate
-    ? futureProjections[0]?.date ?? null
+    ? (futureProjections[0]?.date ?? null)
     : crossingIdx >= 0
       ? futureProjections[crossingIdx].date
       : null;
   const daysUntilIrrigation = shouldIrrigate ? 0 : crossingIdx >= 0 ? crossingIdx : null;
 
   // Meaningful rain in the next 3 days can make irrigation unnecessary.
-  const imminentRain = futureProjections
-    .slice(0, 3)
-    .reduce((sum, p) => sum + p.effectiveRainMm, 0);
+  const imminentRain = futureProjections.slice(0, 3).reduce((sum, p) => sum + p.effectiveRainMm, 0);
   const rainWillCover = imminentRain >= depletionToday * 0.8 && imminentRain >= 5;
 
   const urgency: Urgency = determineUrgency(
@@ -464,7 +464,9 @@ function buildNarrative(ctx: {
 
   if (shouldIrrigate && rainWillCover) {
     const rainDay = futureProjections.find((p) => p.effectiveRainMm >= 3);
-    const when = rainDay ? describeRelativeDay(rainDay.date, futureProjections) : 'in the next few days';
+    const when = rainDay
+      ? describeRelativeDay(rainDay.date, futureProjections)
+      : 'in the next few days';
     return {
       headline: `Hold off — rain is coming ${when}`,
       reason:
@@ -485,7 +487,12 @@ function buildNarrative(ctx: {
   }
 
   if (urgency === 'SOON') {
-    const when = daysUntilIrrigation === 0 ? 'today' : daysUntilIrrigation === 1 ? 'tomorrow' : `in ${daysUntilIrrigation} days`;
+    const when =
+      daysUntilIrrigation === 0
+        ? 'today'
+        : daysUntilIrrigation === 1
+          ? 'tomorrow'
+          : `in ${daysUntilIrrigation} days`;
     return {
       headline: `No irrigation today — plan for ${when}`,
       reason:
@@ -606,9 +613,7 @@ function detectRisks(
   }
 
   // ── Strong wind ──
-  const windyDay = weather.daily
-    .filter((d) => !d.isPast)
-    .find((d) => d.windSpeedMaxKmh >= 40);
+  const windyDay = weather.daily.filter((d) => !d.isPast).find((d) => d.windSpeedMaxKmh >= 40);
   if (windyDay) {
     alerts.push({
       type: 'WEATHER_RISK',
@@ -632,7 +637,8 @@ function detectRisks(
       message:
         `Root-zone depletion is ${balance.depletionToday.toFixed(0)} mm against a ` +
         `${balance.raw.toFixed(0)} mm trigger point.`,
-      action: 'Irrigate today. Early morning or evening loses far less water to evaporation than midday.',
+      action:
+        'Irrigate today. Early morning or evening loses far less water to evaporation than midday.',
     });
   }
 

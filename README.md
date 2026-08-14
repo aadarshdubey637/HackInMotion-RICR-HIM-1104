@@ -5,20 +5,21 @@
 AI-powered farm advisory: crop recommendations, weather-based irrigation, pest/disease alerts, fertilizer planning, yield prediction — works offline.
 
 ---
+
 ## deployment link
+
 frontend http://65.0.45.45:3000
 
 backend http://65.0.45.45:3001
 
-
 ## Team
 
-| Name |
-|---|
-| Aadarsh Dubey | 
-|Harsh Kumar Verma| 
-| Aaryan |
-|Vijay Patel|
+| Name              |
+| ----------------- |
+| Aadarsh Dubey     |
+| Harsh Kumar Verma |
+| Aaryan            |
+| Vijay Patel       |
 
 ---
 
@@ -121,13 +122,13 @@ smart-farm-dss/
 
 ## Environment files
 
-| File | Purpose | Committed? |
-|---|---|---|
-| `.env.example` | Template with shared Atlas URL pre-filled | ✅ Yes |
-| `backend/.env.example` | Backend-only template (same values) | ✅ Yes |
-| `frontend/.env.local.example` | Frontend template (API URL, Google client id) | ✅ Yes |
-| `backend/.env` | Actual secrets (copied from `.env.example`) | ❌ No (gitignored) |
-| `frontend/.env.local` | Frontend API URL and Google client id | ❌ No (gitignored) |
+| File                          | Purpose                                       | Committed?         |
+| ----------------------------- | --------------------------------------------- | ------------------ |
+| `.env.example`                | Template with shared Atlas URL pre-filled     | ✅ Yes             |
+| `backend/.env.example`        | Backend-only template (same values)           | ✅ Yes             |
+| `frontend/.env.local.example` | Frontend template (API URL, Google client id) | ✅ Yes             |
+| `backend/.env`                | Actual secrets (copied from `.env.example`)   | ❌ No (gitignored) |
+| `frontend/.env.local`         | Frontend API URL and Google client id         | ❌ No (gitignored) |
 
 `npm run setup` creates both ignored files automatically.
 
@@ -149,15 +150,15 @@ npm run db:studio       # Open Prisma Studio (visual DB browser)
 
 ## Features
 
-| Feature | Status |
-|---|---|
-| Crop Recommendation Engine | ✅ Climate + soil + market scoring |
-| Voice Interface | ✅ 6 Indian languages (Hindi, Punjabi, Telugu, Marathi, Bengali, English) |
-| Community Pest/Disease Alerts | ✅ Outbreak detection within 5 km radius |
-| Fertilizer & Resource Planning | ✅ ICAR-based dosing, soil-adjusted |
-| Yield Prediction | ✅ Transparent stress-factor model |
-| Offline-First | ✅ localStorage cache + write queue, auto-sync on reconnect |
-| Google Sign-In + Email OTP | ✅ Optional — both degrade gracefully when unconfigured |
+| Feature                        | Status                                                                    |
+| ------------------------------ | ------------------------------------------------------------------------- |
+| Crop Recommendation Engine     | ✅ Climate + soil + market scoring                                        |
+| Voice Interface                | ✅ 6 Indian languages (Hindi, Punjabi, Telugu, Marathi, Bengali, English) |
+| Community Pest/Disease Alerts  | ✅ Outbreak detection within 5 km radius                                  |
+| Fertilizer & Resource Planning | ✅ ICAR-based dosing, soil-adjusted                                       |
+| Yield Prediction               | ✅ Transparent stress-factor model                                        |
+| Offline-First                  | ✅ localStorage cache + write queue, auto-sync on reconnect               |
+| Google Sign-In + Email OTP     | ✅ Optional — both degrade gracefully when unconfigured                   |
 
 ---
 

@@ -73,7 +73,11 @@ export const NUTRITION: Record<string, { nutrients: NutrientPlan; yield: YieldBa
       potassiumKgHa: 40,
       nitrogenSplits: [
         { timing: 'At transplanting (basal)', fraction: 0.5, stage: 'SEED' },
-        { timing: 'At active tillering, ~3 weeks after transplanting', fraction: 0.25, stage: 'VEGETATIVE' },
+        {
+          timing: 'At active tillering, ~3 weeks after transplanting',
+          fraction: 0.25,
+          stage: 'VEGETATIVE',
+        },
         { timing: 'At panicle initiation', fraction: 0.25, stage: 'FLOWERING' },
       ],
       notes: [
@@ -92,7 +96,11 @@ export const NUTRITION: Record<string, { nutrients: NutrientPlan; yield: YieldBa
       potassiumKgHa: 40,
       nitrogenSplits: [
         { timing: 'At sowing (basal)', fraction: 0.5, stage: 'SEED' },
-        { timing: 'At first irrigation, 21 days after sowing (crown root stage)', fraction: 0.25, stage: 'VEGETATIVE' },
+        {
+          timing: 'At first irrigation, 21 days after sowing (crown root stage)',
+          fraction: 0.25,
+          stage: 'VEGETATIVE',
+        },
         { timing: 'At second irrigation, ~45 days', fraction: 0.25, stage: 'VEGETATIVE' },
       ],
       notes: [
@@ -283,10 +291,18 @@ export const GENERIC_NUTRITION = {
       'A local soil test and your extension officer will give better numbers.',
     ],
   } as NutrientPlan,
-  yield: { attainableKgHa: 3000, rangeKgHa: { low: 1500, high: 5000 }, unit: 'kg' } as YieldBaseline,
+  yield: {
+    attainableKgHa: 3000,
+    rangeKgHa: { low: 1500, high: 5000 },
+    unit: 'kg',
+  } as YieldBaseline,
 };
 
-export function nutritionFor(cropKey: string): { nutrients: NutrientPlan; yield: YieldBaseline; isKnown: boolean } {
+export function nutritionFor(cropKey: string): {
+  nutrients: NutrientPlan;
+  yield: YieldBaseline;
+  isKnown: boolean;
+} {
   const found = NUTRITION[cropKey];
   return found ? { ...found, isKnown: true } : { ...GENERIC_NUTRITION, isKnown: false };
 }

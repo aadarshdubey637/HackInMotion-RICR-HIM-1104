@@ -103,9 +103,7 @@ function HealthContent() {
       <div className="flex items-start justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-slate-900">{t('health.title')}</h1>
-          <p className="text-sm text-slate-600">
-            {t('health.subtitle')}
-          </p>
+          <p className="text-sm text-slate-600">{t('health.subtitle')}</p>
         </div>
       </div>
 
@@ -162,7 +160,10 @@ function HealthContent() {
             </p>
             <div className="space-y-1.5">
               {nearby.outbreaks.slice(0, 4).map((outbreak) => (
-                <div key={`${outbreak.name}-${outbreak.crop}`} className="flex items-center justify-between gap-2">
+                <div
+                  key={`${outbreak.name}-${outbreak.crop}`}
+                  className="flex items-center justify-between gap-2"
+                >
                   <span className="text-sm font-semibold text-amber-900">
                     {outbreak.name}{' '}
                     <span className="font-normal">
@@ -238,8 +239,7 @@ function ObservationForm({
     supportedCrops.forEach((s) => {
       const existing = crops.find(
         (c) =>
-          c.cropName.toLowerCase() === s.key ||
-          c.cropName.toLowerCase() === s.label.toLowerCase()
+          c.cropName.toLowerCase() === s.key || c.cropName.toLowerCase() === s.label.toLowerCase(),
       );
       list.push({
         id: existing ? existing.id : `new:${s.key}`,
@@ -277,7 +277,9 @@ function ObservationForm({
   const [image, setImage] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [submitProgress, setSubmitProgress] = useState<{ done: number; total: number } | null>(null);
+  const [submitProgress, setSubmitProgress] = useState<{ done: number; total: number } | null>(
+    null,
+  );
   const [error, setError] = useState<string | null>(null);
 
   // Close dropdown when clicking outside
@@ -382,7 +384,9 @@ function ObservationForm({
       setSubmitting(false);
       setSubmitProgress(null);
       setError(
-        err instanceof ApiError ? err.message : 'Could not save your observation. Please try again.',
+        err instanceof ApiError
+          ? err.message
+          : 'Could not save your observation. Please try again.',
       );
     }
   }
@@ -400,9 +404,7 @@ function ObservationForm({
         {error ? <Notice tone="warn">{error}</Notice> : null}
 
         <div>
-          <label className="label">
-            {t('health.cropSelect')}
-          </label>
+          <label className="label">{t('health.cropSelect')}</label>
           {/* Custom multi-select dropdown */}
           <div ref={dropdownRef} className="relative">
             {/* Trigger button */}
@@ -419,7 +421,10 @@ function ObservationForm({
                     : `${selectedCropIds.size} crops selected`}
               </span>
               <ChevronDown
-                className={cn('h-4 w-4 shrink-0 text-slate-400 transition-transform', dropdownOpen && 'rotate-180')}
+                className={cn(
+                  'h-4 w-4 shrink-0 text-slate-400 transition-transform',
+                  dropdownOpen && 'rotate-180',
+                )}
                 aria-hidden
               />
             </button>
@@ -443,7 +448,9 @@ function ObservationForm({
                     }
                     className="text-xs font-semibold text-brand-600 hover:underline"
                   >
-                    {selectedCropIds.size === selectableCrops.length ? 'Deselect all' : 'Select all'}
+                    {selectedCropIds.size === selectableCrops.length
+                      ? 'Deselect all'
+                      : 'Select all'}
                   </button>
                 </div>
 
@@ -456,7 +463,9 @@ function ObservationForm({
                         <label
                           className={cn(
                             'flex cursor-pointer items-center gap-3 px-3 py-2.5 text-sm transition',
-                            checked ? 'bg-brand-50 font-semibold text-brand-800' : 'text-slate-700 hover:bg-soil-50',
+                            checked
+                              ? 'bg-brand-50 font-semibold text-brand-800'
+                              : 'text-slate-700 hover:bg-soil-50',
                           )}
                         >
                           <input
@@ -570,9 +579,7 @@ function ObservationForm({
               like "yellow patches on leaves" — speaking is a first-class way
               to describe a problem here, not a convenience wrapper. */}
           <DictateButton
-            onText={(text) =>
-              setDescription((prev) => (prev ? `${prev.trim()} ${text}` : text))
-            }
+            onText={(text) => setDescription((prev) => (prev ? `${prev.trim()} ${text}` : text))}
           />
         </div>
 
@@ -615,7 +622,11 @@ function ObservationForm({
           <button type="button" onClick={onCancel} className="btn-secondary flex-1">
             {t('common.cancel')}
           </button>
-          <button type="submit" disabled={submitting || selectedCropIds.size === 0} className="btn-primary flex-1">
+          <button
+            type="submit"
+            disabled={submitting || selectedCropIds.size === 0}
+            className="btn-primary flex-1"
+          >
             {submitting ? <Spinner className="h-5 w-5" /> : null}
             {submitting && submitProgress
               ? `Checking ${submitProgress.done}/${submitProgress.total}…`
@@ -886,7 +897,9 @@ function CandidateCard({ candidate }: { candidate: DiagnosisCandidate }) {
             {t('health.fromPhoto')}
           </Badge>
         ) : null}
-        {candidate.source === 'image' ? <Badge tone="warn">{t('health.notInOurList')}</Badge> : null}
+        {candidate.source === 'image' ? (
+          <Badge tone="warn">{t('health.notInOurList')}</Badge>
+        ) : null}
         {details?.classification?.length ? (
           <Badge tone="neutral">{details.classification[0]}</Badge>
         ) : null}
@@ -932,10 +945,7 @@ function CandidateCard({ candidate }: { candidate: DiagnosisCandidate }) {
 
               {hasTreatment ? (
                 <div className="space-y-2">
-                  <TreatmentList
-                    title={t('health.treatmentChemical')}
-                    items={treatment.chemical}
-                  />
+                  <TreatmentList title={t('health.treatmentChemical')} items={treatment.chemical} />
                   <TreatmentList
                     title={t('health.treatmentBiological')}
                     items={treatment.biological}
@@ -1033,7 +1043,9 @@ function HealthLogCard({
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className={cn('rounded px-1.5 py-0.5 text-[11px] font-bold', style.bg, style.text)}>
+            <span
+              className={cn('rounded px-1.5 py-0.5 text-[11px] font-bold', style.bg, style.text)}
+            >
               {style.label}
             </span>
             {log.crop ? (

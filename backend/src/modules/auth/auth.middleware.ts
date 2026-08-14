@@ -10,27 +10,30 @@ export interface AuthenticatedRequest extends Request {
 export const authenticate = async (
   req: AuthenticatedRequest,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): Promise<void> => {
   try {
     const authHeader = req.headers.authorization;
-    
+
     if (!authHeader?.startsWith('Bearer ')) {
       throw new AuthenticationError('Authorization header required');
     }
-    
+
     const token = authHeader.slice(7);
     const payload = await verifyAccessToken(token);
-    
+
     req.user = payload;
     next();
   } catch (error) {
     if (error instanceof AuthenticationError) {
-      logger.warn({ 
-        ip: req.ip, 
-        path: req.path,
-        error: error.message 
-      }, 'Authentication failed');
+      logger.warn(
+        {
+          ip: req.ip,
+          path: req.path,
+          error: error.message,
+        },
+        'Authentication failed',
+      );
     }
     next(error);
   }
@@ -39,17 +42,17 @@ export const authenticate = async (
 export const optionalAuth = async (
   req: AuthenticatedRequest,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): Promise<void> => {
   try {
     const authHeader = req.headers.authorization;
-    
+
     if (authHeader?.startsWith('Bearer ')) {
       const token = authHeader.slice(7);
       const payload = await verifyAccessToken(token);
       req.user = payload;
     }
-    
+
     next();
   } catch {
     // An unreadable token is treated as no token: this middleware only
@@ -63,11 +66,11 @@ export const authorize = (...roles: string[]) => {
     if (!req.user) {
       throw new AuthenticationError('Authentication required');
     }
-    
+
     if (!roles.includes(req.user.role)) {
       throw new AuthenticationError('Insufficient permissions');
     }
-    
+
     next();
   };
 };

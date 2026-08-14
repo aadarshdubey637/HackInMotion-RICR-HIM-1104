@@ -52,13 +52,18 @@ export default function LoginPage() {
       {/* Left panel: Desktop only hero illustration with glassmorphism overlays */}
       <div
         className="relative hidden flex-col justify-between p-12 text-white bg-cover bg-center lg:flex"
-        style={{ backgroundImage: 'linear-gradient(to right, rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.45)), url("/images/smart_farm_hero.png")' }}
+        style={{
+          backgroundImage:
+            'linear-gradient(to right, rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.45)), url("/images/smart_farm_hero.png")',
+        }}
       >
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-600 shadow-md">
             <Sprout className="h-6 w-6 text-white" aria-hidden />
           </div>
-          <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-emerald-400 to-green-500 bg-clip-text text-transparent">Smart Farm</span>
+          <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-emerald-400 to-green-500 bg-clip-text text-transparent">
+            Smart Farm
+          </span>
         </div>
 
         <div className="space-y-6 max-w-md">
@@ -66,7 +71,8 @@ export default function LoginPage() {
             Empowering growth through smart advisories.
           </h2>
           <p className="text-slate-300 text-base">
-            Get weather-based irrigation guides, automatic crop health checks, and local market prices directly in your language.
+            Get weather-based irrigation guides, automatic crop health checks, and local market
+            prices directly in your language.
           </p>
 
           {/* Interactive glassmorphism stats cards */}
@@ -76,7 +82,9 @@ export default function LoginPage() {
                 <Droplet className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Soil Moisture</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  Soil Moisture
+                </p>
                 <p className="text-sm font-bold text-white">64% — Optimal level for Tomato</p>
               </div>
             </div>
@@ -86,7 +94,9 @@ export default function LoginPage() {
                 <TrendingUp className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Market Price Trend</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  Market Price Trend
+                </p>
                 <p className="text-sm font-bold text-white">Wheat prices rising by 5% in Lucknow</p>
               </div>
             </div>
@@ -99,7 +109,9 @@ export default function LoginPage() {
                 <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
                   Today&rsquo;s Advisory
                 </p>
-                <p className="text-sm font-bold text-white">Irrigate early morning to prevent evaporation</p>
+                <p className="text-sm font-bold text-white">
+                  Irrigate early morning to prevent evaporation
+                </p>
               </div>
             </div>
           </div>
@@ -123,9 +135,7 @@ export default function LoginPage() {
           <h2 className="text-center text-3xl font-extrabold tracking-tight text-white">
             {t('auth.loginTitle')}
           </h2>
-          <p className="mt-2 text-center text-sm text-slate-400">
-            {t('auth.loginSubtitle')}
-          </p>
+          <p className="mt-2 text-center text-sm text-slate-400">{t('auth.loginSubtitle')}</p>
         </div>
 
         <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
@@ -134,7 +144,10 @@ export default function LoginPage() {
               {error ? <Notice tone="warn">{error}</Notice> : null}
 
               <div>
-                <label htmlFor="identifier" className="block text-sm font-semibold text-slate-300 mb-1">
+                <label
+                  htmlFor="identifier"
+                  className="block text-sm font-semibold text-slate-300 mb-1"
+                >
                   Username or Gmail
                 </label>
                 <input
@@ -156,7 +169,10 @@ export default function LoginPage() {
               </div>
 
               <div>
-                <label htmlFor="password" className="block text-sm font-semibold text-slate-300 mb-1">
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-semibold text-slate-300 mb-1"
+                >
                   {t('auth.password')}
                 </label>
                 <div className="relative">
@@ -200,13 +216,15 @@ export default function LoginPage() {
 
               {/* Renders nothing when Google is not configured or unreachable. */}
               <GoogleSignIn />
-
             </form>
 
             <div className="pt-4 border-t border-slate-800 text-center">
               <p className="text-sm text-slate-400">
                 {t('auth.noAccount')}{' '}
-                <Link href="/register" className="font-bold text-brand-400 hover:text-brand-300 underline underline-offset-4">
+                <Link
+                  href="/register"
+                  className="font-bold text-brand-400 hover:text-brand-300 underline underline-offset-4"
+                >
                   {t('auth.register')}
                 </Link>
               </p>

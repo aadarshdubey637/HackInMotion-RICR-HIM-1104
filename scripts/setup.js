@@ -18,15 +18,23 @@ const { execSync } = require('child_process');
 
 const root = path.resolve(__dirname, '..');
 
-function log(msg) { console.log('\x1b[36m' + msg + '\x1b[0m'); }
-function ok(msg)  { console.log('\x1b[32m✔ ' + msg + '\x1b[0m'); }
-function warn(msg){ console.log('\x1b[33m⚠ ' + msg + '\x1b[0m'); }
-function fail(msg){ console.error('\x1b[31m✖ ' + msg + '\x1b[0m'); }
+function log(msg) {
+  console.log('\x1b[36m' + msg + '\x1b[0m');
+}
+function ok(msg) {
+  console.log('\x1b[32m✔ ' + msg + '\x1b[0m');
+}
+function warn(msg) {
+  console.log('\x1b[33m⚠ ' + msg + '\x1b[0m');
+}
+function fail(msg) {
+  console.error('\x1b[31m✖ ' + msg + '\x1b[0m');
+}
 
 // ── 1. Copy .env files ──────────────────────────────────────────
 
-const exampleEnv  = path.join(root, '.env.example');
-const backendEnv  = path.join(root, 'backend', '.env');
+const exampleEnv = path.join(root, '.env.example');
+const backendEnv = path.join(root, 'backend', '.env');
 const frontendEnv = path.join(root, 'frontend', '.env.local');
 
 log('\n[1/3] Setting up environment files…');
@@ -34,7 +42,9 @@ log('\n[1/3] Setting up environment files…');
 if (!fs.existsSync(backendEnv)) {
   fs.copyFileSync(exampleEnv, backendEnv);
   ok('Created backend/.env from .env.example');
-  warn('ACTION REQUIRED: Open backend/.env and set DATABASE_URL to the shared Atlas connection string.');
+  warn(
+    'ACTION REQUIRED: Open backend/.env and set DATABASE_URL to the shared Atlas connection string.',
+  );
   warn('Ask a teammate for the URL, or see README.md for local MongoDB setup.');
 } else {
   ok('backend/.env already exists — keeping it');

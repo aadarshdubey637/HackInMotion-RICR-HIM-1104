@@ -111,9 +111,13 @@ function scoreClimate(crop: CropProfile, climate: ClimateWindow | null): Dimensi
 
   const reasons: string[] = [];
   if (deviation < 0.4) {
-    reasons.push(`average ${climate.meanTempC}°C sits comfortably in this crop's ${min}-${max}°C range`);
+    reasons.push(
+      `average ${climate.meanTempC}°C sits comfortably in this crop's ${min}-${max}°C range`,
+    );
   } else if (deviation <= 1) {
-    reasons.push(`average ${climate.meanTempC}°C is workable but near the edge of the ${min}-${max}°C range`);
+    reasons.push(
+      `average ${climate.meanTempC}°C is workable but near the edge of the ${min}-${max}°C range`,
+    );
   } else {
     reasons.push(`average ${climate.meanTempC}°C is outside the ${min}-${max}°C this crop prefers`);
   }
@@ -192,8 +196,14 @@ function scoreSoil(crop: CropProfile, soilType: SoilType | null): DimensionScore
   return {
     score: workable ? 55 : 30,
     reason: workable
-      ? `${capitalise(soilType.toLowerCase())} soil is workable but not ideal — this crop prefers ${crop.preferredSoils.slice(0, 2).map((s) => s.toLowerCase()).join(' or ')}.`
-      : `This crop prefers ${crop.preferredSoils.slice(0, 2).map((s) => s.toLowerCase()).join(' or ')} soil, not ${soilType.toLowerCase()}.`,
+      ? `${capitalise(soilType.toLowerCase())} soil is workable but not ideal — this crop prefers ${crop.preferredSoils
+          .slice(0, 2)
+          .map((s) => s.toLowerCase())
+          .join(' or ')}.`
+      : `This crop prefers ${crop.preferredSoils
+          .slice(0, 2)
+          .map((s) => s.toLowerCase())
+          .join(' or ')} soil, not ${soilType.toLowerCase()}.`,
   };
 }
 
@@ -255,10 +265,7 @@ function scoreWater(
  * ₹7,000/quintal crop yielding 2 t/ha earns less than a ₹2,000/quintal crop
  * yielding 30 t/ha. Comparing raw prices would be actively misleading.
  */
-function scoreMarket(
-  incomePerHa: number | null,
-  allIncomes: number[],
-): DimensionScore {
+function scoreMarket(incomePerHa: number | null, allIncomes: number[]): DimensionScore {
   if (incomePerHa === null || allIncomes.length === 0) {
     return { score: 50, reason: 'No current price data for this crop.' };
   }
@@ -390,13 +397,20 @@ function weakestDimension(dims: DimensionScore[]): string {
 
 function buildCautions(
   crop: CropProfile,
-  scores: { climate: DimensionScore; season: DimensionScore; soil: DimensionScore; water: DimensionScore & { irrigationNeedMm: number | null } },
+  scores: {
+    climate: DimensionScore;
+    season: DimensionScore;
+    soil: DimensionScore;
+    water: DimensionScore & { irrigationNeedMm: number | null };
+  },
   input: ScoringInputs,
 ): string[] {
   const cautions: string[] = [];
 
   if (scores.season.score < 60) {
-    cautions.push(`Out of season — ${crop.label.toLowerCase()} is normally sown in ${crop.seasons.join(' or ')}.`);
+    cautions.push(
+      `Out of season — ${crop.label.toLowerCase()} is normally sown in ${crop.seasons.join(' or ')}.`,
+    );
   }
   if (scores.water.irrigationNeedMm && scores.water.irrigationNeedMm > 200) {
     cautions.push(

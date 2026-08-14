@@ -136,7 +136,8 @@ export function planFertilizer(input: FertilizerInputs): FertilizerPlan {
   ] as const) {
     if (!level) continue;
     if (factor > 1) adjustments.push(`${name} is ${level} in your soil — dose increased by 25%.`);
-    else if (factor < 1) adjustments.push(`${name} is ${level} in your soil — dose reduced by 25%, saving cost.`);
+    else if (factor < 1)
+      adjustments.push(`${name} is ${level} in your soil — dose reduced by 25%, saving cost.`);
     else adjustments.push(`${name} is medium in your soil — standard dose.`);
   }
 
@@ -180,8 +181,16 @@ export function planFertilizer(input: FertilizerInputs): FertilizerPlan {
   }
 
   const products: ProductRequirement[] = [];
-  if (ureaKg > 0.5) products.push(toProduct('urea', ureaKg, `${Math.round(nitrogenFromUrea)} kg nitrogen`));
-  if (dapKg > 0.5) products.push(toProduct('dap', dapKg, `${Math.round(pKg)} kg phosphorus + ${Math.round(nitrogenFromDap)} kg nitrogen`));
+  if (ureaKg > 0.5)
+    products.push(toProduct('urea', ureaKg, `${Math.round(nitrogenFromUrea)} kg nitrogen`));
+  if (dapKg > 0.5)
+    products.push(
+      toProduct(
+        'dap',
+        dapKg,
+        `${Math.round(pKg)} kg phosphorus + ${Math.round(nitrogenFromDap)} kg nitrogen`,
+      ),
+    );
   if (mopKg > 0.5) products.push(toProduct('mop', mopKg, `${Math.round(kKg)} kg potassium`));
 
   // ── Schedule ──

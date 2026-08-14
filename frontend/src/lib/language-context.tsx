@@ -154,7 +154,8 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     if (language === 'en') return text;
 
     // 1. Normalize and extract crop names
-    const cropRegex = /\b(rice|wheat|maize|cotton|soybean|chickpea|sugarcane|tomato|onion|mustard|groundnut|turmeric)\b/gi;
+    const cropRegex =
+      /\b(rice|wheat|maize|cotton|soybean|chickpea|sugarcane|tomato|onion|mustard|groundnut|turmeric)\b/gi;
     let cropValue = '';
     const textWithCropPlaceholder = text.replace(cropRegex, (match) => {
       cropValue = match;
@@ -162,7 +163,8 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     });
 
     // 2. Normalize and extract days
-    const dayRegex = /\b(on\s+)?(today|tomorrow|in \d+ days|in the next few days|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/gi;
+    const dayRegex =
+      /\b(on\s+)?(today|tomorrow|in \d+ days|in the next few days|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/gi;
     let dayValue = '';
     const textWithDayPlaceholder = textWithCropPlaceholder.replace(dayRegex, (match) => {
       dayValue = match;
@@ -202,7 +204,10 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     if (dayValue) {
       // Translate relative day/date
       let translatedDay = dayValue;
-      const lowerDay = dayValue.toLowerCase().replace(/^on\s+/, '').trim();
+      const lowerDay = dayValue
+        .toLowerCase()
+        .replace(/^on\s+/, '')
+        .trim();
       if (lowerDay === 'today') translatedDay = t('dayNames.today');
       else if (lowerDay === 'tomorrow') translatedDay = t('dayNames.tomorrow');
       else if (lowerDay === 'in the next few days') translatedDay = t('dayNames.nextFewDays');

@@ -24,15 +24,7 @@ import { AppShell } from '@/components/app-shell';
 import { useAuth } from '@/lib/auth-context';
 import { api, ApiError } from '@/lib/api';
 import type { PriceTrend, MarketLocation, MarketScope } from '@/lib/types';
-import {
-  Card,
-  ErrorState,
-  EmptyState,
-  Notice,
-  SkeletonCard,
-  Badge,
-  Stat,
-} from '@/components/ui';
+import { Card, ErrorState, EmptyState, Notice, SkeletonCard, Badge, Stat } from '@/components/ui';
 import { cn, formatRupees, formatDay } from '@/lib/utils';
 import { useTranslation } from '@/lib/language-context';
 
@@ -62,9 +54,7 @@ function MarketContent() {
   const states = Array.from(new Set(locations.map((l) => l.state))).sort();
   const districts = Array.from(
     new Set(
-      locations
-        .filter((l) => !selectedState || l.state === selectedState)
-        .map((l) => l.district),
+      locations.filter((l) => !selectedState || l.state === selectedState).map((l) => l.district),
     ),
   ).sort();
   const markets = Array.from(
@@ -81,7 +71,10 @@ function MarketContent() {
 
   // Load location options once
   useEffect(() => {
-    api.market.getLocations().then((res) => setLocations(res.locations)).catch(() => {});
+    api.market
+      .getLocations()
+      .then((res) => setLocations(res.locations))
+      .catch(() => {});
   }, []);
 
   // Reset child selections when parent changes
@@ -282,13 +275,16 @@ function MarketContent() {
   );
 }
 
-
 function TrendCard({ trend }: { trend: PriceTrend }) {
   const { t, tCrop, tNarrative } = useTranslation();
   const { statistics: stats, advice } = trend;
 
   const TrendIcon =
-    trend.direction === 'RISING' ? TrendingUp : trend.direction === 'FALLING' ? TrendingDown : Minus;
+    trend.direction === 'RISING'
+      ? TrendingUp
+      : trend.direction === 'FALLING'
+        ? TrendingDown
+        : Minus;
 
   const directionTone =
     trend.direction === 'RISING'
@@ -450,7 +446,9 @@ function TrendCard({ trend }: { trend: PriceTrend }) {
           label="Volatility"
           value={stats.volatilityPercent !== null ? `${stats.volatilityPercent}%` : '—'}
           hint={
-            stats.volatilityPercent !== null && stats.volatilityPercent > 12 ? 'Swinging a lot' : undefined
+            stats.volatilityPercent !== null && stats.volatilityPercent > 12
+              ? 'Swinging a lot'
+              : undefined
           }
         />
       </div>

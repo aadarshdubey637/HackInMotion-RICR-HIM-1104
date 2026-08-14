@@ -51,9 +51,9 @@ services:
     # Docker publishes on 0.0.0.0 and the database is reachable from the
     # network the laptop is on.
     ports:
-      - "127.0.0.1:27017:27017"
+      - '127.0.0.1:27017:27017'
     healthcheck:
-      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      test: ['CMD', 'mongosh', '--quiet', '--eval', "db.adminCommand('ping')"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -64,7 +64,7 @@ services:
   mongo-init:
     image: mongo:7
     container_name: smart-farm-mongo-init
-    restart: "no"
+    restart: 'no'
     depends_on:
       mongo:
         condition: service_healthy
@@ -72,19 +72,16 @@ services:
       MONGO_ROOT_USER: ${MONGO_ROOT_USER:?set MONGO_ROOT_USER in docker/.env}
       MONGO_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?set MONGO_ROOT_PASSWORD in docker/.env}
     # Idempotent: re-running the stack finds an initiated set and does nothing.
+    #
+    # The mongosh invocation is one unbroken line on purpose. In a YAML folded
+    # scalar (`>`) a line indented further than the first is kept verbatim,
+    # newline and all — so splitting this across lines for readability would
+    # hand bash `mongosh --host mongo:27017`, then try to run `-u` as its own
+    # command. `$$` is Compose's escape for a literal `$`, leaving the variable
+    # to be expanded by the shell inside the container.
     command: >
       bash -c '
-        mongosh --host mongo:27017
-          -u "$$MONGO_ROOT_USER" -p "$$MONGO_ROOT_PASSWORD" --authenticationDatabase admin
-          --quiet --eval "
-            try {
-              rs.status();
-              print(\"replica set already initiated\");
-            } catch (e) {
-              rs.initiate({ _id: \"rs0\", members: [{ _id: 0, host: \"mongo:27017\" }] });
-              print(\"replica set initiated\");
-            }
-          "
+        mongosh --host mongo:27017 -u "$$MONGO_ROOT_USER" -p "$$MONGO_ROOT_PASSWORD" --authenticationDatabase admin --quiet --eval "try { rs.status(); print(\"replica set already initiated\"); } catch (e) { rs.initiate({ _id: \"rs0\", members: [{ _id: 0, host: \"mongo:27017\" }] }); print(\"replica set initiated\"); }"
       '
 
   # ── API ─────────────────────────────────────────────────────────────────
@@ -113,7 +110,7 @@ services:
       EMAIL_USER: ${EMAIL_USER:-}
       EMAIL_APP_PASSWORD: ${EMAIL_APP_PASSWORD:-}
     ports:
-      - "3001:3001"
+      - '3001:3001'
     volumes:
       # Crop photos are written to disk. Without this they vanish on every
       # rebuild, leaving health-log rows pointing at files that no longer exist.
@@ -136,7 +133,7 @@ services:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001/api}
       NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
     ports:
-      - "3000:3000"
+      - '3000:3000'
     depends_on:
       - backend
 
