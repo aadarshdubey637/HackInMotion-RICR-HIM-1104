@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import Image from 'next/image';
 import { Sprout, Plus, X, Trash2, MapPin, Ruler, Layers } from 'lucide-react';
 import { AppShell } from '@/components/app-shell';
 import { useAuth } from '@/lib/auth-context';
@@ -16,7 +17,7 @@ import {
   Badge,
   SkeletonCard,
 } from '@/components/ui';
-import { cn, cropLabel, humanise, formatDate } from '@/lib/utils';
+import { cn, humanise, formatDate } from '@/lib/utils';
 import { useTranslation } from '@/lib/language-context';
 
 const CROP_STATUSES = [
@@ -37,7 +38,7 @@ export default function CropsPage() {
 
 function CropsContent() {
   const { currentFarm } = useAuth();
-  const { t, tCrop, tStage } = useTranslation();
+  const { t } = useTranslation();
   const [crops, setCrops] = useState<Crop[]>([]);
   const [supported, setSupported] = useState<Array<{ key: string; label: string }>>([]);
   const [loading, setLoading] = useState(true);
@@ -378,10 +379,12 @@ function CropCard({
       <div className="flex items-center gap-4 min-w-0 flex-1">
         {/* Left Thumbnail with glassmorphism overlay for stage */}
         <div className="relative w-20 h-20 shrink-0 rounded-2xl overflow-hidden shadow-inner border border-soil-100 bg-soil-50">
-          <img 
-            src={imageUrl} 
-            alt={crop.cropName} 
-            className="w-full h-full object-cover transition-transform duration-300 hover:scale-110" 
+          <Image
+            src={imageUrl}
+            alt={crop.cropName}
+            fill
+            sizes="80px"
+            className="object-cover transition-transform duration-300 hover:scale-110"
           />
           {/* Glassmorphism badge overlay at the bottom */}
           <div className="absolute inset-x-0 bottom-0 bg-slate-900/60 backdrop-blur-[2px] py-0.5 px-1 text-center">

@@ -51,7 +51,9 @@ export const optionalAuth = async (
     }
     
     next();
-  } catch (error) {
+  } catch {
+    // An unreadable token is treated as no token: this middleware only
+    // populates `req.user` when it can, and leaves rejection to `authenticate`.
     next();
   }
 };

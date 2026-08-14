@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import {
-  Sprout,
   Thermometer,
   CalendarDays,
   Layers,
@@ -17,7 +16,7 @@ import { AppShell } from '@/components/app-shell';
 import { useAuth } from '@/lib/auth-context';
 import { api, ApiError } from '@/lib/api';
 import type { RecommendationResult, CropRecommendation, DimensionScore } from '@/lib/types';
-import { Card, SectionHeading, ErrorState, Notice, SkeletonCard, Badge } from '@/components/ui';
+import { Card, ErrorState, Notice, SkeletonCard, Badge } from '@/components/ui';
 import { cn, formatRupees } from '@/lib/utils';
 
 export default function RecommendationsPage() {

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   Droplets,
   CloudSun,
@@ -416,10 +417,12 @@ function DashboardContent() {
                 <Card key={crop.id} className="flex items-center justify-between gap-4 p-4 hover:shadow-md transition-shadow duration-300">
                   <div className="flex items-center gap-3 min-w-0 flex-1">
                     <div className="relative w-12 h-12 shrink-0 rounded-xl overflow-hidden shadow-inner border border-soil-100 bg-soil-50">
-                      <img 
-                        src={imageUrl} 
-                        alt={crop.cropName} 
-                        className="w-full h-full object-cover" 
+                      <Image
+                        src={imageUrl}
+                        alt={crop.cropName}
+                        fill
+                        sizes="48px"
+                        className="object-cover"
                       />
                     </div>
                     <div className="min-w-0">

@@ -10,7 +10,7 @@
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../../common/prisma';
 import { logger } from '../../common/logger';
-import { NotFoundError, ValidationError } from '../../common/errors';
+import { NotFoundError } from '../../common/errors';
 import { resolveCrop, findCrop, supportedCrops } from '../../domain/crops';
 import type {
   CreateFarmInput,

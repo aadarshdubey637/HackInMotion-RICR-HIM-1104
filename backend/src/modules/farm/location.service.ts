@@ -1,4 +1,3 @@
-import { config } from '../../config';
 import { logger } from '../../common/logger';
 
 export interface LocationInfo {

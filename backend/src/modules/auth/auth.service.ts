@@ -93,7 +93,9 @@ function verifyToken(token: string): TokenPayload {
 
   try {
     decoded = jwt.verify(token, config.JWT_SECRET) as TokenPayload & { type?: string };
-  } catch (error) {
+  } catch {
+    // Deliberately not forwarding jwt's reason (expired vs malformed vs bad
+    // signature): the caller gets one indistinguishable message either way.
     throw new AuthenticationError('Invalid or expired token');
   }
 

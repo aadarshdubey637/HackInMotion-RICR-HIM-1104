@@ -33,7 +33,7 @@ import {
   Badge,
   Stat,
 } from '@/components/ui';
-import { cn, formatRupees, cropLabel, formatDay } from '@/lib/utils';
+import { cn, formatRupees, formatDay } from '@/lib/utils';
 import { useTranslation } from '@/lib/language-context';
 
 export default function MarketPage() {

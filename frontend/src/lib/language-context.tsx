@@ -24,6 +24,33 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
+/**
+ * One node in the nested translation tree: a leaf string, or a subtree of them.
+ *
+ * Naming this shape is what lets `walk` narrow with `typeof` at each step. The
+ * alternative — walking an `any` — silently permits indexing into a string,
+ * which is exactly the mistake the walk has to avoid.
+ */
+type TranslationNode = string | { [key: string]: TranslationNode };
+
+/**
+ * Follow a key path through the translation tree.
+ *
+ * Returns the node found, or `null` if any segment is missing or the path runs
+ * into a leaf before it is exhausted. Callers decide what a non-string result
+ * means for them; nothing here throws on a bad key.
+ */
+function walk(root: unknown, keys: string[]): TranslationNode | null {
+  let node = root as TranslationNode | undefined;
+
+  for (const key of keys) {
+    if (!node || typeof node !== 'object' || !(key in node)) return null;
+    node = node[key];
+  }
+
+  return node ?? null;
+}
+
 /** Narrow an arbitrary string to a language the app actually ships. */
 function asLanguage(value: string | null | undefined): Language | null {
   if (!value) return null;
@@ -87,25 +114,11 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
   const t = (path: string, variables?: Record<string, string | number>): string => {
     const keys = path.split('.');
-    let result: any = translations[language];
 
-    for (const key of keys) {
-      if (result && key in result) {
-        result = result[key];
-      } else {
-        // Fallback to English translation if available
-        let englishFallback: any = translations['en'];
-        for (const fallbackKey of keys) {
-          if (englishFallback && fallbackKey in englishFallback) {
-            englishFallback = englishFallback[fallbackKey];
-          } else {
-            englishFallback = null;
-            break;
-          }
-        }
-        return englishFallback || path;
-      }
-    }
+    // Selected language first, English second. A path that resolves to a
+    // subtree rather than a leaf is treated as missing, so a wrong key shows
+    // the key itself instead of rendering "[object Object]" to the farmer.
+    const result = walk(translations[language], keys) ?? walk(translations.en, keys);
 
     if (typeof result !== 'string') {
       return path;
@@ -171,10 +184,11 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
       return '{number}';
     });
 
-    // 4. Look up directly in narratives map (avoiding t() path dot-split bug)
-    const dict = (translations[language] as any)?.narratives;
-    const localizedTemplate = dict?.[normalizedTemplate];
-    if (!localizedTemplate) {
+    // 4. Look up directly in narratives map (avoiding t() path dot-split bug).
+    //    The key is a whole sentence and contains dots, so `t` cannot be used:
+    //    it would split the sentence on them and walk into nothing.
+    const localizedTemplate = walk(translations[language], ['narratives', normalizedTemplate]);
+    if (typeof localizedTemplate !== 'string') {
       return text;
     }
 

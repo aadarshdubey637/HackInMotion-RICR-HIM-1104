@@ -9,7 +9,6 @@ import {
   Check,
   Beaker,
   CloudRain,
-  Wind,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -38,7 +37,7 @@ import {
   Spinner,
   severityStyles,
 } from '@/components/ui';
-import { cn, formatDay, cropLabel, humanise } from '@/lib/utils';
+import { cn, formatDay, humanise } from '@/lib/utils';
 import { useTranslation } from '@/lib/language-context';
 
 export default function WeatherPage() {

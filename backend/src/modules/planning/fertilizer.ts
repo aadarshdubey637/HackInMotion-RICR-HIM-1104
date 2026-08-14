@@ -21,7 +21,7 @@
 
 import type { GrowthStage, SoilType } from '@prisma/client';
 import type { CropProfile } from '../../domain/crops';
-import { nutritionFor, FERTILISER_PRODUCTS, type NutrientPlan } from '../../domain/nutrition';
+import { nutritionFor, FERTILISER_PRODUCTS } from '../../domain/nutrition';
 
 export interface ProductRequirement {
   product: string;

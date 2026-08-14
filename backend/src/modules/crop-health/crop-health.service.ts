@@ -317,6 +317,33 @@ function getOutbreakGuidance(issueName: string, cropName: string): string[] {
 
 import { CreateCommunityReportInput } from './crop-health.schema';
 
+/**
+ * What we store in `HealthLog.analysisResult` for a farmer-submitted report.
+ *
+ * The column is Prisma `Json`, so it is `Prisma.JsonValue` on the way out —
+ * meaning it could be a string, a number or null as far as the type system
+ * knows. Naming the shape we actually write is what lets `readReportMeta`
+ * narrow it on read without reaching for `any`.
+ */
+interface CommunityReportMeta {
+  isCommunityReport?: boolean;
+  method?: string;
+  /** Free-text crop name, when the farmer's crop was not in our list. */
+  customCropName?: string | null;
+}
+
+/**
+ * Read `analysisResult` as our own metadata, tolerating anything else.
+ *
+ * Rows written by the vision pipeline hold a different shape entirely, and rows
+ * from an older build may hold neither — both must read as "no metadata" rather
+ * than throwing while grouping outbreaks.
+ */
+function readReportMeta(value: Prisma.JsonValue | null): CommunityReportMeta {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  return value as CommunityReportMeta;
+}
+
 export async function createCommunityReport(
   farmId: string,
   userId: string,
@@ -368,7 +395,7 @@ export async function createCommunityReport(
         method: 'manual_report',
         // Store the actual crop name so outbreak grouping uses the correct name
         customCropName: input.customCropName ?? null,
-      } as any,
+      } satisfies CommunityReportMeta as Prisma.InputJsonValue,
     },
   });
 
@@ -435,7 +462,7 @@ export async function nearbyOutbreaks(farmId: string, userId: string, radiusKm =
     const name = log.diseaseDetected ?? log.pestDetected;
     if (!name) continue;
     // Use the stored customCropName if available (community reports with typed crop name)
-    const meta = log.analysisResult as any;
+    const meta = readReportMeta(log.analysisResult);
     const cropName = meta?.customCropName?.trim() || log.crop.cropName;
     const key = `${name.toLowerCase()}|${cropName.toLowerCase()}`;
     const farmDist = filteredFarms.find((f) => f.id === log.farmId)?.distance ?? 0;

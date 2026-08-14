@@ -96,7 +96,9 @@ export default function LoginPage() {
                 <CheckCircle2 className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Today's Advisory</p>
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  Today&rsquo;s Advisory
+                </p>
                 <p className="text-sm font-bold text-white">Irrigate early morning to prevent evaporation</p>
               </div>
             </div>

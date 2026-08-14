@@ -2,8 +2,6 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import {
-  AlertTriangle,
-  Info,
   Check,
   Megaphone,
   PlusCircle,
@@ -40,7 +38,7 @@ export default function CommunityPage() {
 
 function CommunityContent() {
   const { currentFarm } = useAuth();
-  const { t, tCrop } = useTranslation();
+  const { tCrop } = useTranslation();
 
   // Outbreaks state
   const [data, setData] = useState<NearbyOutbreaks | null>(null);
@@ -143,14 +141,6 @@ function CommunityContent() {
     }
   };
 
-  // UI mappings
-  const severityTones = {
-    MILD: 'neutral',
-    MODERATE: 'warn',
-    SEVERE: 'warn',
-    CRITICAL: 'danger',
-  } as const;
-
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -226,7 +216,9 @@ function CommunityContent() {
                       ))}
                       <option value="__custom__">✏️ Other crop (type name)...</option>
                     </select>
-                    <p className="text-[11px] text-slate-400">Not in list? Select "Other crop" above.</p>
+                    <p className="text-[11px] text-slate-400">
+                      Not in list? Select &ldquo;Other crop&rdquo; above.
+                    </p>
                   </div>
                 ) : (
                   <div className="mt-1 space-y-1.5">
