@@ -1,0 +1,44 @@
+{
+  "name": "Smart Farm DSS",
+  "short_name": "Smart Farm",
+  "description": "Farm advisory: crops, weather, irrigation, health, market prices — works offline.",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#16a34a",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Today",
+      "url": "/dashboard",
+      "description": "Today's farm summary"
+    },
+    {
+      "name": "Weather",
+      "url": "/weather",
+      "description": "Weather and irrigation guidance"
+    },
+    {
+      "name": "Crop Health",
+      "url": "/health",
+      "description": "Log and diagnose crop issues"
+    }
+  ],
+  "categories": ["agriculture", "productivity"],
+  "lang": "en",
+  "dir": "ltr"
+}

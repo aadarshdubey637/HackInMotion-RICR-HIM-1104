@@ -19,7 +19,8 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
-import { useOnlineStatus } from '@/lib/offline';
+import { useOfflineState, describeAge } from '@/lib/offline';
+import { ensureFlushListener } from '@/lib/api';
 import { useTranslation } from '@/lib/language-context';
 import { cn } from '@/lib/utils';
 import { Spinner } from './ui';
@@ -53,8 +54,13 @@ export function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const { user, loading, farms, currentFarm, selectFarm, logout } = useAuth();
-  const online = useOnlineStatus();
+  const { online, pending, oldestCacheMs } = useOfflineState();
   const { t, syncFromProfile } = useTranslation();
+
+  // Register the queue-flush listener once the shell mounts.
+  useEffect(() => {
+    ensureFlushListener();
+  }, []);
   const [moreOpen, setMoreOpen] = useState(false);
 
   useEffect(() => {
@@ -181,9 +187,26 @@ export function AppShell({ children }: { children: ReactNode }) {
 
           {/* Connectivity banner — the app keeps working from cache. */}
           {!online ? (
-            <div className="flex items-center gap-2 bg-amber-100 px-4 py-2 text-xs font-semibold text-amber-900">
-              <WifiOff className="h-3.5 w-3.5 shrink-0" aria-hidden />
-              {t('common.offlineBanner')}
+            <div className="flex flex-col gap-0.5 bg-amber-100 px-4 py-2 text-xs font-semibold text-amber-900">
+              <div className="flex items-center gap-2">
+                <WifiOff className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                <span>
+                  {t('common.offlineBanner')}
+                  {oldestCacheMs !== null
+                    ? ` Data from ${describeAge(oldestCacheMs)}.`
+                    : ' No cached data available.'}
+                </span>
+              </div>
+              {pending > 0 ? (
+                <div className="ml-5 text-amber-800">
+                  {pending} action{pending === 1 ? '' : 's'} waiting to sync when you reconnect.
+                </div>
+              ) : null}
+            </div>
+          ) : pending > 0 ? (
+            <div className="flex items-center gap-2 bg-blue-50 px-4 py-2 text-xs font-semibold text-blue-800">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-blue-500" aria-hidden />
+              Syncing {pending} offline action{pending === 1 ? '' : 's'}…
             </div>
           ) : null}
         </header>
