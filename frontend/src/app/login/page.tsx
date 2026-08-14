@@ -31,12 +31,6 @@ export default function LoginPage() {
     }
   }
 
-  function useDemoAccount() {
-    setEmail('farmer@demo.com');
-    setPassword('demo1234');
-    setError(null);
-  }
-
   return (
     <div className="relative min-h-dvh bg-slate-900 lg:grid lg:grid-cols-2">
       {/* Mobile background blurred image */}
@@ -177,14 +171,6 @@ export default function LoginPage() {
               >
                 {submitting ? <Spinner className="h-5 w-5" /> : null}
                 {submitting ? t('common.loading') : t('auth.signIn')}
-              </button>
-
-              <button 
-                type="button" 
-                onClick={useDemoAccount} 
-                className="w-full text-slate-400 hover:text-white py-2 text-sm font-semibold transition duration-200 border border-slate-800 hover:border-slate-700 bg-slate-900/50 rounded-xl"
-              >
-                Use the demo account
               </button>
             </form>
 
