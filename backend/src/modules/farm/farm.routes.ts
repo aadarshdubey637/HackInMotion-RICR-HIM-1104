@@ -13,8 +13,10 @@ import {
   updateCropBody,
   cropIdParams,
   cropDashboardQuery,
+  locationQuery,
 } from './farm.schema';
 import * as service from './farm.service';
+import { reverseGeocode, getSoilType } from './location.service';
 
 export const farmRouter = Router();
 
@@ -29,6 +31,20 @@ farmRouter.get(
   '/supported-crops',
   handler(async (_req, res) => {
     ok(res, { crops: service.listSupportedCrops() });
+  }),
+);
+
+/** GET /api/farms/location-info — resolve address & soil from coordinates. */
+farmRouter.get(
+  '/location-info',
+  validateQuery(locationQuery),
+  handler(async (req, res) => {
+    const { latitude, longitude } = query(req, locationQuery);
+    const [location, soil] = await Promise.all([
+      reverseGeocode(latitude, longitude),
+      getSoilType(latitude, longitude),
+    ]);
+    ok(res, { location, soil });
   }),
 );
 

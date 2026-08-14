@@ -1,6 +1,13 @@
 import { z } from 'zod';
 import { objectId, boolParam } from '../../common/http';
 
+export const locationQuery = z.object({
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+});
+
+export type LocationQueryInput = z.infer<typeof locationQuery>;
+
 const SOIL_TYPES = ['SANDY', 'LOAMY', 'CLAY', 'SILTY', 'PEATY', 'CHALKY', 'MIXED'] as const;
 const CROP_STATUSES = [
   'PLANNED',
