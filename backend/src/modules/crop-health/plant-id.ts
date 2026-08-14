@@ -1,7 +1,11 @@
 /**
  * Plant.id v3 image analysis client.
  *
- * This is the one part of crop health that actually looks at the photograph.
+ * The hosted fallback for crop photos: the local Ollama model in
+ * ollama-vision.ts is tried first, and this runs only when that is unavailable
+ * and a key is configured. Trained on plant disease specifically, and it
+ * returns reference photographs, which no local model can.
+ *
  * Everything it returns is folded into the rule engine as an extra signal —
  * see diagnosis.ts for why it is a signal and not the answer.
  *
@@ -21,6 +25,7 @@
 
 import { logger } from '../../common/logger';
 import { config } from '../../config';
+import type { ImageAssessment, ImageFinding, VisionOptions } from './vision';
 
 /**
  * Languages Plant.id returns real localised content for, of the ones this app
@@ -43,45 +48,6 @@ const DETAIL_FIELDS = [
 ].join(',');
 
 const REQUEST_TIMEOUT_MS = 20_000;
-
-export interface PlantIdTreatment {
-  chemical: string[];
-  biological: string[];
-  prevention: string[];
-}
-
-export interface PlantIdFinding {
-  /** Scientific or family name, e.g. "Erysiphaceae". */
-  name: string;
-  /** 0-1 from the model. */
-  probability: number;
-  /** Farmer-facing names, e.g. ["Powdery Mildews"]. Often the useful one. */
-  commonNames: string[];
-  localName: string | null;
-  description: string | null;
-  treatment: PlantIdTreatment | null;
-  cause: string | null;
-  /** e.g. ["Fungi"] — separates a pathogen from a nutrient deficiency. */
-  classification: string[];
-  /** Reference photos of this problem, for the farmer to compare against. */
-  similarImages: string[];
-}
-
-export interface PlantIdAssessment {
-  findings: PlantIdFinding[];
-  /** False when the photo is not of a plant at all. */
-  isPlant: boolean;
-  isPlantProbability: number;
-  /** True when the model sees no disease. */
-  isHealthy: boolean;
-  isHealthyProbability: number;
-  /** Language the text above actually came back in. */
-  language: string;
-  /** True when we had to ask in English because the farmer's language is unsupported. */
-  languageFellBack: boolean;
-  /** Lets a stored assessment be re-read later without spending a credit. */
-  accessToken: string | null;
-}
 
 /** Shape of the bits of the v3 response we rely on. */
 interface RawResponse {
@@ -122,7 +88,7 @@ function toFinding(
   suggestion: NonNullable<
     NonNullable<NonNullable<RawResponse['result']>['disease']>['suggestions']
   >[number],
-): PlantIdFinding | null {
+): ImageFinding | null {
   if (typeof suggestion.name !== 'string' || typeof suggestion.probability !== 'number') {
     return null;
   }
@@ -165,8 +131,8 @@ function toFinding(
  */
 export async function assessPlantHealth(
   imageBase64: string,
-  options: { language?: string; latitude?: number; longitude?: number } = {},
-): Promise<PlantIdAssessment | null> {
+  options: VisionOptions = {},
+): Promise<ImageAssessment | null> {
   if (!config.PLANT_ID_API_KEY) return null;
 
   const { language, fellBack } = resolveLanguage(options.language);
@@ -215,10 +181,13 @@ export async function assessPlantHealth(
 
     const findings = (result.disease?.suggestions ?? [])
       .map(toFinding)
-      .filter((f): f is PlantIdFinding => f !== null)
+      .filter((f): f is ImageFinding => f !== null)
       .slice(0, 5);
 
     return {
+      provider: 'plant-id',
+      // A hosted API; the model behind it is not ours to name.
+      model: null,
       findings,
       isPlant: result.is_plant?.binary ?? true,
       isPlantProbability: result.is_plant?.probability ?? 1,
@@ -227,6 +196,11 @@ export async function assessPlantHealth(
       language,
       languageFellBack: fellBack,
       accessToken: body.access_token ?? null,
+      // Plant.id classifies; it does not describe what it saw. Only the local
+      // vision model returns symptom text for the rule engine to score.
+      observedSymptoms: [],
+      affectedParts: [],
+      imageQuality: null,
     };
   } catch (err) {
     logger.warn({ err }, 'Plant.id analysis unavailable; using rule engine alone');

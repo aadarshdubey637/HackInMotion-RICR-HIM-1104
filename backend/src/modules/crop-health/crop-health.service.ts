@@ -4,7 +4,7 @@
  * Pipeline for a new observation:
  *   1. Store the farmer's description and photo (never lose the record).
  *   2. Pull recent weather for the farm — epidemiological context.
- *   3. Optionally run Plant.id image analysis, if a key is configured.
+ *   3. Analyse the photo — the local Ollama vision model, or Plant.id.
  *   4. Run the rule-based differential engine over all available signals.
  *   5. Persist the diagnosis and raise an alert if it is serious.
  *
@@ -20,7 +20,7 @@ import { NotFoundError } from '../../common/errors';
 import { upsertWithoutTransaction } from '../../common/upsert';
 import { resolveCrop } from '../../domain/crops';
 import { getWeatherForFarm } from '../weather/weather.service';
-import { assessPlantHealth } from './plant-id';
+import { analyseCropImage } from './vision';
 import { diagnose, buildWeatherContext, type Diagnosis, type WeatherContext } from './diagnosis';
 import type {
   CreateObservationInput,
@@ -68,22 +68,33 @@ export async function createObservation(
   const { crop, isKnown } = resolveCrop(cropRecord.cropName);
 
   // The language the farmer is using, so image-analysis descriptions come back
-  // in it where Plant.id has them. Falls back to the stored profile language.
+  // in it. Falls back to the stored profile language.
   const user = await prisma.user
     .findUnique({ where: { id: userId }, select: { language: true } })
     .catch(() => null);
   const language = input.language ?? user?.language ?? 'en';
 
+  const observedAt = input.observedAt ? new Date(input.observedAt) : new Date();
+
   // Weather context and image analysis are independent — run them together.
   const [weather, external] = await Promise.all([
     weatherContextForFarm(farmId, farm.latitude, farm.longitude),
     image
-      ? assessPlantHealth(image.base64, {
+      ? analyseCropImage(image.base64, {
           language,
           // Regional priors: the same symptoms mean different things in
           // Punjab in January and in Kerala in July.
           latitude: farm.latitude,
           longitude: farm.longitude,
+          observedAt,
+          cropLabel: isKnown ? crop.label : cropRecord.cropName,
+          // Naming the problems we already know for this crop keeps the model's
+          // answer in our vocabulary, so an image finding corroborates a
+          // curated candidate instead of arriving as a separate unranked row.
+          knownProblems: isKnown
+            ? [...crop.diseases.map((d) => d.name), ...crop.pests.map((p) => p.name)]
+            : [],
+          description: input.description,
         })
       : Promise.resolve(null),
   ]);
@@ -104,7 +115,7 @@ export async function createObservation(
       farmId,
       cropId: input.cropId,
       parcelId: cropRecord.parcelId,
-      observedAt: input.observedAt ? new Date(input.observedAt) : new Date(),
+      observedAt,
       observationType: input.observationType,
       description: input.description,
       imageUrl: image?.url ?? null,

@@ -25,6 +25,23 @@ const envSchema = z.object({
   UPLOAD_DIR: z.string().default('uploads'),
   PUBLIC_URL: z.string().default('http://localhost:3001'),
 
+  // ── Local vision model (Ollama) ──
+  // Crop photos are analysed by a multimodal model running on this machine:
+  // no key, no per-photo cost, no image leaving the network. Enabled by
+  // default and probed before use, so a stopped Ollama simply falls through to
+  // the rule engine.
+  OLLAMA_BASE_URL: z.string().default('http://localhost:11434'),
+  OLLAMA_VISION_MODEL: z.string().default('gemma4:e4b'),
+  // Anything but false/0/no/off leaves it on.
+  OLLAMA_VISION_ENABLED: z
+    .string()
+    .optional()
+    .transform((value) => (value === undefined ? true : !/^(false|0|no|off)$/i.test(value.trim()))),
+  // Generous: a cold 9 GB model on a CPU-only machine can take a minute for
+  // its first photo. Subsequent ones are fast while OLLAMA_KEEP_ALIVE holds.
+  OLLAMA_TIMEOUT_MS: z.coerce.number().default(120_000),
+  OLLAMA_KEEP_ALIVE: z.string().default('10m'),
+
   // ── Optional third-party keys ──
   // Weather needs NO key (Open-Meteo). These are upgrade paths only.
   OPENWEATHER_API_KEY: z.string().optional(),
@@ -57,6 +74,8 @@ export const isProduction = config.NODE_ENV === 'production';
 
 /** Feature availability, derived from which keys are actually present. */
 export const features = {
+  /** Local crop-photo analysis. Availability is re-checked at request time. */
+  ollamaVision: config.OLLAMA_VISION_ENABLED,
   plantIdApi: Boolean(config.PLANT_ID_API_KEY),
   dataGovIn: Boolean(config.DATA_GOV_IN_API_KEY),
 } as const;

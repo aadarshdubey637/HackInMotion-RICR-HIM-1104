@@ -7,8 +7,9 @@
  * using a model we trained during a hackathon. Instead this is an
  * **evidence-weighted differential diagnosis** over three independent signals:
  *
- *   1. SYMPTOMS  — keyword matching of the farmer's own description against a
- *                  curated symptom vocabulary per disease/pest.
+ *   1. SYMPTOMS  — keyword matching against a curated symptom vocabulary per
+ *                  disease/pest. Two sources feed it: the farmer's own words,
+ *                  and the symptoms the vision model reads off the photograph.
  *   2. EPIDEMIOLOGY — whether recent weather at that farm actually favours the
  *                  candidate. Late blight needs cool wet weather; flagging it
  *                  during a dry spell would be wrong regardless of symptoms.
@@ -25,14 +26,20 @@
  *   - It cannot hallucinate a disease that is impossible for the crop or the
  *     weather, which an image model absolutely can.
  *
- * When a Plant.id API key is configured, its image analysis is folded in as an
- * additional weighted signal — it does not replace the reasoning above.
+ * Image analysis — the local Ollama vision model, or Plant.id — is folded in as
+ * additional weighted signal. It does not replace the reasoning above, and it
+ * contributes in two distinct ways:
+ *
+ *   - by *naming* a problem, which corroborates a curated candidate; and
+ *   - by *describing* what is visible, which feeds signal (1) above and so gets
+ *     cross-checked against weather and host susceptibility like any symptom
+ *     the farmer typed. A photograph is evidence here, never a verdict.
  */
 
 import type { HealthSeverity } from '@prisma/client';
 import type { CropProfile, DiseaseProfile, PestProfile, WeatherTriggers } from '../../domain/crops';
 import type { DailyWeather } from '../weather/openmeteo';
-import type { PlantIdAssessment, PlantIdFinding } from './plant-id';
+import type { ImageAssessment, ImageFinding } from './vision';
 import { expandRegionalSymptoms } from './symptom-lexicon';
 
 // ─────────────────────────── Types ───────────────────────────
@@ -74,9 +81,9 @@ export interface Candidate {
   actions: string[];
   explanation: string;
   /**
-   * Where this candidate came from. `image` means only Plant.id proposed it —
-   * it is not in our curated list for this crop, so it carries no weather or
-   * symptom corroboration and is labelled as such on screen.
+   * Where this candidate came from. `image` means only the image analysis
+   * proposed it — it is not in our curated list for this crop, so it carries no
+   * weather or symptom corroboration and is labelled as such on screen.
    */
   source: 'rules' | 'rules+image' | 'image';
   details?: CandidateDetails;
@@ -87,6 +94,8 @@ export interface Candidate {
     matchedKeywords: string[];
     weatherFavourable: boolean;
     imageProbability?: number;
+    /** Symptom score from the photo's description alone, when there was one. */
+    imageSymptomScore?: number;
   };
 }
 
@@ -101,19 +110,33 @@ export interface Diagnosis {
   nextSteps: string[];
   /** How much to trust this, 0-1. */
   confidence: number;
-  method: 'rule-engine' | 'rule-engine+plant-id';
+  method: 'rule-engine' | 'rule-engine+ollama-vision' | 'rule-engine+plant-id';
   /** Honest statement of what the analysis could and could not use. */
   limitations: string[];
   /** What the image analysis concluded, when a photo was analysed. */
   image?: {
+    /** Which engine looked at the photo. */
+    provider: 'ollama' | 'plant-id';
+    /** Model tag, when it ran locally. */
+    model: string | null;
     /** False when the photo is not of a plant — the farmer should retake it. */
     isPlant: boolean;
     /** True when the model saw no disease at all. */
     looksHealthy: boolean;
     /** Language the external descriptions came back in. */
     language: string;
-    /** Set when the farmer's language has no Plant.id content and we used English. */
+    /** Set when the farmer's language is unsupported and we used English. */
     languageFellBack: boolean;
+    /**
+     * What the model could actually see, shown to the farmer verbatim. This is
+     * the most checkable thing on the screen: they can look at the same leaf and
+     * agree or disagree, which they cannot do with a probability.
+     */
+    observedSymptoms: string[];
+    /** Parts of the plant affected, e.g. ["leaf", "fruit"]. */
+    affectedParts: string[];
+    /** How readable the photo was; "poor" means the advice is worth less. */
+    quality: 'good' | 'acceptable' | 'poor' | null;
   };
 }
 
@@ -199,6 +222,35 @@ function scoreSymptoms(
   // signal; a long list of weak ones should not reach certainty.
   const score = 1 - Math.exp(-weight / 3);
   return { score: round2(score), matched };
+}
+
+/**
+ * How much the vision model's reading of the photo counts, relative to the
+ * farmer standing in the field looking at the plant.
+ *
+ * Below 1 because the model's symptom list is inference from pixels — it can
+ * read a nutrient burn as a fungal lesion — while the farmer can turn the leaf
+ * over. High enough that a photo with no description still produces a real
+ * differential, which is the common case: taking a picture is easy, typing a
+ * paragraph about it on a phone is not.
+ */
+const PHOTO_SYMPTOM_WEIGHT = 0.8;
+
+/**
+ * Combine two independent readings of the same symptoms (noisy-OR).
+ *
+ * Either source alone can carry a candidate, agreement strengthens it, and the
+ * result can never exceed 1 — which straight addition would, turning "the
+ * farmer and the photo both mention brown rings" into false certainty.
+ */
+function combineEvidence(a: number, b: number): number {
+  return a + b - a * b;
+}
+
+/** Union of two keyword lists, order preserved, case-insensitively deduped. */
+function mergeKeywords(first: string[], second: string[]): string[] {
+  const seen = new Set(first.map((k) => k.toLowerCase()));
+  return [...first, ...second.filter((k) => !seen.has(k.toLowerCase()))];
 }
 
 // ─────────────────────── Weather matching ───────────────────────
@@ -334,7 +386,7 @@ const NAME_SYNONYMS: Record<string, string[]> = {
 };
 
 /** Every string Plant.id offers us for one finding, lowercased. */
-function findingAliases(finding: PlantIdFinding): string[] {
+function findingAliases(finding: ImageFinding): string[] {
   return [finding.name, finding.localName ?? '', ...finding.commonNames]
     .filter(Boolean)
     .map((s) => normalise(s));
@@ -347,7 +399,7 @@ function findingAliases(finding: PlantIdFinding): string[] {
  * Containment alone is too weak for short names — "rust" is a substring of
  * plenty — so single-word profile names must match a whole alias word.
  */
-function findingMatchesProfile(finding: PlantIdFinding, profileName: string): boolean {
+function findingMatchesProfile(finding: ImageFinding, profileName: string): boolean {
   const profile = normalise(profileName);
   const aliases = findingAliases(finding);
 
@@ -371,7 +423,7 @@ function findingMatchesProfile(finding: PlantIdFinding, profileName: string): bo
 }
 
 /** The name to show a farmer: a common name beats a fungal family. */
-function farmerFacingName(finding: PlantIdFinding): string {
+function farmerFacingName(finding: ImageFinding): string {
   const common = finding.commonNames.find((n) => n.trim().length > 0);
   if (common) {
     // Plant.id pluralises families ("Powdery Mildews"); singular reads better.
@@ -381,14 +433,18 @@ function farmerFacingName(finding: PlantIdFinding): string {
 }
 
 /** Insects are pests; fungi, bacteria and viruses are diseases. */
-function findingKind(finding: PlantIdFinding): 'disease' | 'pest' {
+function findingKind(finding: ImageFinding): 'disease' | 'pest' {
+  // The local model states the class outright; only Plant.id makes us infer it
+  // from taxonomy.
+  if (finding.kind) return finding.kind;
+
   const classification = finding.classification.map((c) => c.toLowerCase());
   const pestish = ['insecta', 'insect', 'arachnida', 'animalia', 'acari', 'nematoda'];
   return classification.some((c) => pestish.some((p) => c.includes(p))) ? 'pest' : 'disease';
 }
 
 /** Turn Plant.id's treatment advice into the engine's flat action list. */
-function treatmentActions(finding: PlantIdFinding): string[] {
+function treatmentActions(finding: ImageFinding): string[] {
   const treatment = finding.treatment;
   if (!treatment) return [];
   // Prevention last: it matters, but not before an active infection is dealt with.
@@ -404,7 +460,7 @@ export interface DiagnosisInput {
   weather: WeatherContext;
   hasImage: boolean;
   /** Optional Plant.id result, folded in as an extra signal. */
-  external?: PlantIdAssessment | null;
+  external?: ImageAssessment | null;
 }
 
 const SEVERITY_RANK: Record<HealthSeverity, number> = {
@@ -425,7 +481,15 @@ export function diagnose(input: DiagnosisInput): Diagnosis {
 
   const externalFindings = external?.findings ?? [];
   /** Findings that corroborated a curated profile, so we do not repeat them. */
-  const consumedFindings = new Set<PlantIdFinding>();
+  const consumedFindings = new Set<ImageFinding>();
+
+  /**
+   * What the vision model read off the photograph, as text the symptom matcher
+   * can score. This is the whole point of using a vision *language* model rather
+   * than a classifier: "concentric brown rings on lower leaves" is evidence the
+   * rest of the engine can reason about, where a bare label is not.
+   */
+  const photoSymptomText = (external?.observedSymptoms ?? []).join('. ');
 
   const candidates: Candidate[] = [];
 
@@ -433,8 +497,16 @@ export function diagnose(input: DiagnosisInput): Diagnosis {
     profile: DiseaseProfile | PestProfile,
     kind: 'disease' | 'pest',
   ): void => {
-    const symptoms = scoreSymptoms(description, profile.keywords);
+    const described = scoreSymptoms(description, profile.keywords);
+    const seen = photoSymptomText
+      ? scoreSymptoms(photoSymptomText, profile.keywords)
+      : { score: 0, matched: [] };
     const weatherVerdict = scoreWeather(profile.favouredBy, weather);
+
+    const symptoms = {
+      score: round2(combineEvidence(described.score, seen.score * PHOTO_SYMPTOM_WEIGHT)),
+      matched: mergeKeywords(described.matched, seen.matched),
+    };
 
     // An external image match for this same name is strong corroboration.
     const finding = externalFindings.find((f) => findingMatchesProfile(f, profile.name));
@@ -456,11 +528,17 @@ export function diagnose(input: DiagnosisInput): Diagnosis {
     if (!hasImage) confidence *= 0.9;
 
     const evidence: string[] = [];
-    if (symptoms.matched.length > 0) {
-      evidence.push(`You described: ${symptoms.matched.slice(0, 4).join(', ')}.`);
+    if (described.matched.length > 0) {
+      evidence.push(`You described: ${described.matched.slice(0, 4).join(', ')}.`);
     }
-    if (regional.matchedTerms.length > 0 && symptoms.matched.length > 0) {
+    if (regional.matchedTerms.length > 0 && described.matched.length > 0) {
       evidence.push(`Understood from your own words: ${regional.matchedTerms.slice(0, 4).join(', ')}.`);
+    }
+    // Named separately from the farmer's own words: two sources agreeing is the
+    // strongest thing this engine can show, and blurring them into one line
+    // hides that.
+    if (seen.matched.length > 0) {
+      evidence.push(`Seen in your photo: ${seen.matched.slice(0, 4).join(', ')}.`);
     }
     if (finding) {
       evidence.push(
@@ -485,7 +563,9 @@ export function diagnose(input: DiagnosisInput): Diagnosis {
         ? [...profile.actions, ...treatmentActions(finding).slice(0, 3)]
         : profile.actions,
       explanation: profile.explanation,
-      source: finding ? 'rules+image' : 'rules',
+      // The photo contributed if it named this problem *or* if what it saw
+      // matched this profile's symptoms.
+      source: finding || seen.matched.length > 0 ? 'rules+image' : 'rules',
       details: finding
         ? {
             scientificName: finding.name,
@@ -502,6 +582,7 @@ export function diagnose(input: DiagnosisInput): Diagnosis {
         matchedKeywords: symptoms.matched,
         weatherFavourable: weatherVerdict.favourable,
         ...(finding ? { imageProbability: finding.probability } : {}),
+        ...(seen.score > 0 ? { imageSymptomScore: seen.score } : {}),
       },
     });
   };
@@ -512,7 +593,7 @@ export function diagnose(input: DiagnosisInput): Diagnosis {
   // Anything the photo identified that our curated list for this crop does not
   // cover. Dropping these was the single biggest cause of "no problem
   // identified" on a photo the model had confidently diagnosed — our list is
-  // 40-odd problems, Plant.id knows around 90.
+  // 40-odd problems per crop, and both image engines range much wider.
   for (const finding of externalFindings) {
     if (consumedFindings.has(finding)) continue;
     if (finding.probability < 0.2) continue;
@@ -526,8 +607,10 @@ export function diagnose(input: DiagnosisInput): Diagnosis {
       // No symptom or weather corroboration, so we never let a photo alone
       // reach the confidence a fully-triangulated candidate can.
       confidence: round2(clamp(finding.probability * 0.75, 0, 0.8)),
-      // Severity is genuinely unknown for a problem outside our list.
-      severity: 'MODERATE',
+      // Outside our list there is no curated severity, so we take the model's
+      // own read of how bad it looks and fall back to MODERATE. Getting this
+      // wrong in the safe direction matters: SEVERE and above raises an alert.
+      severity: finding.severityHint ?? 'MODERATE',
       evidence: [
         `Identified from your photo (${Math.round(finding.probability * 100)}% match).`,
         `Not in our ${crop.label} problem list, so weather and your description could not be cross-checked.`,
@@ -574,6 +657,8 @@ export function diagnose(input: DiagnosisInput): Diagnosis {
 function assemble(candidates: Candidate[], input: DiagnosisInput): Diagnosis {
   const { crop, hasImage, description, external } = input;
 
+  const readSymptoms = external?.observedSymptoms ?? [];
+
   const limitations: string[] = [];
   if (!hasImage) {
     limitations.push('No photo was provided, so this is based on your description alone.');
@@ -583,29 +668,50 @@ function assemble(candidates: Candidate[], input: DiagnosisInput): Diagnosis {
       `${crop.label} is not in our detailed crop database, so only general checks were applied.`,
     );
   }
-  if (description.trim().length < 20) {
+  // Only worth asking for more words when the photo did not already supply
+  // them — a good close-up with no caption is not a thin observation.
+  if (description.trim().length < 20 && readSymptoms.length === 0) {
     limitations.push('A longer description of what you are seeing would improve accuracy.');
   }
   if (hasImage && !external) {
     limitations.push('Image analysis was unavailable, so the photo was stored but not analysed.');
   }
+  if (external?.imageQuality === 'poor') {
+    limitations.push(
+      'The photo was hard to read — blurred, dark or taken from too far away — so the reading from it is weaker than usual.',
+    );
+  }
+  if (external?.provider === 'ollama') {
+    limitations.push(
+      'The photo was examined on this device by a general-purpose vision model, not a specialist plant-disease model, so treat what it saw as a second opinion rather than a lab result.',
+    );
+  }
   if (external?.languageFellBack) {
     limitations.push(
-      'Detailed descriptions from image analysis are only published in English and Hindi, so those sections are in English.',
+      'Detailed descriptions from image analysis were not available in your language, so those sections are in English.',
     );
   }
   limitations.push(
     'This is guidance to help you check the right things — not a confirmed diagnosis. Consult your local extension officer for anything serious.',
   );
 
-  const method: Diagnosis['method'] = external ? 'rule-engine+plant-id' : 'rule-engine';
+  const method: Diagnosis['method'] = external
+    ? external.provider === 'ollama'
+      ? 'rule-engine+ollama-vision'
+      : 'rule-engine+plant-id'
+    : 'rule-engine';
 
   const imageSummary: Diagnosis['image'] = external
     ? {
+        provider: external.provider,
+        model: external.model,
         isPlant: external.isPlant,
         looksHealthy: external.isHealthy,
         language: external.language,
         languageFellBack: external.languageFellBack,
+        observedSymptoms: readSymptoms,
+        affectedParts: external.affectedParts,
+        quality: external.imageQuality,
       }
     : undefined;
 
@@ -647,10 +753,17 @@ function assemble(candidates: Candidate[], input: DiagnosisInput): Diagnosis {
       };
     }
 
+    // The photo showed something, but it matched nothing on this crop's list.
+    // Reporting "nothing found" would throw away the one genuinely useful
+    // thing we have — what the model could see.
+    const sawSomething = readSymptoms.length > 0;
+
     return {
       candidates: [],
       severity: 'MILD',
-      summary: 'No specific problem identified from what you described.',
+      summary: sawSomething
+        ? `Your photo shows ${readSymptoms.slice(0, 3).join(', ')}, but that does not match a known ${crop.label.toLowerCase()} problem closely enough to name one.`
+        : 'No specific problem identified from what you described.',
       nextSteps: [
         'Take a clear, close-up photo of the affected part in daylight.',
         'Describe what you see in more detail: the colour and shape of any marks, which leaves are affected (old or new), and whether it is spreading.',
