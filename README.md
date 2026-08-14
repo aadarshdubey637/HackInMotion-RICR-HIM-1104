@@ -1,6 +1,24 @@
 # Smart Farm DSS
 
+> **HackInMotion Hackathon** — Team **RICR-HIM-1104**
+
 AI-powered farm advisory: crop recommendations, weather-based irrigation, pest/disease alerts, fertilizer planning, yield prediction — works offline.
+
+---
+## deployment link
+frontend http://65.0.45.45:3000
+
+backend http://65.0.45.45:3001
+
+
+## Team
+
+| Name |
+|---|
+| Aadarsh Dubey | 
+|Harsh Kumar Verma| 
+| Aaryan |
+|Vijay Patel|
 
 ---
 
