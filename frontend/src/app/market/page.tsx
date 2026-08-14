@@ -23,7 +23,7 @@ import {
 import { AppShell } from '@/components/app-shell';
 import { useAuth } from '@/lib/auth-context';
 import { api, ApiError } from '@/lib/api';
-import type { PriceTrend } from '@/lib/types';
+import type { PriceTrend, MarketLocation, MarketScope } from '@/lib/types';
 import {
   Card,
   ErrorState,
@@ -51,71 +51,203 @@ function MarketContent() {
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedMarket, setSelectedMarket] = useState<string>('');
-  const [availableMarkets, setAvailableMarkets] = useState<string[]>([]);
 
-  const load = useCallback(async (marketVal?: string) => {
-    if (!currentFarm) return;
-    setError(null);
-    setLoading(true);
+  // Location hierarchy
+  const [locations, setLocations] = useState<MarketLocation[]>([]);
+  const [selectedState, setSelectedState] = useState('');
+  const [selectedDistrict, setSelectedDistrict] = useState('');
+  const [selectedMarket, setSelectedMarket] = useState('');
 
-    try {
-      const result = await api.market.farmTrends(currentFarm.id, marketVal || undefined);
-      setTrends(result.trends);
-      setMessage(result.message);
+  // Derived options
+  const states = Array.from(new Set(locations.map((l) => l.state))).sort();
+  const districts = Array.from(
+    new Set(
+      locations
+        .filter((l) => !selectedState || l.state === selectedState)
+        .map((l) => l.district),
+    ),
+  ).sort();
+  const markets = Array.from(
+    new Set(
+      locations
+        .filter(
+          (l) =>
+            (!selectedState || l.state === selectedState) &&
+            (!selectedDistrict || l.district === selectedDistrict),
+        )
+        .map((l) => l.marketName),
+    ),
+  ).sort();
 
-      if (!marketVal) {
-        const uniqueMarkets = Array.from(new Set(result.trends.flatMap((t) => t.markets)));
-        setAvailableMarkets(uniqueMarkets);
-      }
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Could not load market prices.');
-    } finally {
-      setLoading(false);
-    }
-  }, [currentFarm]);
-
+  // Load location options once
   useEffect(() => {
-    void load(selectedMarket);
-  }, [load, selectedMarket]);
+    api.market.getLocations().then((res) => setLocations(res.locations)).catch(() => {});
+  }, []);
+
+  // Reset child selections when parent changes
+  const handleStateChange = (val: string) => {
+    setSelectedState(val);
+    setSelectedDistrict('');
+    setSelectedMarket('');
+  };
+  const handleDistrictChange = (val: string) => {
+    setSelectedDistrict(val);
+    setSelectedMarket('');
+  };
+
+  const load = useCallback(
+    async (scope: MarketScope) => {
+      if (!currentFarm) return;
+      setError(null);
+      setLoading(true);
+      try {
+        const result = await api.market.farmTrends(currentFarm.id, scope);
+        setTrends(result.trends);
+        setMessage(result.message);
+      } catch (err) {
+        setError(err instanceof ApiError ? err.message : 'Could not load market prices.');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [currentFarm],
+  );
+
+  // Every level of the filter narrows the query, not just the mandi — picking a
+  // state alone aggregates that state's mandis.
+  useEffect(() => {
+    void load({
+      state: selectedState || undefined,
+      district: selectedDistrict || undefined,
+      market: selectedMarket || undefined,
+    });
+  }, [load, selectedState, selectedDistrict, selectedMarket]);
 
   if (!currentFarm) return null;
 
+  const currentScope: MarketScope = {
+    state: selectedState || undefined,
+    district: selectedDistrict || undefined,
+    market: selectedMarket || undefined,
+  };
+
   if (error && trends.length === 0) {
-    return <ErrorState message={error} onRetry={() => void load(selectedMarket)} />;
+    return <ErrorState message={error} onRetry={() => void load(currentScope)} />;
   }
+
+  const selectClass =
+    'w-full rounded-xl border border-soil-300 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 outline-none shadow-sm focus:border-brand-500 focus:ring-2 focus:ring-brand-200 transition-all cursor-pointer';
 
   return (
     <div className="space-y-5 animate-fade-up">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-slate-900">{t('prices.title')}</h1>
-          <p className="text-sm text-slate-600">
-            {t('prices.subtitle')}
-          </p>
-        </div>
-
-        {availableMarkets.length > 0 ? (
-          <div className="flex items-center gap-2">
-            <label htmlFor="market-select" className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-              {t('prices.selectMandi')}:
-            </label>
-            <select
-              id="market-select"
-              value={selectedMarket}
-              onChange={(e) => setSelectedMarket(e.target.value)}
-              className="rounded-xl border border-soil-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 outline-none shadow-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all cursor-pointer"
-            >
-              <option value="">{t('prices.allMandis')}</option>
-              {availableMarkets.map((mkt) => (
-                <option key={mkt} value={mkt}>
-                  {mkt}
-                </option>
-              ))}
-            </select>
-          </div>
-        ) : null}
+      {/* Header */}
+      <div>
+        <h1 className="text-xl font-bold text-slate-900">{t('prices.title')}</h1>
+        <p className="text-sm text-slate-600">{t('prices.subtitle')}</p>
       </div>
+
+      {/* Location Filters */}
+      {locations.length > 0 && (
+        <div className="rounded-2xl border border-soil-200 bg-white p-4 shadow-sm">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
+            {t('prices.selectMandi')}
+          </p>
+          <div className="grid gap-3 sm:grid-cols-3">
+            {/* State */}
+            <div className="flex flex-col gap-1">
+              <label htmlFor="state-select" className="text-xs font-semibold text-slate-600">
+                {t('prices.selectState')}
+              </label>
+              <select
+                id="state-select"
+                value={selectedState}
+                onChange={(e) => handleStateChange(e.target.value)}
+                className={selectClass}
+              >
+                <option value="">{t('prices.allStates')}</option>
+                {states.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* District */}
+            <div className="flex flex-col gap-1">
+              <label htmlFor="district-select" className="text-xs font-semibold text-slate-600">
+                {t('prices.selectDistrict')}
+              </label>
+              <select
+                id="district-select"
+                value={selectedDistrict}
+                onChange={(e) => handleDistrictChange(e.target.value)}
+                className={selectClass}
+                disabled={!selectedState}
+              >
+                <option value="">{t('prices.allDistricts')}</option>
+                {districts.map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Mandi */}
+            <div className="flex flex-col gap-1">
+              <label htmlFor="mandi-select" className="text-xs font-semibold text-slate-600">
+                {t('prices.mandi')}
+              </label>
+              <select
+                id="mandi-select"
+                value={selectedMarket}
+                onChange={(e) => setSelectedMarket(e.target.value)}
+                className={selectClass}
+                disabled={!selectedDistrict}
+              >
+                <option value="">{t('prices.allMandis')}</option>
+                {markets.map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Active filter badge */}
+          {(selectedState || selectedDistrict || selectedMarket) && (
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              {selectedState && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-brand-100 px-2.5 py-0.5 text-xs font-semibold text-brand-700">
+                  {selectedState}
+                </span>
+              )}
+              {selectedDistrict && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-brand-100 px-2.5 py-0.5 text-xs font-semibold text-brand-700">
+                  {selectedDistrict}
+                </span>
+              )}
+              {selectedMarket && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
+                  🏪 {selectedMarket}
+                </span>
+              )}
+              <button
+                onClick={() => {
+                  setSelectedState('');
+                  setSelectedDistrict('');
+                  setSelectedMarket('');
+                }}
+                className="text-xs text-slate-400 underline hover:text-slate-600 transition-colors"
+              >
+                {t('common.cancel')}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {loading ? (
         <>
@@ -126,7 +258,7 @@ function MarketContent() {
         <EmptyState
           icon={IndianRupee}
           title={t('prices.emptyPrices')}
-          message="Market prices"
+          message={message ?? 'Add a crop to your farm to see mandi prices for it.'}
         />
       ) : (
         <div className="space-y-5">
@@ -149,6 +281,7 @@ function MarketContent() {
     </div>
   );
 }
+
 
 function TrendCard({ trend }: { trend: PriceTrend }) {
   const { t, tCrop, tNarrative } = useTranslation();
@@ -176,6 +309,10 @@ function TrendCard({ trend }: { trend: PriceTrend }) {
     price: point.modalPrice,
   }));
 
+  // Commodity names carry spaces and brackets ("Bengal Gram(Gram)"), which make
+  // an invalid SVG id — url(#…) then fails to resolve and the area loses its fill.
+  const gradientId = `grad-${trend.commodity.replace(/[^a-zA-Z0-9]/g, '-')}`;
+
   return (
     <Card className="space-y-4">
       {/* Header */}
@@ -201,9 +338,19 @@ function TrendCard({ trend }: { trend: PriceTrend }) {
               </p>
             ) : null}
           </div>
-          <p className="text-xs text-slate-500">{trend.unit}</p>
+          <p className="text-xs text-slate-500">
+            {trend.unit}
+            {trend.scope ? ` · ${trend.scope.label}` : ''}
+          </p>
         </div>
       </div>
+
+      {/* The chosen mandi had too little history, so this card covers a wider area. */}
+      {trend.scope?.widened ? (
+        <Notice tone="info">
+          Not enough history for the mandi you picked, so these figures cover {trend.scope.label}.
+        </Notice>
+      ) : null}
 
       {/* Advice */}
       <div className={cn('rounded-xl border-l-4 p-3', signalStyle.bg, signalStyle.border)}>
@@ -232,7 +379,7 @@ function TrendCard({ trend }: { trend: PriceTrend }) {
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={chartData} margin={{ top: 8, right: 6, left: 0, bottom: 0 }}>
               <defs>
-                <linearGradient id={`grad-${trend.commodity}`} x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="#16a34a" stopOpacity={0.28} />
                   <stop offset="100%" stopColor="#16a34a" stopOpacity={0.02} />
                 </linearGradient>
@@ -276,7 +423,7 @@ function TrendCard({ trend }: { trend: PriceTrend }) {
                 dataKey="price"
                 stroke="#16a34a"
                 strokeWidth={2.5}
-                fill={`url(#grad-${trend.commodity})`}
+                fill={`url(#${gradientId})`}
               />
             </AreaChart>
           </ResponsiveContainer>

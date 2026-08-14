@@ -9,6 +9,14 @@ export const marketRouter = Router();
 
 marketRouter.use(authenticate);
 
+/** GET /api/market/locations — get all unique states, districts, and markets. */
+marketRouter.get(
+  '/locations',
+  handler(async (req, res) => {
+    ok(res, await service.getUniqueLocations());
+  }),
+);
+
 /** GET /api/market/farm/:farmId — price trends for every crop on this farm. */
 marketRouter.get(
   '/farm/:farmId',
@@ -16,8 +24,8 @@ marketRouter.get(
   validateQuery(farmTrendsQuery),
   handler(async (req, res) => {
     const { farmId } = params(req, farmIdParams);
-    const { market } = query(req, farmTrendsQuery);
-    ok(res, await service.getFarmPriceTrends(farmId, userId(req), market));
+    const { state, district, market } = query(req, farmTrendsQuery);
+    ok(res, await service.getFarmPriceTrends(farmId, userId(req), { state, district, market }));
   }),
 );
 
@@ -28,8 +36,8 @@ marketRouter.get(
   validateQuery(trendQuery),
   handler(async (req, res) => {
     const { commodity } = params(req, commodityParams);
-    const { days } = query(req, trendQuery);
-    ok(res, await service.getPriceTrend(commodity, days));
+    const { days, state, district, market } = query(req, trendQuery);
+    ok(res, await service.getPriceTrend(commodity, days, { state, district, market }));
   }),
 );
 

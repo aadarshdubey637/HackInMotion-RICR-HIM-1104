@@ -152,6 +152,7 @@ export function useSpeechRecognition(): SpeechState {
       recognition.maxAlternatives = 1;
 
       let finalText = '';
+      let lastHeardText = '';
       let settled = false;
 
       const finish = (value: string) => {
@@ -162,12 +163,12 @@ export function useSpeechRecognition(): SpeechState {
           setListening(false);
           setInterim('');
         }
-        resolve(value.trim());
+        resolve(value.trim() || lastHeardText);
       };
 
       const timer = setTimeout(() => {
         recognition.abort();
-        if (!finalText) setError('no-speech');
+        if (!finalText && !lastHeardText) setError('no-speech');
         finish(finalText);
       }, LISTEN_TIMEOUT_MS);
 
@@ -179,16 +180,26 @@ export function useSpeechRecognition(): SpeechState {
       };
 
       recognition.onresult = (event) => {
-        let partial = '';
-        for (let i = event.resultIndex; i < event.results.length; i += 1) {
+        let accumulatedFinal = '';
+        let accumulatedInterim = '';
+        for (let i = 0; i < event.results.length; i += 1) {
           const result = event.results[i];
           const text = result[0]?.transcript ?? '';
-          if (result.isFinal) finalText += text;
-          else partial += text;
+          if (result.isFinal) {
+            accumulatedFinal += text;
+          } else {
+            accumulatedInterim += text;
+          }
         }
+        
+        lastHeardText = (accumulatedFinal + accumulatedInterim).trim();
+
         if (session !== sessionRef.current) return;
-        setInterim(partial);
-        if (finalText) setTranscript(finalText.trim());
+        setInterim(accumulatedInterim);
+        if (accumulatedFinal) {
+          finalText = accumulatedFinal;
+          setTranscript(accumulatedFinal.trim());
+        }
       };
 
       recognition.onerror = (event) => {

@@ -34,6 +34,8 @@ import type {
   YieldHistoryEntry,
   RecordHarvestResult,
   NearbyOutbreaks,
+  MarketScope,
+  MarketLocation,
 } from './types';
 import { writeCache, readCache, enqueue, flushQueue } from './offline';
 
@@ -65,6 +67,25 @@ export const activeFarm = {
   set: (id: string) => localStorage.setItem(FARM_KEY, id),
   clear: () => localStorage.removeItem(FARM_KEY),
 };
+
+/**
+ * Serialise a mandi scope into a query string. Blank values are dropped so an
+ * unset filter means "all India" rather than matching an empty state name.
+ */
+function scopeQuery(scope: MarketScope, append = false): string {
+  const params = new URLSearchParams();
+  if (scope.state) params.set('state', scope.state);
+  if (scope.district) params.set('district', scope.district);
+  if (scope.market) params.set('market', scope.market);
+  const qs = params.toString();
+  if (!qs) return '';
+  return append ? `&${qs}` : `?${qs}`;
+}
+
+/** Stable cache-key fragment for a scope. */
+function scopeKey(scope: MarketScope): string {
+  return `${scope.state ?? ''}|${scope.district ?? ''}|${scope.market ?? ''}` || 'all';
+}
 
 // ─────────────────────────── Errors ───────────────────────────
 
@@ -425,17 +446,24 @@ export const api = {
   },
 
   market: {
-    farmTrends: (farmId: string, market?: string) =>
+    // The scope is part of the cache key, so each state/district/mandi keeps its
+    // own offline copy instead of overwriting one shared "trends" entry.
+    farmTrends: (farmId: string, scope: MarketScope = {}) =>
       cachedRequest<{ trends: PriceTrend[]; message: string | null }>(
-        `market:${farmId}:trends:${market ?? 'all'}`,
-        `/market/farm/${farmId}${market ? `?market=${encodeURIComponent(market)}` : ''}`,
+        `market:${farmId}:trends:${scopeKey(scope)}`,
+        `/market/farm/${farmId}${scopeQuery(scope)}`,
       ),
 
-    commodity: (commodity: string, days = 60) =>
+    commodity: (commodity: string, days = 60, scope: MarketScope = {}) =>
       cachedRequest<PriceTrend>(
-        `market:commodity:${commodity}:${days}`,
-        `/market/commodity/${encodeURIComponent(commodity)}?days=${days}`,
+        `market:commodity:${commodity}:${days}:${scopeKey(scope)}`,
+        `/market/commodity/${encodeURIComponent(commodity)}?days=${days}${scopeQuery(scope, true)}`,
       ),
+
+    getLocations: () => cachedRequest<{ locations: MarketLocation[] }>(
+      'market:locations',
+      '/market/locations',
+    ),
   },
 
   recommendations: {

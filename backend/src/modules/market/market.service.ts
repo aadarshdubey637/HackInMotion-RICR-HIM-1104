@@ -31,6 +31,12 @@ const DATA_GOV_RESOURCE = '9ef84268-d588-465a-a308-a864a43d0070';
 const DATA_GOV_BASE = `https://api.data.gov.in/resource/${DATA_GOV_RESOURCE}`;
 const REQUEST_TIMEOUT_MS = 15_000;
 
+/**
+ * Below this many rows a series cannot support a chart or a percent change, so
+ * a scoped query falls back to a wider geography instead of rendering nothing.
+ */
+const MIN_SERIES_POINTS = 5;
+
 // ─────────────────────────── Ingestion ───────────────────────────
 
 interface AgmarknetRecord {
@@ -203,13 +209,48 @@ export interface PriceTrend {
   dataPoints: number;
   markets: string[];
   lastUpdated: string | null;
+  /** The geographic level the returned series actually covers. */
+  scope: {
+    level: ScopeLevel;
+    /** Human-readable description of that level, e.g. "Indore mandi". */
+    label: string;
+    /** True when the requested scope had too little history and we widened. */
+    widened: boolean;
+  };
+}
+
+export type ScopeLevel = 'market' | 'district' | 'state' | 'all';
+
+function scopeLevelOf(scope: PriceScope): ScopeLevel {
+  if (scope.market) return 'market';
+  if (scope.district) return 'district';
+  if (scope.state) return 'state';
+  return 'all';
+}
+
+function scopeLabel(level: ScopeLevel, scope: PriceScope): string {
+  if (level === 'market' && scope.market) return `${scope.market} mandi`;
+  if (level === 'district' && scope.district) return `${scope.district} district`;
+  if (level === 'state' && scope.state) return scope.state;
+  return 'All mandis';
+}
+
+/**
+ * Optional geographic narrowing for a trend query. Any subset may be given —
+ * state alone aggregates every mandi in that state, market alone pins a single
+ * mandi. Omitting all three gives the all-India aggregate.
+ */
+export interface PriceScope {
+  state?: string;
+  district?: string;
+  market?: string;
 }
 
 /**
  * Price trend for a commodity, with selling guidance.
  * Aggregates across markets by day (mean modal price) to smooth mandi-level noise.
  */
-export async function getPriceTrend(commodity: string, days = 60, marketName?: string): Promise<PriceTrend> {
+export async function getPriceTrend(commodity: string, days = 60, scope: PriceScope = {}): Promise<PriceTrend> {
   const since = new Date(Date.now() - days * 86_400_000);
 
   const whereClause: Prisma.PriceHistoryWhereInput = {
@@ -217,14 +258,44 @@ export async function getPriceTrend(commodity: string, days = 60, marketName?: s
     priceDate: { gte: since },
   };
 
-  if (marketName) {
-    whereClause.marketName = marketName;
+  // Narrowest given filter wins implicitly — all three are ANDed, and the
+  // frontend only ever sends a consistent state → district → mandi chain.
+  if (scope.state) whereClause.state = scope.state;
+  if (scope.district) whereClause.district = scope.district;
+  if (scope.market) whereClause.marketName = scope.market;
+
+  // A newly-listed mandi can hold a single day's row, which is not enough to
+  // draw a chart or compute a change. Try the requested scope first, then widen
+  // step by step rather than showing an empty card — and report which level we
+  // ended up using so the UI can say so.
+  const levels: Array<{ level: ScopeLevel; where: Prisma.PriceHistoryWhereInput }> = [
+    { level: scopeLevelOf(scope), where: whereClause },
+  ];
+  const base = { commodity, priceDate: { gte: since } };
+  if (scope.market && (scope.district || scope.state)) {
+    levels.push({
+      level: scope.district ? 'district' : 'state',
+      where: {
+        ...base,
+        ...(scope.district ? { district: scope.district } : {}),
+        ...(scope.state ? { state: scope.state } : {}),
+      },
+    });
+  }
+  if (scope.district && scope.state) {
+    levels.push({ level: 'state', where: { ...base, state: scope.state } });
+  }
+  if (scope.state || scope.district || scope.market) {
+    levels.push({ level: 'all', where: base });
   }
 
-  const rows = await prisma.priceHistory.findMany({
-    where: whereClause,
-    orderBy: { priceDate: 'asc' },
-  });
+  let rows: Awaited<ReturnType<typeof prisma.priceHistory.findMany>> = [];
+  let appliedLevel: ScopeLevel = levels[0].level;
+  for (const candidate of levels) {
+    rows = await prisma.priceHistory.findMany({ where: candidate.where, orderBy: { priceDate: 'asc' } });
+    appliedLevel = candidate.level;
+    if (rows.length >= MIN_SERIES_POINTS) break;
+  }
 
   const unit = rows[0]?.unit ?? 'Rs/quintal';
   const isSeeded = rows.some((r) => r.source === 'seed');
@@ -274,6 +345,11 @@ export async function getPriceTrend(commodity: string, days = 60, marketName?: s
     dataPoints: series.length,
     markets: [...new Set(rows.map((r) => r.marketName))].slice(0, 10),
     lastUpdated: latestRow?.priceDate.toISOString() ?? null,
+    scope: {
+      level: appliedLevel,
+      label: scopeLabel(appliedLevel, scope),
+      widened: appliedLevel !== scopeLevelOf(scope),
+    },
   };
 }
 
@@ -415,7 +491,7 @@ function buildAdvice(
 // ─────────────────────── Farm-scoped queries ───────────────────────
 
 /** Price trends for every crop on a farm — powers the dashboard's market card. */
-export async function getFarmPriceTrends(farmId: string, userId: string, marketName?: string) {
+export async function getFarmPriceTrends(farmId: string, userId: string, scope: PriceScope = {}) {
   const farm = await prisma.farm.findFirst({
     where: { id: farmId, userId },
     include: { crops: { select: { id: true, cropName: true, status: true } } },
@@ -447,7 +523,7 @@ export async function getFarmPriceTrends(farmId: string, userId: string, marketN
   const trends = await Promise.all(
     [...commodities.entries()].map(async ([commodity, meta]) => ({
       ...meta,
-      ...(await getPriceTrend(commodity, 60, marketName)),
+      ...(await getPriceTrend(commodity, 60, scope)),
     })),
   );
 
@@ -511,16 +587,53 @@ function seededNoise(seed: string, index: number): number {
 
 export async function seedPriceHistory(days = 90): Promise<number> {
   const markets = [
-    { marketName: 'Lucknow', state: 'Uttar Pradesh', district: 'Lucknow' },
-    { marketName: 'Kanpur', state: 'Uttar Pradesh', district: 'Kanpur Nagar' },
-    { marketName: 'Jaipur', state: 'Rajasthan', district: 'Jaipur' },
-    { marketName: 'Nashik', state: 'Maharashtra', district: 'Nashik' },
-    { marketName: 'Bathinda', state: 'Punjab', district: 'Bathinda' },
-    { marketName: 'Kurnool', state: 'Andhra Pradesh', district: 'Kurnool' },
-    { marketName: 'Burdwan', state: 'West Bengal', district: 'Purba Bardhaman' },
-    { marketName: 'Indore', state: 'Madhya Pradesh', district: 'Indore' },
-    { marketName: 'Rajkot', state: 'Gujarat', district: 'Rajkot' },
+    // Madhya Pradesh
+    { marketName: 'Indore',    state: 'Madhya Pradesh', district: 'Indore' },
+    { marketName: 'Bhopal',    state: 'Madhya Pradesh', district: 'Bhopal' },
+    { marketName: 'Ujjain',    state: 'Madhya Pradesh', district: 'Ujjain' },
+    { marketName: 'Dewas',     state: 'Madhya Pradesh', district: 'Dewas' },
+    { marketName: 'Jabalpur',  state: 'Madhya Pradesh', district: 'Jabalpur' },
+    { marketName: 'Sagar',     state: 'Madhya Pradesh', district: 'Sagar' },
+    { marketName: 'Gwalior',   state: 'Madhya Pradesh', district: 'Gwalior' },
+    // Uttar Pradesh
+    { marketName: 'Lucknow',   state: 'Uttar Pradesh', district: 'Lucknow' },
+    { marketName: 'Kanpur',    state: 'Uttar Pradesh', district: 'Kanpur Nagar' },
+    { marketName: 'Agra',      state: 'Uttar Pradesh', district: 'Agra' },
+    { marketName: 'Varanasi',  state: 'Uttar Pradesh', district: 'Varanasi' },
+    { marketName: 'Meerut',    state: 'Uttar Pradesh', district: 'Meerut' },
+    { marketName: 'Mathura',   state: 'Uttar Pradesh', district: 'Mathura' },
+    // Rajasthan
+    { marketName: 'Jaipur',    state: 'Rajasthan', district: 'Jaipur' },
+    { marketName: 'Jodhpur',   state: 'Rajasthan', district: 'Jodhpur' },
+    { marketName: 'Kota',      state: 'Rajasthan', district: 'Kota' },
+    { marketName: 'Ajmer',     state: 'Rajasthan', district: 'Ajmer' },
+    { marketName: 'Bikaner',   state: 'Rajasthan', district: 'Bikaner' },
+    // Maharashtra
+    { marketName: 'Nashik',    state: 'Maharashtra', district: 'Nashik' },
+    { marketName: 'Pune',      state: 'Maharashtra', district: 'Pune' },
+    { marketName: 'Nagpur',    state: 'Maharashtra', district: 'Nagpur' },
+    { marketName: 'Solapur',   state: 'Maharashtra', district: 'Solapur' },
+    { marketName: 'Latur',     state: 'Maharashtra', district: 'Latur' },
+    // Punjab
+    { marketName: 'Bathinda',  state: 'Punjab', district: 'Bathinda' },
+    { marketName: 'Amritsar',  state: 'Punjab', district: 'Amritsar' },
+    { marketName: 'Ludhiana',  state: 'Punjab', district: 'Ludhiana' },
+    { marketName: 'Patiala',   state: 'Punjab', district: 'Patiala' },
+    // Andhra Pradesh
+    { marketName: 'Kurnool',   state: 'Andhra Pradesh', district: 'Kurnool' },
+    { marketName: 'Guntur',    state: 'Andhra Pradesh', district: 'Guntur' },
+    { marketName: 'Vijayawada', state: 'Andhra Pradesh', district: 'Krishna' },
+    // Gujarat
+    { marketName: 'Rajkot',    state: 'Gujarat', district: 'Rajkot' },
+    { marketName: 'Ahmedabad', state: 'Gujarat', district: 'Ahmedabad' },
+    { marketName: 'Surat',     state: 'Gujarat', district: 'Surat' },
+    { marketName: 'Junagadh',  state: 'Gujarat', district: 'Junagadh' },
+    // West Bengal
+    { marketName: 'Burdwan',   state: 'West Bengal', district: 'Purba Bardhaman' },
+    { marketName: 'Kolkata',   state: 'West Bengal', district: 'Kolkata' },
+    { marketName: 'Murshidabad', state: 'West Bengal', district: 'Murshidabad' },
   ];
+
 
   const today = new Date();
   today.setUTCHours(0, 0, 0, 0);
@@ -549,9 +662,11 @@ export async function seedPriceHistory(days = 90): Promise<number> {
       const modal = Math.round(base * seasonal * (1 + drift + daily));
       const spread = Math.round(modal * 0.06);
 
-      for (const [m, market] of markets.entries()) {
-        // Give each market a small unique persistent offset.
-        const offsetPct = 0.01 + ((m % 5) - 2) * 0.008; // unique offsets: -0.6%, +0.2%, +1%, +1.8%, +2.6%...
+      for (const market of markets) {
+        // Persistent per-mandi premium/discount, derived from the mandi name so
+        // every mandi reads differently (an index-modulo offset made mandis five
+        // apart in the list quote identical prices).
+        const offsetPct = seededNoise(market.marketName, 0) * 0.03;
         const offset = Math.round(modal * offsetPct);
         const marketModal = modal + offset;
 
@@ -572,10 +687,67 @@ export async function seedPriceHistory(days = 90): Promise<number> {
   // Replace any previous seed run wholesale. Real AGMARKNET rows are matched
   // on `source` and left untouched, so live data is never clobbered.
   await prisma.priceHistory.deleteMany({ where: { source: 'seed' } });
-  const result = await prisma.priceHistory.createMany({ data: rows });
 
-  logger.info({ created: result.count }, 'Seeded price history');
-  return result.count;
+  // Insert in chunks. A single createMany with ~40k documents exceeds MongoDB's
+  // 16 MB command limit, and the whole call fails — which is how this table
+  // ended up effectively empty, leaving every chart with one data point.
+  // (`skipDuplicates` is unsupported on MongoDB, so a chunk that collides with a
+  // live AGMARKNET row is retried one row at a time and the clash is skipped.)
+  const CHUNK = 1_000;
+  let created = 0;
+  for (let start = 0; start < rows.length; start += CHUNK) {
+    const chunk = rows.slice(start, start + CHUNK);
+    try {
+      const result = await prisma.priceHistory.createMany({ data: chunk });
+      created += result.count;
+    } catch {
+      for (const row of chunk) {
+        try {
+          await prisma.priceHistory.create({ data: row });
+          created += 1;
+        } catch {
+          // Already covered by a real observation — leave it alone.
+        }
+      }
+    }
+  }
+
+  logger.info({ created, attempted: rows.length }, 'Seeded price history');
+  return created;
+}
+
+/**
+ * State → district → mandi options for the price filter.
+ *
+ * Uses `groupBy` rather than `findMany({ distinct })`: on MongoDB Prisma applies
+ * `distinct` in memory after fetching every matching document, which means
+ * pulling the whole price table on each page load. `groupBy` pushes the
+ * aggregation into the database and gives us the per-mandi row count for free.
+ */
+export async function getUniqueLocations() {
+  const groups = await prisma.priceHistory.groupBy({
+    by: ['state', 'district', 'marketName'],
+    _count: { _all: true },
+  });
+
+  const locations = groups
+    .map((g) => ({
+      state: g.state,
+      district: g.district,
+      marketName: g.marketName,
+      dataPoints: g._count._all,
+    }))
+    // A mandi with a day or two of rows cannot produce a chart, and offering it
+    // in the dropdown only leads to an empty card.
+    .filter((l) => l.dataPoints >= MIN_SERIES_POINTS && l.state !== 'Unknown')
+    .sort(
+      (a, b) =>
+        a.state.localeCompare(b.state) ||
+        a.district.localeCompare(b.district) ||
+        a.marketName.localeCompare(b.marketName),
+    );
+
+  return { locations };
 }
 
 // ─────────────────────────── Utils ───────────────────────────

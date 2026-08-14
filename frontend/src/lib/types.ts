@@ -315,6 +315,23 @@ export interface PriceTrend {
   dataPoints: number;
   markets: string[];
   lastUpdated: string | null;
+  scope: { level: MarketScopeLevel; label: string; widened: boolean };
+}
+
+export type MarketScopeLevel = 'market' | 'district' | 'state' | 'all';
+
+/** Mandi filter sent with a price query. Any subset may be set. */
+export interface MarketScope {
+  state?: string;
+  district?: string;
+  market?: string;
+}
+
+export interface MarketLocation {
+  state: string;
+  district: string;
+  marketName: string;
+  dataPoints: number;
 }
 
 // ─────────────────── Crop recommendations ───────────────────

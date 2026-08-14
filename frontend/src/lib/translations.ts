@@ -240,6 +240,10 @@ export const translations = {
       priceHistoryChart: 'Price Trend (Last 30 Days)',
       selectMandi: 'Select Mandi / Market',
       allMandis: 'All Mandis (Average)',
+      selectState: 'Select State',
+      selectDistrict: 'Select District',
+      allStates: 'All States',
+      allDistricts: 'All Districts',
     },
     crops: {
       title: 'Your farm profile',
@@ -554,6 +558,10 @@ export const translations = {
       priceHistoryChart: 'भाव रुझान (पिछले 30 दिन)',
       selectMandi: 'मंडी / बाजार चुनें',
       allMandis: 'सभी मंडियां (औसत)',
+      selectState: 'राज्य चुनें',
+      selectDistrict: 'जिला चुनें',
+      allStates: 'सभी राज्य',
+      allDistricts: 'सभी जिले',
     },
     crops: {
       title: 'आपके खेत का प्रोफाइल',
