@@ -7,6 +7,11 @@ node_modules/
 .env
 .env.local
 .env.*.local
+# Editor and hand-made backups of a .env hold exactly the same secrets as the
+# original, and are easy to create by accident while rotating a key.
+.env.bak
+*.env.bak
+.env.save
 !.env.example
 
 # Build output

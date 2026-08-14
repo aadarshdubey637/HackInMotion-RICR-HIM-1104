@@ -8,13 +8,48 @@ import { z } from 'zod';
  * has a working default. This is deliberate: a missing third-party key must
  * degrade one feature, never prevent the server from booting.
  */
+/**
+ * Values that have appeared in this repository's example files.
+ *
+ * Matched case-insensitively and by prefix, so an edited-but-not-really
+ * placeholder ("REPLACE_WITH...-v2") is still caught.
+ */
+const PLACEHOLDER_SECRETS = [
+  'replace_with',
+  'dev-only-secret',
+  'your-super-secret',
+  'change-in-production',
+  'changeme',
+];
+
+function isPlaceholderSecret(value: string): boolean {
+  const normalised = value.trim().toLowerCase();
+  return PLACEHOLDER_SECRETS.some((placeholder) => normalised.includes(placeholder));
+}
+
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().default(3001),
 
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
 
-  JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters'),
+  /**
+   * Signs every access and refresh token, so knowing it means being able to
+   * mint one for any account.
+   *
+   * The length check alone is not enough. `npm run setup` copies
+   * `.env.example` to `backend/.env`, and a placeholder long enough to satisfy
+   * `min(32)` would sail through — leaving a server signing tokens with a
+   * string published in the repository. So known placeholders are rejected by
+   * name, and the failure is at boot rather than silent.
+   */
+  JWT_SECRET: z
+    .string()
+    .min(32, 'JWT_SECRET must be at least 32 characters')
+    .refine((value) => !isPlaceholderSecret(value), {
+      message:
+        'JWT_SECRET is still the example placeholder. Generate a real one: openssl rand -base64 48',
+    }),
   JWT_EXPIRES_IN: z.string().default('7d'),
   BCRYPT_ROUNDS: z.coerce.number().default(10),
 

@@ -5,8 +5,11 @@ FROM node:20-alpine AS base
 FROM base AS deps
 WORKDIR /app
 
+# `npm install`, not `npm ci`: the lockfile lives at the repo root because this
+# is an npm workspace, so it is not part of this build context and `npm ci`
+# would abort for want of one.
 COPY package.json package-lock.json* ./
-RUN npm ci
+RUN npm install
 
 # Rebuild the source code only when needed
 FROM base AS builder

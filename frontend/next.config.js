@@ -2,6 +2,11 @@
 const nextConfig = {
   reactStrictMode: true,
 
+  // Emit `.next/standalone` — a self-contained server with only the modules it
+  // actually imports. `frontend/Dockerfile` copies that directory and runs its
+  // `server.js`, so without this the image build fails on a missing path.
+  output: 'standalone',
+
   // No `remotePatterns`, which means the image optimizer will only serve files
   // from this app's own `public/` directory.
   //

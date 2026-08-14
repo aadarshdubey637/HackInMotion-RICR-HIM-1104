@@ -1,0 +1,13 @@
+# Never copy real secrets into a build context — an image layer keeps them
+# even if a later stage deletes the file.
+.env
+.env.*
+!.env.example
+
+node_modules
+dist
+uploads
+
+npm-debug.log*
+*.log
+.DS_Store
