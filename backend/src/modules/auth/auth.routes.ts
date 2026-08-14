@@ -115,8 +115,9 @@ authRouter.patch(
  * POST /api/auth/send-otp — email a 6-digit code to the signed-in farmer.
  *
  * 429 with `retryAfter` while the 60-second resend cooldown is running or the
- * hourly ceiling is reached; 502 if the mailbox is unconfigured or Gmail
- * rejected the message.
+ * hourly ceiling is reached; 502 if Gmail rejected the message, or if the
+ * mailbox is unconfigured on a non-development server. In development an
+ * unconfigured mailbox prints the code to the server log instead of failing.
  */
 authRouter.post(
   '/send-otp',

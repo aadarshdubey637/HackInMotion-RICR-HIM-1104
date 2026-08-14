@@ -40,13 +40,7 @@ export default function LoginPage() {
       setError(err instanceof ApiError ? err.message : t('auth.serverError'));
     }
   }
-<<<<<<< Updated upstream
-  
-=======
 
-
-
->>>>>>> Stashed changes
   return (
     <div className="relative min-h-dvh bg-slate-900 lg:grid lg:grid-cols-2">
       {/* Mobile background blurred image */}

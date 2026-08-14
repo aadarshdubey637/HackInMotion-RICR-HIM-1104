@@ -22,9 +22,9 @@ import { randomInt } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../../common/prisma';
-import { config, features } from '../../config';
+import { config, features, isDevelopment } from '../../config';
 import { logger } from '../../common/logger';
-import { isEmailEnabled, sendMail } from '../../common/mailer';
+import { sendMail } from '../../common/mailer';
 import {
   ExternalServiceError,
   NotFoundError,
@@ -95,9 +95,14 @@ export interface SendOtpResult {
  * working and the attempt counter could be reset at will by requesting a new one.
  */
 export async function sendVerificationOtp(userId: string): Promise<SendOtpResult> {
-  if (!features.email) {
+  if (!features.email && !isDevelopment) {
     // 502 rather than 500: nothing is wrong with the request, the server is
     // missing configuration. The message names the fix without echoing values.
+    //
+    // Development is exempt because a contributor who has cloned the repo has no
+    // Gmail App Password, and refusing here would make registration — the first
+    // screen of the app — impossible to get past locally. `deliverCode` below is
+    // what makes that exemption safe.
     throw new ExternalServiceError(
       'email',
       'Email delivery is not configured on this server (EMAIL_USER / EMAIL_APP_PASSWORD)',
@@ -161,12 +166,7 @@ export async function sendVerificationOtp(userId: string): Promise<SendOtpResult
     data: { userId, codeHash, expiresAt, consumedAt: null },
   });
 
-  const sent = await sendMail({
-    to: user.email,
-    subject: `${code} is your Smart Farm verification code`,
-    text: verificationText(user.name, code),
-    html: verificationHtml(user.name, code),
-  });
+  const sent = await deliverCode(user.email, user.name, code);
 
   if (!sent) {
     // The code was never delivered, so it must not sit in the table occupying
@@ -186,6 +186,47 @@ export async function sendVerificationOtp(userId: string): Promise<SendOtpResult
     expiresAt,
     resendAfter: Math.ceil(RESEND_COOLDOWN_MS / 1000),
   };
+}
+
+/**
+ * Get the code to the farmer, or report that it could not be done.
+ *
+ * Normally this is Gmail. When Gmail is unconfigured *and* we are in
+ * development, the code is written to the server log instead and the send is
+ * reported as successful — the developer reads it out of their own terminal.
+ *
+ * Three properties keep that from being a way in:
+ *
+ *  - It is unreachable unless `NODE_ENV === 'development'`. A production server
+ *    with no mailbox has already thrown 502 in `sendVerificationOtp` and never
+ *    arrives here.
+ *  - The code goes to the log, never to the HTTP response. Reaching it requires
+ *    access to the process's own output, which on a development machine is the
+ *    same person who started the process. An attacker who could read that could
+ *    read `backend/.env` too.
+ *  - Configuring Gmail switches this off with no code change, because the branch
+ *    is on `features.email` rather than on a separate flag someone has to
+ *    remember to unset.
+ */
+async function deliverCode(email: string, name: string, code: string): Promise<boolean> {
+  if (features.email) {
+    return sendMail({
+      to: email,
+      subject: `${code} is your Smart Farm verification code`,
+      text: verificationText(name, code),
+      html: verificationHtml(name, code),
+    });
+  }
+
+  // Deliberately `warn`, not `info`: this line means the account is being
+  // verified without anyone proving they can read the mailbox, and that should
+  // be visible in the log rather than blending into normal traffic.
+  logger.warn(
+    { to: redactEmail(email), code },
+    'DEVELOPMENT ONLY — Gmail is not configured, so no email was sent. Enter the code printed here to verify. Set EMAIL_USER and EMAIL_APP_PASSWORD in backend/.env to send real mail.',
+  );
+
+  return true;
 }
 
 /**
@@ -334,6 +375,3 @@ function redactEmail(address: string): string {
   if (!domain) return '***';
   return `${local.slice(0, 2)}***@${domain}`;
 }
-
-/** Exported for the route layer's benefit — nothing else should need it. */
-export const emailOtpEnabled = isEmailEnabled;
