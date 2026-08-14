@@ -65,30 +65,6 @@ const indianMobile = z
   })
   .transform((value) => `+91${value}`);
 
-/**
- * Username, lowercased.
- *
- * Lowercasing is a deliberate simplification rather than a limitation: a farmer
- * typing their name on a phone keypad at 6am should not be locked out by a
- * capital letter, and two accounts differing only in case would be a
- * support problem forever. Dots and underscores are allowed inside the name but
- * not at either end, which keeps `ramesh_kumar` and `ramesh.kumar` available
- * without also allowing `_ramesh_`.
- */
-const username = z
-  .string()
-  .trim()
-  .toLowerCase()
-  .min(3, 'Username must be at least 3 characters')
-  .max(20, 'Username must be 20 characters or fewer')
-  .regex(
-    /^[a-z0-9]([a-z0-9._]*[a-z0-9])?$/,
-    'Use only letters, numbers, dots and underscores — starting and ending with a letter or number',
-  )
-  .refine((value) => !/[._]{2,}/.test(value), {
-    message: 'Dots and underscores cannot be next to each other',
-  });
-
 const password = z.string().min(8, 'Password must be at least 8 characters').max(128);
 
 const fullName = z.string().trim().min(2, 'Please enter your full name').max(100);
@@ -98,19 +74,30 @@ const fullName = z.string().trim().min(2, 'Please enter your full name').max(100
 /**
  * POST /auth/register — one form, one request, account created.
  *
- * Every identifier is checked for availability server-side before the insert, so
- * "username already taken" comes back keyed to the field that caused it and the
+ * Four fields: full name, Gmail address, mobile number, password typed twice.
+ * There is deliberately no username. The Gmail address already signs the farmer
+ * in, already receives the verification and reset codes, and is already the
+ * thing "Continue with Google" matches on — a second name to choose, check for
+ * availability and then remember was one more box on the sign-up form and one
+ * more thing to forget, buying nothing the email address did not already do.
+ * `username` remains a valid *login* identifier for accounts created before this
+ * change; see the note on the field in schema.prisma.
+ *
+ * The remaining identifiers are checked for availability server-side before the
+ * insert, so a clash comes back keyed to the field that caused it and the
  * frontend can highlight that box.
  *
  * `confirmPassword` is compared here rather than trusted from the browser. The
  * frontend checks it too, for an instant error, but a mismatch reaching this
  * point means something is wrong with the request and it must not create an
  * account whose password the farmer does not know.
+ *
+ * Unknown keys are dropped by Zod, so a stale frontend bundle still sending
+ * `username` registers successfully and the value is simply ignored.
  */
 export const registerSchema = z
   .object({
     name: fullName,
-    username,
     email: gmailAddress,
     phone: indianMobile,
     password,
@@ -154,6 +141,54 @@ export const loginSchema = z
     // Lowercased for both lookups: usernames are stored lowercased, and email
     // addresses are case-insensitive in every way that matters here.
     return { identifier: identifier.toLowerCase(), password: value.password };
+  });
+
+// ───────────────────────── Forgotten password ─────────────────────────
+
+/**
+ * POST /auth/forgot-password — "email me a code".
+ *
+ * Only the address, and it runs through the same `gmailAddress` validator
+ * registration uses so the lookup matches how the value was stored.
+ *
+ * A malformed address is still a 400 here. That is not an existence oracle:
+ * the reply depends on the *shape* of what was typed, which the caller already
+ * knows, and never on whether an account exists — `requestPasswordReset`
+ * answers identically either way.
+ */
+export const forgotPasswordSchema = z.object({
+  email: gmailAddress,
+});
+
+/**
+ * POST /auth/reset-password — code plus the new password.
+ *
+ * The address is repeated because there is no session to read it from: the
+ * farmer cannot sign in, which is the entire reason they are here. It is the
+ * code, not the address, that authorises the change.
+ *
+ * `newPassword` gets the same 8-character floor as registration — a reset must
+ * not be a way around the password rules — and is confirmed twice for the same
+ * reason registration confirms it: nobody can see what they are typing, and a
+ * typo here locks them out of the account they are in the middle of recovering.
+ */
+export const resetPasswordSchema = z
+  .object({
+    email: gmailAddress,
+    code: z
+      .string()
+      .trim()
+      // Usually pasted out of the email, and a stray space is not a wrong code.
+      .transform((value) => value.replace(/\s/g, ''))
+      .refine((value) => /^\d{6}$/.test(value), {
+        message: 'Please enter the 6-digit code from your email',
+      }),
+    newPassword: password,
+    confirmPassword: z.string().min(1, 'Please re-enter your new password'),
+  })
+  .refine((value) => value.newPassword === value.confirmPassword, {
+    message: 'Both passwords must match',
+    path: ['confirmPassword'],
   });
 
 export const refreshTokenSchema = z.object({
@@ -213,6 +248,8 @@ export const verifyEmailSchema = z.object({
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type VerifyEmailInput = z.infer<typeof verifyEmailSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type RefreshTokenInput = z.infer<typeof refreshTokenSchema>;
 export type GoogleAuthInput = z.infer<typeof googleAuthSchema>;
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;

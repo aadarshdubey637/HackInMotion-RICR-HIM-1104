@@ -106,11 +106,12 @@ function verifyToken(token: string): TokenPayload {
 
 // ═══════════════════════════ Registration ═══════════════════════════
 //
-// One request creates the account and signs the farmer in. The four identifiers
-// — full name, username, Gmail address and mobile number — are validated by
+// One request creates the account and signs the farmer in. The three identifiers
+// — full name, Gmail address and mobile number — are validated by
 // `registerSchema`, checked for availability here, and written together with a
-// bcrypt hash of the chosen password. Nothing about the mobile number is
-// verified: it is contact detail, not a second credential.
+// bcrypt hash of the chosen password. There is no username: the Gmail address is
+// the credential (see the header on `registerSchema`). Nothing about the mobile
+// number is verified: it is contact detail, not a second credential.
 
 /**
  * Reject identifiers that already belong to somebody.
@@ -121,17 +122,16 @@ function verifyToken(token: string): TokenPayload {
  */
 async function assertIdentifiersAreFree(input: {
   email: string;
-  username: string;
   phone: string;
 }): Promise<void> {
-  // findFirst, not three findUniques: `username` and `phone` carry plain
-  // indexes rather than unique ones — see the note on `User.username` in
-  // schema.prisma for why a unique index is not possible there.
+  // findFirst, not two findUniques: `phone` carries a plain index rather than a
+  // unique one — see the note on the field in schema.prisma for why a unique
+  // index is not possible there.
   const clash = await prisma.user.findFirst({
     where: {
-      OR: [{ email: input.email }, { username: input.username }, { phone: input.phone }],
+      OR: [{ email: input.email }, { phone: input.phone }],
     },
-    select: { email: true, username: true, phone: true },
+    select: { email: true, phone: true },
   });
 
   if (!clash) return;
@@ -139,12 +139,6 @@ async function assertIdentifiersAreFree(input: {
   if (clash.email === input.email) {
     throw new ConflictError('That Gmail address already has an account. Please sign in instead.', {
       email: 'This Gmail address is already registered. Try signing in.',
-    });
-  }
-
-  if (clash.username === input.username) {
-    throw new ConflictError('That username is taken. Please choose another.', {
-      username: 'This username is taken. Please choose another.',
     });
   }
 
@@ -169,7 +163,6 @@ export async function register(
 ): Promise<{ user: UserResponse; tokens: AuthTokens }> {
   await assertIdentifiersAreFree({
     email: input.email,
-    username: input.username,
     phone: input.phone,
   });
 
@@ -180,7 +173,9 @@ export async function register(
     user = await prisma.user.create({
       data: {
         email: input.email,
-        username: input.username,
+        // `username` is left unset on purpose — the field is not written at all
+        // rather than written as null, which is what keeps the sparse unique
+        // index in apply-sparse-indexes.ts from seeing a pile of duplicates.
         passwordHash,
         name: input.name,
         phone: input.phone,
@@ -192,7 +187,7 @@ export async function register(
     // `assertIdentifiersAreFree` lost by milliseconds. Same message either way.
     if ((error as { code?: string }).code === 'P2002') {
       throw new ConflictError(
-        'Someone just took that username, Gmail or mobile number. Please try a different one.',
+        'Someone just took that Gmail address or mobile number. Please try a different one.',
       );
     }
     throw error;
@@ -213,17 +208,23 @@ export async function register(
     data: { lastLoginAt: new Date() },
   });
 
-  logger.info({ userId: user.id, username: user.username }, 'User registered');
+  logger.info({ userId: user.id }, 'User registered');
 
   return { user: formatUserResponse(user), tokens };
 }
 
 /**
- * Sign in with a username **or** a Gmail address, plus a password.
+ * Sign in with a Gmail address — or a username, on an account old enough to
+ * have one — plus a password.
  *
  * This is the only door a returning farmer needs. Logging out does not send
- * anyone back to registration: the account, its username and its password hash
- * all outlive the session, so signing back in is one form with two fields.
+ * anyone back to registration: the account and its password hash outlive the
+ * session, so signing back in is one form with two fields. A farmer who has
+ * forgotten the password takes `password-reset.ts` instead, which is the other
+ * way back in and does not need this one to work first.
+ *
+ * The username branch is kept for accounts created before registration stopped
+ * asking for one. New accounts have none, so in practice this matches on email.
  *
  * `identifier` arrives already lowercased from the schema, matching how both
  * `username` and `email` are stored.

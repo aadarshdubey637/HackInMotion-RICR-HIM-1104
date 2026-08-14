@@ -12,7 +12,10 @@ interface AuthState {
   currentFarm: Farm | null;
   /** True until the initial session check finishes. */
   loading: boolean;
-  /** `identifier` is a username or a Gmail address. */
+  /**
+   * `identifier` is a Gmail address, or a username on an account old enough to
+   * have one — registration no longer asks for a username.
+   */
   login: (identifier: string, password: string) => Promise<void>;
   /**
    * Create the account, sign in, and land on email verification.
@@ -25,7 +28,6 @@ interface AuthState {
    */
   register: (input: {
     name: string;
-    username: string;
     email: string;
     phone: string;
     password: string;
@@ -146,7 +148,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = useCallback(
     async (input: {
       name: string;
-      username: string;
       email: string;
       phone: string;
       password: string;

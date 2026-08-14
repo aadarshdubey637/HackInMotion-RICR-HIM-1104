@@ -14,11 +14,13 @@ export default function LoginPage() {
   const { login } = useAuth();
   const { t } = useTranslation();
   /**
-   * One field for a username *or* a Gmail address.
+   * One field, holding a Gmail address for anyone who registered recently.
    *
-   * Two separate fields, or a toggle between them, would make a farmer decide
-   * which kind of thing they are about to type before they type it. The server
-   * looks up both, so there is nothing for them to decide.
+   * The server still looks up usernames too, for accounts created before
+   * registration stopped asking for one, so a farmer who has been typing a
+   * username for months keeps getting in. The label says Gmail because that is
+   * what everyone signing up today has — and the field accepting more than the
+   * label promises costs nobody anything.
    */
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
@@ -133,13 +135,13 @@ export default function LoginPage() {
 
               <div>
                 <label htmlFor="identifier" className="block text-sm font-semibold text-slate-300 mb-1">
-                  Username or Gmail
+                  Gmail address
                 </label>
                 <input
                   id="identifier"
                   // `type="text"`, not `type="email"`: an email input refuses to
                   // submit a bare username, and the browser's own validation error
-                  // would block a farmer typing exactly what they were told to.
+                  // would block an older account whose farmer signs in with one.
                   type="text"
                   autoComplete="username"
                   autoCapitalize="none"
@@ -149,14 +151,24 @@ export default function LoginPage() {
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
                   className="w-full rounded-xl border border-slate-700 bg-slate-800/80 px-4 py-3 text-white placeholder-slate-500 transition duration-200 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-                  placeholder="rameshkumar or you@gmail.com"
+                  placeholder="you@gmail.com"
                 />
               </div>
 
               <div>
-                <label htmlFor="password" className="block text-sm font-semibold text-slate-300 mb-1">
-                  {t('auth.password')}
-                </label>
+                <div className="mb-1 flex items-baseline justify-between gap-3">
+                  <label htmlFor="password" className="block text-sm font-semibold text-slate-300">
+                    {t('auth.password')}
+                  </label>
+                  {/* Beside the password box, not buried at the bottom: this is
+                      the moment a farmer discovers they cannot remember it. */}
+                  <Link
+                    href="/forgot-password"
+                    className="text-xs font-semibold text-brand-400 underline underline-offset-4 hover:text-brand-300"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
                 <div className="relative">
                   <input
                     id="password"

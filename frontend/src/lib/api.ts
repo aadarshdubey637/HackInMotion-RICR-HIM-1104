@@ -241,7 +241,10 @@ export function ensureFlushListener(): void {
 
 export const api = {
   auth: {
-    /** `identifier` is a username or a Gmail address — the server accepts either. */
+    /**
+     * `identifier` is a Gmail address — or a username on an account created
+     * before registration stopped asking for one. The server accepts either.
+     */
     login: (identifier: string, password: string) =>
       request<{ user: User; tokens: AuthTokens }>('/auth/login', {
         method: 'POST',
@@ -255,7 +258,6 @@ export const api = {
      */
     register: (input: {
       name: string;
-      username: string;
       email: string;
       phone: string;
       password: string;
@@ -263,6 +265,38 @@ export const api = {
       language?: string;
     }) =>
       request<{ user: User; tokens: AuthTokens }>('/auth/register', {
+        method: 'POST',
+        body: input,
+        anonymous: true,
+      }),
+
+    /**
+     * Step one of a forgotten password: ask for a code by email.
+     *
+     * Resolves the same way whether or not that address has an account — the
+     * server will not confirm which, so neither can the UI. `resendAfter` is the
+     * cooldown in seconds.
+     */
+    forgotPassword: (email: string) =>
+      request<{ resendAfter: number; message: string }>('/auth/forgot-password', {
+        method: 'POST',
+        body: { email },
+        anonymous: true,
+      }),
+
+    /**
+     * Step two: the code, and the new password.
+     *
+     * No tokens come back. A reset revokes every session on the account, so the
+     * farmer signs in afresh with the password they just chose.
+     */
+    resetPassword: (input: {
+      email: string;
+      code: string;
+      newPassword: string;
+      confirmPassword: string;
+    }) =>
+      request<{ message: string }>('/auth/reset-password', {
         method: 'POST',
         body: input,
         anonymous: true,
