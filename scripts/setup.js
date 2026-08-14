@@ -34,6 +34,8 @@ log('\n[1/3] Setting up environment files…');
 if (!fs.existsSync(backendEnv)) {
   fs.copyFileSync(exampleEnv, backendEnv);
   ok('Created backend/.env from .env.example');
+  warn('ACTION REQUIRED: Open backend/.env and set DATABASE_URL to the shared Atlas connection string.');
+  warn('Ask a teammate for the URL, or see README.md for local MongoDB setup.');
 } else {
   ok('backend/.env already exists — keeping it');
 }
