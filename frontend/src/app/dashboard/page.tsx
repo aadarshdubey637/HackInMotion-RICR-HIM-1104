@@ -53,6 +53,364 @@ import {
 } from '@/components/ui';
 import { cn, formatDay, formatRupees, cropLabel, humanise, weatherIcon, timeAgo } from '@/lib/utils';
 
+// ── Multi-Language Translation Dictionaries for mockup text ──
+const DASHBOARD_LOCALES: Record<string, Record<string, string>> = {
+  en: {
+    soilMoisture: "Soil Moisture",
+    irrigationStatus: "Irrigation Status",
+    sevenDayRainfall: "7-Day Rainfall",
+    cropHealthScore: "Crop Health Score",
+    noIrrigation: "No irrigation",
+    irrigationDue: "Irrigation Due",
+    notNeeded: "Not needed",
+    urgent: "Urgent",
+    low: "Low",
+    moderate: "Moderate",
+    high: "High",
+    excellent: "Excellent",
+    good: "Good",
+    warning: "Warning",
+    waterIrrigation: "Water & Irrigation",
+    soilWaterUsed: "Soil Water Used",
+    weatherForecast: "Weather Forecast",
+    humidity: "Humidity",
+    wind: "Wind",
+    updated: "Updated",
+    priorityAlerts: "Priority Alerts",
+    viewAll: "View all",
+    overallCropHealth: "Overall Crop Health",
+    quickActions: "Quick Actions",
+    irrigateNow: "Irrigate Now",
+    startIrrigation: "Start irrigation",
+    checkCrop: "Check Crop",
+    scanDiagnose: "Scan & diagnose",
+    marketPrices: "Market Prices",
+    checkLatestPrices: "Check latest prices",
+    askAi: "Ask AI",
+    getFarmingAdvice: "Get farming advice",
+    planAhead: "Plan ahead",
+    whatToPlant: "What to plant",
+    cropsSuited: "Crops ranked for your soil, season and local climate.",
+    planPredict: "Plan & predict",
+    fertiliserToBuy: "Fertiliser to buy, when to apply it, and expected yield.",
+    manage: "Manage",
+    seeTrends: "See trends",
+    logIssue: "Log an issue",
+    allCropsHealthy: "All crops healthy & secure",
+    noActionsRequired: "No immediate actions required",
+    greetingMorning: "Good morning, {name}! 🍃",
+    greetingAfternoon: "Good afternoon, {name}! 🍃",
+    greetingEvening: "Good evening, {name}! 🍃",
+    happeningToday: "Here's what's happening on your farm today.",
+    moistureTipGood: "Great! Your field has enough moisture. Keep monitoring regularly.",
+    moistureTipUrgent: "Critical: Crop needs about {amount} mm of water.",
+    healthGood: "No major issues found. Your crops are healthy and growing well.",
+    healthIssueSingle: "1 active issue reported. Check health log for recommendations.",
+    healthIssuePlural: "{count} active issues reported. Check health log for recommendations.",
+    limitedData: "Limited",
+    daysLeft: "days left",
+    reportedNearYou: "Reported near you",
+    farmersWithin: "Farmers within {radius} km have reported these in the last 7 days. Worth checking your own crop.",
+    checkMyCrop: "Check my crop",
+    weatherStale: "Live weather is unavailable. Showing saved data.",
+  },
+  hi: {
+    soilMoisture: "मिट्टी की नमी",
+    irrigationStatus: "सिंचाई की स्थिति",
+    sevenDayRainfall: "7-दिवसीय वर्षा",
+    cropHealthScore: "फसल स्वास्थ्य स्कोर",
+    noIrrigation: "सिंचाई की ज़रूरत नहीं",
+    irrigationDue: "सिंचाई आवश्यक",
+    notNeeded: "ज़रूरत नहीं",
+    urgent: "ज़रूरी",
+    low: "कम",
+    moderate: "मध्यम",
+    high: "अधिक",
+    excellent: "उत्कृष्ट",
+    good: "अच्छा",
+    warning: "चेतावनी",
+    waterIrrigation: "जल और सिंचाई",
+    soilWaterUsed: "उपयोग किया गया पानी",
+    weatherForecast: "मौसम का पूर्वानुमान",
+    humidity: "आर्द्रता",
+    wind: "हवा",
+    updated: "अपडेट",
+    priorityAlerts: "प्राथमिकता अलर्ट",
+    viewAll: "सभी देखें",
+    overallCropHealth: "फसल का कुल स्वास्थ्य",
+    quickActions: "त्वरित कार्य",
+    irrigateNow: "अभी सिंचाई करें",
+    startIrrigation: "सिंचाई शुरू करें",
+    checkCrop: "फसल जांचें",
+    scanDiagnose: "जांचें और निदान करें",
+    marketPrices: "बाजार भाव",
+    checkLatestPrices: "ताजा भाव देखें",
+    askAi: "AI से पूछें",
+    getFarmingAdvice: "खेती की सलाह लें",
+    planAhead: "आगे की योजना",
+    whatToPlant: "क्या बोएँ",
+    cropsSuited: "आपकी मिट्टी, मौसम और स्थानीय जलवायु के अनुकूल फसलें।",
+    planPredict: "योजना और अनुमान",
+    fertiliserToBuy: "खाद कब और कितनी डालें, साथ ही अनुमानित पैदावार।",
+    manage: "प्रबंधन",
+    seeTrends: "रुझान देखें",
+    logIssue: "समस्या दर्ज करें",
+    allCropsHealthy: "सभी फसलें स्वस्थ और सुरक्षित हैं",
+    noActionsRequired: "कोई तत्काल कार्य आवश्यक नहीं है",
+    greetingMorning: "शुभ प्रभात, {name}! 🍃",
+    greetingAfternoon: "नमस्कार, {name}! 🍃",
+    greetingEvening: "शुभ संध्या, {name}! 🍃",
+    happeningToday: "आज आपके खेत में क्या हो रहा है, यहाँ देखें।",
+    moistureTipGood: "बहुत बढ़िया! आपके खेत में पर्याप्त नमी है। नियमित निगरानी रखें।",
+    moistureTipUrgent: "महत्वपूर्ण: फसल को लगभग {amount} मिमी पानी की आवश्यकता है।",
+    healthGood: "कोई बड़ी समस्या नहीं मिली। आपकी फसलें स्वस्थ हैं और अच्छी बढ़ रही हैं।",
+    healthIssueSingle: "1 सक्रिय समस्या दर्ज की गई है। स्वास्थ्य लॉग देखें।",
+    healthIssuePlural: "{count} सक्रिय समस्याएं दर्ज हैं। स्वास्थ्य लॉग देखें।",
+    limitedData: "सीमित",
+    daysLeft: "दिन शेष",
+    reportedNearYou: "आपके आस-पास रिपोर्ट की गई समस्याएं",
+    farmersWithin: "{radius} किमी के दायरे में किसानों ने पिछले 7 दिनों में ये समस्याएं रिपोर्ट की हैं।",
+    checkMyCrop: "अपनी फसल जांचें",
+    weatherStale: "लाइव मौसम उपलब्ध नहीं है। सहेजा गया डेटा दिखाया जा रहा है।",
+  },
+  pa: {
+    soilMoisture: "ਮਿੱਟੀ ਦੀ ਨਮੀ",
+    irrigationStatus: "ਸਿੰਚਾਈ ਦੀ ਸਥਿਤੀ",
+    sevenDayRainfall: "7-ਦਿਨ ਦੀ ਬਾਰਸ਼",
+    cropHealthScore: "ਫਸਲ ਸਿਹਤ ਸਕੋਰ",
+    noIrrigation: "ਸਿੰਚਾਈ ਦੀ ਲੋੜ ਨਹੀਂ",
+    irrigationDue: "ਸਿੰਚਾਈ ਦੀ ਲੋੜ ਹੈ",
+    notNeeded: "ਲੋੜ ਨਹੀਂ",
+    urgent: "ਜ਼ਰੂਰੀ",
+    low: "ਘੱਟ",
+    moderate: "ਦਰਮਿਆਨਾ",
+    high: "ਬਹੁਤ",
+    excellent: "ਬਹੁਤ ਵਧੀਆ",
+    good: "ਚੰਗਾ",
+    warning: "ਚੇਤਾਵਨੀ",
+    waterIrrigation: "ਪਾਣੀ ਅਤੇ ਸਿੰਚਾਈ",
+    soilWaterUsed: "ਵਰਤਿਆ ਗਿਆ ਪਾਣੀ",
+    weatherForecast: "ਮੌਸਮ ਦਾ ਅਨੁਮਾਨ",
+    humidity: "ਨਮੀ",
+    wind: "ਹਵਾ",
+    updated: "ਅੱਪਡੇਟ",
+    priorityAlerts: "ਤਰਜੀਹੀ ਚੇਤਾਵਨੀਆਂ",
+    viewAll: "ਸਭ ਦੇਖੋ",
+    overallCropHealth: "ਫਸਲ ਦੀ ਕੁੱਲ ਸਿਹਤ",
+    quickActions: "ਤੁਰੰਤ ਕਾਰਵਾਈਆਂ",
+    irrigateNow: "ਹੁਣੇ ਸਿੰਚਾਈ ਕਰੋ",
+    startIrrigation: "ਸਿੰਚਾਈ ਸ਼ੁਰੂ ਕਰੋ",
+    checkCrop: "ਫਸਲ ਚੈੱਕ ਕਰੋ",
+    scanDiagnose: "ਜਾਂਚ ਅਤੇ ਇਲਾਜ",
+    marketPrices: "ਮੰਡੀ ਦੇ ਭਾਅ",
+    checkLatestPrices: "ਤਾਜ਼ਾ ਭਾਅ ਦੇਖੋ",
+    askAi: "AI ਤੋਂ ਪੁੱਛੋ",
+    getFarmingAdvice: "ਖੇਤੀਬਾੜੀ ਸਲਾਹ ਲਓ",
+    planAhead: "ਅਗਲੀ ਯੋਜਨਾ",
+    whatToPlant: "ਕੀ ਬੀਜੀਏ",
+    cropsSuited: "ਤੁਹਾਡੀ ਮਿੱਟੀ, ਮੌਸਮ ਅਤੇ ਸਥਾਨਕ ਜਲਵਾਯੂ ਲਈ ਅਨੁਕੂਲ ਫਸਲਾਂ।",
+    planPredict: "ਯੋਜਨਾ ਅਤੇ ਅਨੁਮਾਨ",
+    fertiliserToBuy: "ਖਾਦ ਕਦੋਂ ਅਤੇ ਕਿੰਨੀ ਪਾਉਣੀ ਹੈ, ਅਤੇ ਅਨੁਮਾਨਿਤ ਝਾੜ।",
+    manage: "ਪ੍ਰਬੰਧ ਕਰੋ",
+    seeTrends: "ਰੁਝਾਨ ਦੇਖੋ",
+    logIssue: "ਸਮੱਸਿਆ ਦਰਜ ਕਰੋ",
+    allCropsHealthy: "ਸਾਰੀਆਂ ਫਸਲਾਂ ਤੰਦਰੁਸਤ ਅਤੇ ਸੁਰੱਖਿਅਤ ਹਨ",
+    noActionsRequired: "ਕਿਸੇ ਤੁਰੰਤ ਕੰਮ ਦੀ ਲੋੜ ਨਹੀਂ ਹੈ",
+    greetingMorning: "ਸਤਿ ਸ੍ਰੀ ਅਕਾਲ, {name}! 🍃",
+    greetingAfternoon: "ਨਮਸਕਾਰ, {name}! 🍃",
+    greetingEvening: "ਸ਼ੁਭ ਸ਼ਾਮ, {name}! 🍃",
+    happeningToday: "ਅੱਜ ਤੁਹਾਡੇ ਖੇਤ ਵਿੱਚ ਕੀ ਹੋ ਰਿਹਾ ਹੈ, ਇੱਥੇ ਦੇਖੋ।",
+    moistureTipGood: "ਬਹੁਤ ਵਧੀਆ! ਤੁਹਾਡੇ ਖੇਤ ਵਿੱਚ ਕਾਫ਼ੀ ਨਮੀ ਹੈ। ਨਿਯਮਤ ਨਿਗਰਾਨੀ ਰੱਖੋ।",
+    moistureTipUrgent: "ਜ਼ਰੂਰੀ: ਫਸਲ ਨੂੰ ਲਗਭਗ {amount} ਮਿਲੀਮੀਟਰ ਪਾਣੀ ਦੀ ਲੋੜ ਹੈ।",
+    healthGood: "ਕੋਈ ਵੱਡੀ ਸਮੱਸਿਆ ਨਹੀਂ ਮਿਲੀ। ਤੁਹਾਡੀਆਂ ਫਸਲਾਂ ਤੰਦਰੁਸਤ ਹਨ ਅਤੇ ਚੰਗੀ ਤਰ੍ਹਾਂ ਵਧ ਰਹੀਆਂ ਹਨ।",
+    healthIssueSingle: "1 ਸਮੱਸਿਆ ਦਰਜ ਕੀਤੀ ਗਈ ਹੈ। ਸਿਹਤ ਰਿਕਾਰਡ ਦੇਖੋ।",
+    healthIssuePlural: "{count} ਸਮੱਸਿਆਵਾਂ ਦਰਜ ਹਨ। ਸਿਹਤ ਰਿਕਾਰਡ ਦੇਖੋ।",
+    limitedData: "ਸੀਮਤ",
+    daysLeft: "ਦਿਨ ਬਾਕੀ",
+    reportedNearYou: "ਤੁਹਾਡੇ ਨੇੜੇ ਰਿਪੋਰਟ ਕੀਤੀਆਂ ਸਮੱਸਿਆਵਾਂ",
+    farmersWithin: "{radius} ਕਿਲੋਮੀਟਰ ਦੇ ਅੰਦਰ ਕਿਸਾਨਾਂ ਨੇ ਪਿਛਲੇ 7 ਦਿਨਾਂ ਵਿੱਚ ਇਹ ਸਮੱਸਿਆਵਾਂ ਰਿਪੋਰਟ ਕੀਤੀਆਂ ਹਨ।",
+    checkMyCrop: "ਆਪਣੀ ਫਸਲ ਚੈੱਕ ਕਰੋ",
+    weatherStale: "ਮੌਸਮ ਦੀ ਜਾਣਕਾਰੀ ਉਪਲਬਧ ਨਹੀਂ ਹੈ। ਸੇਵ ਕੀਤਾ ਡਾਟਾ ਦਿਖਾਇਆ ਜਾ ਰਿਹਾ ਹੈ।",
+  },
+  te: {
+    soilMoisture: "నేల తేమ",
+    irrigationStatus: "నీటి పారుదల స్థితి",
+    sevenDayRainfall: "7-రోజుల వర్షపాతం",
+    cropHealthScore: "పంట ఆరోగ్య స్కోరు",
+    noIrrigation: "నీటి అవసరం లేదు",
+    irrigationDue: "నీరు పెట్టాలి",
+    notNeeded: "అవసరం లేదు",
+    urgent: "అవసరం",
+    low: "తక్కువ",
+    moderate: "మధ్యస్థం",
+    high: "ఎక్కువ",
+    excellent: "అద్భుతం",
+    good: "బాగుంది",
+    warning: "హెచ్చరిక",
+    waterIrrigation: "నీరు & నీటి పారుదల",
+    soilWaterUsed: "ఉపయోగించిన నేల నీరు",
+    weatherForecast: "వాతావరణ సూచన",
+    humidity: "తేమ",
+    wind: "గాలి",
+    updated: "అప్డేట్ చేయబడింది",
+    priorityAlerts: "ముఖ్యమైన హెచ్చరికలు",
+    viewAll: "అన్నీ చూడండి",
+    overallCropHealth: "పంట మొత్తం ఆరోగ్యం",
+    quickActions: "త్వరిత పనులు",
+    irrigateNow: "ఇప్పుడే నీరు పెట్టండి",
+    startIrrigation: "నీరు పెట్టడం ప్రారంభించండి",
+    checkCrop: "పంటను తనిఖీ చేయండి",
+    scanDiagnose: "పరీక్షించి నివారణ పొందండి",
+    marketPrices: "మార్కెట్ ధరలు",
+    checkLatestPrices: "తాజా ధరలు చూడండి",
+    askAi: "AIని అడగండి",
+    getFarmingAdvice: "వ్యవసాయ సలహా పొందండి",
+    planAhead: "ముందుస్తు ప్రణాళిక",
+    whatToPlant: "ఏ పంట వేయాలి",
+    cropsSuited: "మీ నేల, కాలం మరియు వాతావరణానికి సరిపోయే పంటలు.",
+    planPredict: "ప్రణాళిక & అంచనా",
+    fertiliserToBuy: "ఎరువులు ఎప్పుడు, ఎంత వేయాలో మరియు ఆశించిన దిగుబడి.",
+    manage: "निర్వహణ",
+    seeTrends: "ధరలు చూడండి",
+    logIssue: "సమస్యను తెలపండి",
+    allCropsHealthy: "అన్ని పంటలు ఆరోగ్యంగా మరియు సురక్షితంగా ఉన్నాయి",
+    noActionsRequired: "ఎటువంటి తక్షణ పనులు లేవు",
+    greetingMorning: "శుభోదయం, {name}! 🍃",
+    greetingAfternoon: "నమస్కారం, {name}! 🍃",
+    greetingEvening: "శుభ సాయంత్రం, {name}! 🍃",
+    happeningToday: "ఈరోజు మీ పొలంలో ఏం జరుగుతుందో ఇక్కడ చూడండి.",
+    moistureTipGood: "చాలా బాగుంది! పొలంలో తగినంత తేమ ఉంది. క్రమం తప్పకుండా పర్యవేక్షించండి.",
+    moistureTipUrgent: "ముఖ్యం: పంటకు దాదాపు {amount} మి.మీ నీరు అవసరం.",
+    healthGood: "ఎటువంటి ప్రధాన సమస్యలు లేవు. పంటలు ఆరోగ్యంగా పెరుగుతున్నాయి.",
+    healthIssueSingle: "1 సమస్య నమోదైంది. ఆరోగ్య రికార్డులు చూడండి.",
+    healthIssuePlural: "{count} సమస్యలు నమోదయ్యాయి. ఆరోగ్య రికార్డులు చూడండి.",
+    limitedData: "పరిమితం",
+    daysLeft: "రోజులు ఉన్నాయి",
+    reportedNearYou: "మీ పరిసరాల్లో నమోదైన సమస్యలు",
+    farmersWithin: "{radius} కి.మీ పరిధిలో రైతులు గత 7 రోజుల్లో ఈ సమస్యలను తెలిపారు.",
+    checkMyCrop: "నా పంటను తనిఖీ చేయండి",
+    weatherStale: "వాతావరణ వివరాలు అందుబాటులో లేవు. పాత వివరాలు చూపబడుతున్నాయి.",
+  },
+  mr: {
+    soilMoisture: "मातीची आर्द्रता",
+    irrigationStatus: "सिंचनाची स्थिती",
+    sevenDayRainfall: "7-दिवसांचा पाऊस",
+    cropHealthScore: "पीक आरोग्य स्कोर",
+    noIrrigation: "सिंचनाची गरज नाही",
+    irrigationDue: "सिंचन आवश्यक",
+    notNeeded: "गरज नाही",
+    urgent: "तातडीचे",
+    low: "कमी",
+    moderate: "मध्यम",
+    high: "जास्त",
+    excellent: "उत्कृष्ट",
+    good: "चांगले",
+    warning: "धोका / चेतावणी",
+    waterIrrigation: "पाणी आणि सिंचन",
+    soilWaterUsed: "वापरलेले पाणी",
+    weatherForecast: "हवामान अंदाज",
+    humidity: "दमटपणा",
+    wind: "वारा",
+    updated: "अपडेट केले",
+    priorityAlerts: "महत्वाचे अलर्ट",
+    viewAll: "सर्व पहा",
+    overallCropHealth: "पिकाचे एकूण आरोग्य",
+    quickActions: "त्वरित कृती",
+    irrigateNow: "आत्ता पाणी द्या",
+    startIrrigation: "सिंचन सुरू करा",
+    checkCrop: "पीक तपासा",
+    scanDiagnose: "तपासा आणि उपाय मिळवा",
+    marketPrices: "बाजार भाव",
+    checkLatestPrices: "ताजे भाव पहा",
+    askAi: "AI ला विचारा",
+    getFarmingAdvice: "शेती सल्ला मिळवा",
+    planAhead: "पुढील नियोजन",
+    whatToPlant: "काय पेरावे",
+    cropsSuited: "तुमच्या शेतजमीन, हंगाम आणि स्थानिक हवामानास अनुकूल पिके.",
+    planPredict: "नियोजन आणि अंदाज",
+    fertiliserToBuy: "खते कधी आणि किती टाकावीत, आणि अपेक्षित उत्पादन.",
+    manage: "व्यवस्थापन",
+    seeTrends: "रुझान पहा",
+    logIssue: "तक्रार नोंदवा",
+    allCropsHealthy: "सर्व पिके निरोगी आणि सुरक्षित आहेत",
+    noActionsRequired: "तूर्तास कोणतीही कामे आवश्यक नाहीत",
+    greetingMorning: "शुभ प्रभात, {name}! 🍃",
+    greetingAfternoon: "नमस्कार, {name}! 🍃",
+    greetingEvening: "शुभ संध्याकाळ, {name}! 🍃",
+    happeningToday: "आज तुमच्या शेतात काय घडत आहे, ते येथे पहा.",
+    moistureTipGood: "उत्तम! तुमच्या शेतात पुरेशी आर्द्रता आहे. नियमित लक्ष ठेवा.",
+    moistureTipUrgent: "महत्त्वाचे: पिकाला सुमारे {amount} मिमी पाण्याची गरज आहे.",
+    healthGood: "कोणतीही मोठी समस्या आढळली नाही. तुमची पिके निरोगी आहेत.",
+    healthIssueSingle: "1 पिकाची समस्या नोंदवली गेली आहे. आरोग्य नोंदवही पहा.",
+    healthIssuePlural: "{count} पिकांच्या समस्या नोंदवल्या आहेत. आरोग्य नोंदवही पहा.",
+    limitedData: "मर्यादित",
+    daysLeft: "दिवस शिल्लक",
+    reportedNearYou: "तुमच्या परिसरात आढळलेले आजार",
+    farmersWithin: "{radius} किमी परिसरातील शेतकऱ्यांनी गेल्या 7 दिवसात या समस्या नोंदवल्या आहेत.",
+    checkMyCrop: "माझे पीक तपासा",
+    weatherStale: "हवामान माहिती उपलब्ध नाही. सेव्ह केलेली माहिती दाखवली जात आहे.",
+  },
+  bn: {
+    soilMoisture: "মাটির আর্দ্রতা",
+    irrigationStatus: "সেচ পরিস্থিতি",
+    sevenDayRainfall: "7-দিনের বৃষ্টিপাত",
+    cropHealthScore: "ফসলের স্বাস্থ্য স্কোর",
+    noIrrigation: "সেচের প্রয়োজন নেই",
+    irrigationDue: "সেচ দিতে হবে",
+    notNeeded: "প্রয়োজন নেই",
+    urgent: "জরুরী",
+    low: "কম",
+    moderate: "মাঝারি",
+    high: "বেশি",
+    excellent: "চমৎকার",
+    good: "ভালো",
+    warning: "সতর্কতা",
+    waterIrrigation: "জল ও সেচ",
+    soilWaterUsed: "ব্যবহৃত জল",
+    weatherForecast: "আবহাওয়ার পূর্বাভাস",
+    humidity: "আর্দ্রতা",
+    wind: "বাতাস",
+    updated: "আপডেট করা",
+    priorityAlerts: "গুরুত্বপূর্ণ সতর্কতা",
+    viewAll: "সব দেখুন",
+    overallCropHealth: "ফসলের সামগ্রিক স্বাস্থ্য",
+    quickActions: "দ্রুত পদক্ষেপ",
+    irrigateNow: "এখনই সেচ দিন",
+    startIrrigation: "সেচ শুরু করুন",
+    checkCrop: "ফসল পরীক্ষা করুন",
+    scanDiagnose: "পরীক্ষা ও সমাধান",
+    marketPrices: "বাজার দর",
+    checkLatestPrices: "তাজা দর দেখুন",
+    askAi: "AI কে জিজ্ঞাসা করুন",
+    getFarmingAdvice: "কৃষি পরামর্শ নিন",
+    planAhead: "ভবিষ্যত পরিকল্পনা",
+    whatToPlant: "কী চাষ করবেন",
+    cropsSuited: "আপনার মাটি, ঋতু এবং আবহাওয়া উপযোগী ফসল সমূহ।",
+    planPredict: "পরিকল্পনা ও অনুমান",
+    fertiliserToBuy: "সার কখন এবং কী পরিমাণ দেবেন, এবং আশানুরূপ ফলন।",
+    manage: "পরিচালনা",
+    seeTrends: "দর দেখুন",
+    logIssue: "সমস্যা জানান",
+    allCropsHealthy: "সব ফসল সুস্থ ও নিরাপদ রয়েছে",
+    noActionsRequired: "কোনো তাত্ক্ষণিক কাজ নেই",
+    greetingMorning: "সুপ্রভাত, {name}! 🍃",
+    greetingAfternoon: "নমস্কার, {name}! 🍃",
+    greetingEvening: "শুভ সন্ধ্যা, {name}! 🍃",
+    happeningToday: "আজ আপনার খামারে কী ঘটছে তা এখানে দেখুন।",
+    moistureTipGood: "দারুণ! আপনার খামারে যথেষ্ট আর্দ্রতা রয়েছে। নিয়মিত তদারকি করুন।",
+    moistureTipUrgent: "গুরুত্বপূর্ণ: ফসলের প্রায় {amount} মিমি জলের প্রয়োজন রয়েছে।",
+    healthGood: "কোনো বড় সমস্যা পাওয়া যায়নি। আপনার ফসলগুলি সুস্থ ও ভালো বাড়ছে।",
+    healthIssueSingle: "1টি সমস্যা নথিভুক্ত করা হয়েছে। স্বাস্থ্য রেকর্ড দেখুন।",
+    healthIssuePlural: "{count}টি সমস্যা নথিভুক্ত আছে। স্বাস্থ্য রেকর্ড দেখুন।",
+    limitedData: "সীমিত",
+    daysLeft: "দিন বাকি",
+    reportedNearYou: "আপনার আশেপাশে নথিভুক্ত সমস্যা সমূহ",
+    farmersWithin: "{radius} কিমি মধ্যে কৃষকরা গত 7 দিনে এই সমস্যাগুলি জানিয়েছেন।",
+    checkMyCrop: "নিজের ফসল দেখুন",
+    weatherStale: "আবহাওয়া তথ্য পাওয়া যাচ্ছে না। সংরক্ষিত তথ্য দেখানো হচ্ছে।",
+  }
+};
+
 export default function DashboardPage() {
   return (
     <AppShell>
@@ -214,8 +572,11 @@ function DashboardContent() {
     );
   }
 
+  // ── Setup translation dictionary index ──
+  const dict = DASHBOARD_LOCALES[language] || DASHBOARD_LOCALES['en'];
+
   // ── Calculate dynamic weather and KPI fields ──
-  const greeting = getGreeting();
+  const greeting = getGreeting(dict, user?.name || 'Farmer');
   const hasCurrentWeather = data.weather.available && data.weather.current;
   const currentTemp = hasCurrentWeather 
     ? Math.round(data.weather.current!.temperatureC) 
@@ -240,19 +601,19 @@ function DashboardContent() {
     100,
     data.irrigation.depletionPercent !== undefined ? 100 - data.irrigation.depletionPercent : 83
   );
-  const moistureRating = moisturePct >= 70 ? 'Good' : moisturePct >= 40 ? 'Moderate' : 'Dry';
+  const moistureRating = moisturePct >= 70 ? dict.good : moisturePct >= 40 ? dict.moderate : dict.low;
 
   // KPI 2: Irrigation Status
-  const irrigationStatus = data.irrigation.shouldIrrigate ? 'Irrigation Due' : 'No irrigation';
-  const irrigationBadge = data.irrigation.shouldIrrigate ? 'Urgent' : 'Not needed';
+  const irrigationStatus = data.irrigation.shouldIrrigate ? dict.irrigationDue : dict.noIrrigation;
+  const irrigationBadge = data.irrigation.shouldIrrigate ? dict.urgent : dict.notNeeded;
 
   // KPI 3: Total 7-day Rainfall
   const totalRainfall = data.weather.upcoming?.reduce((sum, day) => sum + (day.rainMm || 0), 0) || 0;
-  const rainfallBadge = totalRainfall >= 50 ? 'High' : totalRainfall >= 15 ? 'Moderate' : 'Low';
+  const rainfallBadge = totalRainfall >= 50 ? dict.high : totalRainfall >= 15 ? dict.moderate : dict.low;
 
   // KPI 4: Crop Health Score
   const healthScore = data.health.activeIssues === 0 ? 95 : data.health.activeIssues === 1 ? 82 : 65;
-  const healthBadge = healthScore >= 90 ? 'Excellent' : healthScore >= 75 ? 'Good' : 'Warning';
+  const healthBadge = healthScore >= 90 ? dict.excellent : healthScore >= 75 ? dict.good : dict.warning;
 
   return (
     <div className="space-y-6 animate-fade-up">
@@ -283,17 +644,17 @@ function DashboardContent() {
           <div className="h-8 w-[1px] bg-slate-200" />
           <div className="text-center">
             <p className="text-xs font-bold text-slate-700">{humidityVal}%</p>
-            <p className="text-[9px] font-semibold text-slate-400">Humidity</p>
+            <p className="text-[9px] font-semibold text-slate-400">{dict.humidity}</p>
           </div>
           <div className="h-8 w-[1px] bg-slate-200" />
           <div className="text-center">
             <p className="text-xs font-bold text-slate-700">{windVal} km/h</p>
-            <p className="text-[9px] font-semibold text-slate-400">Wind</p>
+            <p className="text-[9px] font-semibold text-slate-400">{dict.wind}</p>
           </div>
           <div className="h-8 w-[1px] bg-slate-200" />
           <div className="text-right">
             <p className="text-xs font-bold text-slate-700">{lastUpdatedFormatted}</p>
-            <p className="text-[9px] font-semibold text-slate-400">Updated</p>
+            <p className="text-[9px] font-semibold text-slate-400">{dict.updated}</p>
           </div>
         </Card>
 
@@ -323,10 +684,10 @@ function DashboardContent() {
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-xs font-extrabold uppercase tracking-wider text-slate-500/90 drop-shadow-sm">
-            {greeting}, {user?.name || 'Farmer'}! 🍃
+            {greeting}
           </p>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight drop-shadow-sm mt-0.5">
-            Here's what's happening on your farm today.
+            {dict.happeningToday}
           </h1>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
@@ -342,7 +703,7 @@ function DashboardContent() {
               ) : (
                 <Volume2 className="h-4 w-4" aria-hidden />
               )}
-              {voice.speaking ? 'Stop' : 'Listen'}
+              {voice.speaking ? t('voice.stopReading').split(' ')[0] : t('voice.readAloud').split(' ')[0]}
             </button>
           )}
           <button
@@ -353,7 +714,7 @@ function DashboardContent() {
             className="btn-secondary px-3 py-2 rounded-xl text-sm flex items-center gap-1.5 shadow-sm border border-soil-200 bg-white hover:bg-slate-50 transition-all duration-200"
           >
             <RefreshCw className={cn('h-4 w-4 text-slate-600', refreshing && 'animate-spin')} aria-hidden />
-            Refresh
+            {t('common.refresh')}
           </button>
         </div>
       </div>
@@ -361,7 +722,7 @@ function DashboardContent() {
       {voiceNotice && <Notice tone="warn">{voiceNotice}</Notice>}
       {cacheAge && (
         <Notice tone="warn">
-          Showing saved information from {cacheAge}. It will update when you are back online.
+          {dict.weatherStale}
         </Notice>
       )}
       {error && <Notice tone="warn">{error.message}</Notice>}
@@ -372,14 +733,14 @@ function DashboardContent() {
         {/* KPI 1: Soil Moisture */}
         <Card className="p-4 bg-white/95 border border-soil-150/70 shadow-sm rounded-2xl flex flex-col justify-between overflow-hidden h-28 relative">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">Soil Moisture</span>
+            <span className="text-xs font-bold text-slate-500">{dict.soilMoisture}</span>
             <Droplets className="h-4.5 w-4.5 text-blue-500" />
           </div>
           <div className="mt-2.5 flex items-baseline gap-1.5">
             <span className="text-2xl font-black text-slate-800">{moisturePct}%</span>
             <span className={cn(
               'text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded-md',
-              moistureRating === 'Good' ? 'text-blue-600 bg-blue-50' : moistureRating === 'Moderate' ? 'text-amber-600 bg-amber-50' : 'text-red-600 bg-red-50'
+              moisturePct >= 70 ? 'text-blue-600 bg-blue-50' : moisturePct >= 40 ? 'text-amber-600 bg-amber-50' : 'text-red-600 bg-red-50'
             )}>{moistureRating}</span>
           </div>
           {/* Wave Sparkline */}
@@ -393,7 +754,7 @@ function DashboardContent() {
         {/* KPI 2: Irrigation Status */}
         <Card className="p-4 bg-white/95 border border-soil-150/70 shadow-sm rounded-2xl flex flex-col justify-between overflow-hidden h-28 relative">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">Irrigation Status</span>
+            <span className="text-xs font-bold text-slate-500">{dict.irrigationStatus}</span>
             <Sprout className="h-4.5 w-4.5 text-emerald-500" />
           </div>
           <div className="mt-2.5 flex items-baseline gap-1.5">
@@ -414,7 +775,7 @@ function DashboardContent() {
         {/* KPI 3: Rainfall */}
         <Card className="p-4 bg-white/95 border border-soil-150/70 shadow-sm rounded-2xl flex flex-col justify-between overflow-hidden h-28 relative">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">7-Day Rainfall</span>
+            <span className="text-xs font-bold text-slate-500">{dict.sevenDayRainfall}</span>
             <CloudRain className="h-4.5 w-4.5 text-purple-500" />
           </div>
           <div className="mt-2.5 flex items-baseline gap-1.5">
@@ -436,14 +797,14 @@ function DashboardContent() {
         {/* KPI 4: Crop Health Score */}
         <Card className="p-4 bg-white/95 border border-soil-150/70 shadow-sm rounded-2xl flex flex-col justify-between overflow-hidden h-28 relative">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">Crop Health Score</span>
+            <span className="text-xs font-bold text-slate-500">{dict.cropHealthScore}</span>
             <Stethoscope className="h-4.5 w-4.5 text-emerald-500" />
           </div>
           <div className="mt-2.5 flex items-baseline gap-1.5">
             <span className="text-2xl font-black text-slate-800">{healthScore}/100</span>
             <span className={cn(
               'text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded-md',
-              healthBadge === 'Excellent' ? 'text-emerald-600 bg-emerald-50' : healthBadge === 'Good' ? 'text-blue-600 bg-blue-50' : 'text-amber-600 bg-amber-50 animate-pulse'
+              healthScore >= 90 ? 'text-emerald-600 bg-emerald-50' : healthScore >= 75 ? 'text-blue-600 bg-blue-50' : 'text-amber-600 bg-amber-50 animate-pulse'
             )}>{healthBadge}</span>
           </div>
           {/* Healthy Sparkline */}
@@ -465,12 +826,12 @@ function DashboardContent() {
               data.irrigation.shouldIrrigate && 'border-red-200 bg-gradient-to-br from-orange-50/20 via-red-50/10 to-white shadow-sm shadow-red-50'
             )}>
               <div>
-                <SectionHeading icon={Droplets} title="Water & Irrigation" />
+                <SectionHeading icon={Droplets} title={dict.waterIrrigation} />
                 <div className="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
                   {/* Gauge and details block */}
                   <div className="flex-1 space-y-3">
                     <p className={cn('text-lg font-black tracking-tight', data.irrigation.shouldIrrigate ? 'text-red-950' : 'text-slate-800')}>
-                      {data.irrigation.headline || 'No irrigation needed this week'}
+                      {data.irrigation.headline || (data.irrigation.shouldIrrigate ? dict.irrigationDue : dict.noIrrigation)}
                     </p>
                     <p className="text-base text-slate-600 leading-relaxed font-medium">
                       {data.irrigation.reason || 'Soil moisture is good and crops are well-hydrated. Rain expected over the coming week will cover crop water needs.'}
@@ -498,7 +859,7 @@ function DashboardContent() {
                     </svg>
                     <div className="absolute flex flex-col items-center justify-center">
                       <span className="text-lg font-black text-slate-800">{moisturePct}%</span>
-                      <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider">Moisture</span>
+                      <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider">{dict.soilMoisture.split(' ')[0]}</span>
                     </div>
                   </div>
                 </div>
@@ -508,7 +869,7 @@ function DashboardContent() {
               <div className="mt-6 space-y-4">
                 <div>
                   <div className="mb-1.5 flex items-center justify-between text-xs font-bold text-slate-600">
-                    <span>Soil Water Used</span>
+                    <span>{dict.soilWaterUsed}</span>
                     <span className="font-extrabold">{(data.irrigation.depletionPercent ?? 0)}%</span>
                   </div>
                   <div className="h-3 overflow-hidden rounded-full bg-slate-100 p-0.5 border border-slate-200/50">
@@ -526,8 +887,8 @@ function DashboardContent() {
                   <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
                   <p className="text-xs font-bold text-blue-800">
                     {data.irrigation.shouldIrrigate 
-                      ? `Critical: Crop needs about ${data.irrigation.depthMm || 20} mm of water.` 
-                      : 'Great! Your field has enough moisture. Keep monitoring regularly.'}
+                      ? dict.moistureTipUrgent.replace('{amount}', String(data.irrigation.depthMm || 20))
+                      : dict.moistureTipGood}
                   </p>
                 </div>
               </div>
@@ -552,7 +913,7 @@ function DashboardContent() {
               </div>
 
               <div className="relative z-10">
-                <SectionHeading icon={CloudSun} title="Weather Forecast" />
+                <SectionHeading icon={CloudSun} title={dict.weatherForecast} />
                 {data.weather.today && (
                   <div className="mt-3 flex items-start gap-4">
                     <div>
@@ -606,10 +967,10 @@ function DashboardContent() {
         <section className="flex flex-col h-full justify-between">
           <SectionHeading
             icon={Bell}
-            title="Priority Alerts"
+            title={dict.priorityAlerts}
             action={
               <Link href="/dashboard" className="text-base font-extrabold text-brand-700 hover:text-brand-800 transition-colors drop-shadow-sm">
-                View all
+                {dict.viewAll}
               </Link>
             }
           />
@@ -620,8 +981,8 @@ function DashboardContent() {
                   <CheckCircle2 className="h-4.5 w-4.5" />
                 </div>
                 <div>
-                  <p className="text-sm font-extrabold text-emerald-950">All crops healthy &amp; secure</p>
-                  <p className="text-xs font-semibold text-emerald-800/80 mt-0.5">No immediate actions required</p>
+                  <p className="text-sm font-extrabold text-emerald-950">{dict.allCropsHealthy}</p>
+                  <p className="text-xs font-semibold text-emerald-800/80 mt-0.5">{dict.noActionsRequired}</p>
                 </div>
               </Card>
             ) : (
@@ -675,10 +1036,10 @@ function DashboardContent() {
         <section className="flex flex-col h-full justify-between">
           <SectionHeading
             icon={Stethoscope}
-            title="Crop Health"
+            title={t('health.title')}
             action={
               <Link href="/health" className="text-base font-extrabold text-brand-700 hover:text-brand-800 transition-colors drop-shadow-sm">
-                Log an issue
+                {dict.logIssue}
               </Link>
             }
           />
@@ -712,27 +1073,29 @@ function DashboardContent() {
 
               {/* Status and text details */}
               <div className="flex-1 space-y-1.5">
-                <p className="text-xs font-extrabold text-slate-400 uppercase tracking-wider">Overall Crop Health</p>
+                <p className="text-xs font-extrabold text-slate-400 uppercase tracking-wider">{dict.overallCropHealth}</p>
                 <Badge tone={healthScore >= 90 ? 'success' : healthScore >= 75 ? 'warn' : 'neutral'} className="text-[10px] font-extrabold tracking-wide uppercase px-2 py-0.5">
                   {healthBadge}
                 </Badge>
                 <p className="text-xs font-semibold text-slate-500 leading-relaxed mt-1">
                   {data.health.activeIssues === 0
-                    ? 'No major issues found. Your crops are healthy and growing well.'
-                    : `${data.health.activeIssues} active issue${data.health.activeIssues === 1 ? '' : 's'} reported. Check health log for recommendations.`}
+                    ? dict.healthGood
+                    : data.health.activeIssues === 1
+                      ? dict.healthIssueSingle
+                      : dict.healthIssuePlural.replace('{count}', String(data.health.activeIssues))}
                 </p>
               </div>
             </div>
 
             <Link href="/health" className="btn-secondary w-full py-2.5 rounded-xl text-sm font-extrabold border border-soil-200 hover:bg-slate-50 mt-6 text-center shadow-sm">
-              Check a plant
+              {t('health.logObservation').split(' ')[0]}
             </Link>
           </Card>
         </section>
 
         {/* Col 3: Quick Actions */}
         <section className="flex flex-col h-full justify-between">
-          <SectionHeading icon={Sparkles} title="Quick Actions" />
+          <SectionHeading icon={Sparkles} title={dict.quickActions} />
           <div className="grid grid-cols-2 gap-3 flex-1">
             {/* Quick Action 1: Irrigate */}
             <Link href="/weather" className="block h-full">
@@ -741,8 +1104,8 @@ function DashboardContent() {
                   <Droplets className="h-4.5 w-4.5" />
                 </div>
                 <div className="mt-4">
-                  <p className="text-sm font-extrabold text-blue-950">Irrigate Now</p>
-                  <p className="text-[10px] font-bold text-blue-800 mt-0.5">Start irrigation</p>
+                  <p className="text-sm font-extrabold text-blue-950">{dict.irrigateNow}</p>
+                  <p className="text-[10px] font-bold text-blue-800 mt-0.5">{dict.startIrrigation}</p>
                 </div>
               </Card>
             </Link>
@@ -754,8 +1117,8 @@ function DashboardContent() {
                   <Stethoscope className="h-4.5 w-4.5" />
                 </div>
                 <div className="mt-4">
-                  <p className="text-sm font-extrabold text-emerald-950">Check Crop</p>
-                  <p className="text-[10px] font-bold text-emerald-800 mt-0.5">Scan &amp; diagnose</p>
+                  <p className="text-sm font-extrabold text-emerald-950">{dict.checkCrop}</p>
+                  <p className="text-[10px] font-bold text-emerald-800 mt-0.5">{dict.scanDiagnose}</p>
                 </div>
               </Card>
             </Link>
@@ -767,8 +1130,8 @@ function DashboardContent() {
                   <TrendingUp className="h-4.5 w-4.5" />
                 </div>
                 <div className="mt-4">
-                  <p className="text-sm font-extrabold text-purple-950">Market Prices</p>
-                  <p className="text-[10px] font-bold text-purple-800 mt-0.5">Check latest prices</p>
+                  <p className="text-sm font-extrabold text-purple-950">{dict.marketPrices}</p>
+                  <p className="text-[10px] font-bold text-purple-800 mt-0.5">{dict.checkLatestPrices}</p>
                 </div>
               </Card>
             </Link>
@@ -780,8 +1143,8 @@ function DashboardContent() {
                   <Sparkles className="h-4.5 w-4.5" />
                 </div>
                 <div className="mt-4">
-                  <p className="text-sm font-extrabold text-orange-950">Ask AI</p>
-                  <p className="text-[10px] font-bold text-orange-800 mt-0.5">Get farming advice</p>
+                  <p className="text-sm font-extrabold text-orange-950">{dict.askAi}</p>
+                  <p className="text-[10px] font-bold text-orange-800 mt-0.5">{dict.getFarmingAdvice}</p>
                 </div>
               </Card>
             </Link>
@@ -793,18 +1156,18 @@ function DashboardContent() {
       <section className="mt-6">
         <SectionHeading
           icon={Sprout}
-          title="Your crops"
+          title={t('nav.crops')}
           action={
             <Link href="/crops" className="text-base font-extrabold text-brand-700 hover:text-brand-800 transition-colors drop-shadow-sm">
-              Manage
+              {dict.manage}
             </Link>
           }
         />
         {data.crops.length === 0 ? (
           <Card className="p-5 text-center">
-            <p className="text-base font-medium text-slate-600">No crops added yet.</p>
+            <p className="text-base font-medium text-slate-600">{t('crops.emptyCrops')}</p>
             <Link href="/crops" className="btn-primary mt-3 w-full sm:w-auto text-center inline-block">
-              Add your crop
+              {t('crops.addCrop')}
             </Link>
           </Card>
         ) : (
@@ -825,13 +1188,13 @@ function DashboardContent() {
                     <p className="text-xs text-slate-500 font-semibold mt-0.5">
                       {humanise(crop.growthStage) || humanise(crop.status)}
                       {crop.daysToHarvest !== null && crop.daysToHarvest > 0
-                        ? ` · ${crop.daysToHarvest} days left`
+                        ? ` · ${crop.daysToHarvest} ${dict.daysLeft}`
                         : ''}
                     </p>
                   </div>
                   {!crop.isRecognised ? (
                     <Badge tone="warn" className="shrink-0 text-[9px] font-extrabold">
-                      Limited
+                      {dict.limitedData}
                     </Badge>
                   ) : null}
                 </Card>
@@ -843,7 +1206,7 @@ function DashboardContent() {
 
       {/* ── Plan Ahead Sections ── */}
       <section className="mt-6">
-        <SectionHeading title="Plan ahead" />
+        <SectionHeading title={dict.planAhead} />
         <div className="grid gap-4 sm:grid-cols-2">
           <Link href="/recommendations">
             <Card className="flex h-full items-start gap-4 p-5 transition-all duration-300 hover:border-brand-300 bg-white/90 border border-soil-150 rounded-2xl hover:shadow-md">
@@ -851,9 +1214,9 @@ function DashboardContent() {
                 <Sprout className="h-5 w-5" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-base font-extrabold text-slate-800">What to plant</p>
+                <p className="text-base font-extrabold text-slate-800">{dict.whatToPlant}</p>
                 <p className="text-sm font-semibold text-slate-500 mt-1">
-                  Crops ranked for your soil, season and local climate.
+                  {dict.cropsSuited}
                 </p>
               </div>
               <ArrowRight className="h-5 w-5 shrink-0 text-slate-400 self-center" aria-hidden />
@@ -866,9 +1229,9 @@ function DashboardContent() {
                 <Droplets className="h-5 w-5" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-base font-extrabold text-slate-800">Plan &amp; predict</p>
+                <p className="text-base font-extrabold text-slate-800">{dict.planPredict}</p>
                 <p className="text-sm font-semibold text-slate-500 mt-1">
-                  Fertiliser to buy, when to apply it, and expected yield.
+                  {dict.fertiliserToBuy}
                 </p>
               </div>
               <ArrowRight className="h-5 w-5 shrink-0 text-slate-400 self-center" aria-hidden />
@@ -880,11 +1243,10 @@ function DashboardContent() {
       {/* ── Outbreak Signal Section ── */}
       {nearby && nearby.outbreaks.length > 0 && (
         <section className="mt-6">
-          <SectionHeading icon={Users} title="Reported near you" />
+          <SectionHeading icon={Users} title={dict.reportedNearYou} />
           <Card className="border-amber-200 bg-amber-50/70 p-5 rounded-2xl shadow-sm">
             <p className="text-base font-bold text-amber-950">
-              Farmers within {nearby.radiusKm} km have reported these in the last 7 days.
-              Worth checking your own crop.
+              {dict.farmersWithin.replace('{radius}', String(nearby.radiusKm))}
             </p>
             <div className="mt-4 space-y-2">
               {nearby.outbreaks.slice(0, 3).map((outbreak) => (
@@ -894,7 +1256,7 @@ function DashboardContent() {
                 >
                   <span className="min-w-0 truncate text-sm font-extrabold text-amber-950">
                     {outbreak.name}
-                    <span className="font-semibold text-amber-900/80"> on {cropLabel(outbreak.crop)}</span>
+                    <span className="font-semibold text-amber-900/80"> {t('health.onCrop')} {cropLabel(outbreak.crop)}</span>
                   </span>
                   <Badge tone="warn" className="shrink-0 text-xs font-extrabold">
                     {outbreak.count} farm{outbreak.count === 1 ? '' : 's'}
@@ -903,7 +1265,7 @@ function DashboardContent() {
               ))}
             </div>
             <Link href="/health" className="btn-primary mt-4 w-full sm:w-auto py-2.5 rounded-xl shadow-sm text-center inline-block">
-              Check my crop
+              {dict.checkMyCrop}
             </Link>
           </Card>
         </section>
@@ -911,16 +1273,19 @@ function DashboardContent() {
 
       {/* Footer Timestamp */}
       <p className="pb-2 text-center text-xs text-slate-400 font-semibold mt-8">
-        {cacheAge ? `Saved ${cacheAge}` : `Updated ${timeAgo(data.generatedAt)}`} · Weather from
+        {cacheAge ? `${dict.updated} ${cacheAge}` : `${dict.updated} ${timeAgo(data.generatedAt)}`} · Weather from
         Open-Meteo
       </p>
     </div>
   );
 }
 
-function getGreeting(): string {
+function getGreeting(dict: Record<string, string>, name: string): string {
   const hour = new Date().getHours();
-  if (hour < 12) return 'Good morning';
-  if (hour < 17) return 'Good afternoon';
-  return 'Good evening';
+  const greetingTemplate = hour < 12 
+    ? dict.greetingMorning 
+    : hour < 17 
+      ? dict.greetingAfternoon 
+      : dict.greetingEvening;
+  return greetingTemplate.replace('{name}', name);
 }
