@@ -20,6 +20,13 @@ languages, with voice, and usable offline.
 | Aaryan            |
 | Vijay Patel       |
 
+## Deployment Link
+
+| Service     | URL                    |
+| ----------- | ---------------------- |
+| Frontend    | http://65.0.45.45:3000 |
+| Backend API | http://65.0.45.45:3001 |
+
 ## Selected Theme
 
 **Agriculture / AgriTech — Smart Farming Decision Support.**
@@ -357,12 +364,7 @@ npm run db:studio     # browse
 
 ---
 
-## Deployment Link
 
-| Service     | URL                    |
-| ----------- | ---------------------- |
-| Frontend    | http://65.0.45.45:3000 |
-| Backend API | http://65.0.45.45:3001 |
 
 ---
 
@@ -386,3 +388,10 @@ npm run db:studio     # browse
   worker would cache the app shell for a genuine cold start offline.
 - **Automated tests.** The engines are pure functions and well suited to unit
   tests; coverage is currently thin.
+
+
+  ## Demo user
+
+Name -    Demo 
+Email -    Demo@gmail.com
+password - Demo@123
