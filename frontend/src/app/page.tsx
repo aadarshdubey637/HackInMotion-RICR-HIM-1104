@@ -8,14 +8,15 @@ import { Spinner } from '@/components/ui';
 /** Entry point — route to the dashboard, setup, or sign-in as appropriate. */
 export default function Home() {
   const router = useRouter();
-  const { user, farms, loading } = useAuth();
+  const { user, farms, loading, farmsLoaded } = useAuth();
 
   useEffect(() => {
     if (loading) return;
     if (!user) router.replace('/login');
+    else if (!farmsLoaded) return; // wait for farms to be fetched before deciding
     else if (farms.length === 0) router.replace('/onboarding');
     else router.replace('/dashboard');
-  }, [user, farms, loading, router]);
+  }, [user, farms, farmsLoaded, loading, router]);
 
   return (
     <div className="flex min-h-dvh items-center justify-center">
