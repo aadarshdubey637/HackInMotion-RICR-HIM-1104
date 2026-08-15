@@ -22,10 +22,13 @@ languages, with voice, and usable offline.
 
 ## Deployment Link
 
-| Service     | URL                    |
-| ----------- | ---------------------- |
-| Frontend    | http://65.0.45.45:3000 |
-| Backend API | http://65.0.45.45:3001 |
+- **Frontend** http://65.0.45.45:3000
+
+- **Backend API** http://65.0.45.45:3001 
+
+- **Nginx** https://65.0.45.45
+
+
 
 ## Selected Theme
 
@@ -391,6 +394,9 @@ npm run db:studio     # browse
 
 
   ## Demo user
-  Name -    Demo
-  Email -    Demo@gmail.com
-  password - Demo@123
+
+  - Name ->    Demo
+
+  - Email ->    Demo@gmail.com
+
+  - password -> Demo@123
