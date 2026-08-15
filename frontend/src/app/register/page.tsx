@@ -13,10 +13,15 @@ import { useTranslation } from '@/lib/language-context';
 /**
  * Registration — one form, one submit.
  *
- * Everything the account needs is collected here: full name, username, Gmail
- * address, mobile number and a password typed twice. The server validates the
- * same rules again, checks the identifiers are free, hashes the password with
- * bcrypt and signs the farmer in with the tokens it returns.
+ * Everything the account needs is collected here: full name, Gmail address,
+ * mobile number and a password typed twice. The server validates the same rules
+ * again, checks the identifiers are free, hashes the password with bcrypt and
+ * signs the farmer in with the tokens it returns.
+ *
+ * No username. The Gmail address is what signs the farmer in, what the
+ * verification and reset codes go to, and what "Continue with Google" matches
+ * on — a separate name to invent, have rejected as taken, and then remember was
+ * a box that earned nothing.
  */
 
 /** Field-level messages from the API, keyed the way `validate.ts` sends them. */
@@ -32,7 +37,6 @@ export default function RegisterPage() {
 
   const [form, setForm] = useState({
     name: '',
-    username: '',
     email: '',
     phone: '',
     password: '',
@@ -211,23 +215,6 @@ export default function RegisterPage() {
               />
 
               <Field
-                id="username"
-                label="Username"
-                value={form.username}
-                onChange={(v) => update('username', v)}
-                error={fieldErrors.username}
-                autoComplete="username"
-                placeholder="rameshkumar"
-                hint="You will use this to sign in. Letters, numbers, dots and underscores."
-                // Keeps phone keyboards out of caps mode and off autocorrect,
-                // both of which fight a username field.
-                autoCapitalize="none"
-                autoCorrect="off"
-                spellCheck={false}
-                required
-              />
-
-              <Field
                 id="email"
                 label="Gmail address"
                 type="email"
@@ -235,9 +222,12 @@ export default function RegisterPage() {
                 value={form.email}
                 onChange={(v) => update('email', v)}
                 error={fieldErrors.email}
-                autoComplete="email"
+                // `username`, not `email`: this is the field the farmer will
+                // sign in with, and telling the password manager so is what
+                // makes it offer the pair back on the login screen.
+                autoComplete="username"
                 placeholder="you@gmail.com"
-                hint="Must end in @gmail.com, so “Continue with Google” works on this account too."
+                hint="You will sign in with this. Must end in @gmail.com, so “Continue with Google” works on this account too."
                 autoCapitalize="none"
                 autoCorrect="off"
                 required
@@ -326,7 +316,7 @@ export default function RegisterPage() {
 
               {/* "Sign up with Google" wording here — same flow, but this is the
                   screen where the farmer expects to be creating something. A Google
-                  account needs no username and no password. */}
+                  account needs no password and no mobile number. */}
               <GoogleSignIn text="signup_with" />
             </form>
 
