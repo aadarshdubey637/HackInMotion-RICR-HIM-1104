@@ -21,9 +21,14 @@ languages, with voice, and usable offline.
 | Vijay Patel       |
 
 
+
+
 ## Deployment Link
 
+
 - **Live** https://65.0.45.45
+
+
 
 
 
