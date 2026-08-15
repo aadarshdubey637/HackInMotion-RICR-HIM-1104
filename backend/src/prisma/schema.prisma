@@ -145,9 +145,16 @@ model User {
   /// above is unique, so two rows can never share a google_id.
   googleId String? @map("google_id")
 
-  /// Chosen at registration; a second way to sign in besides the email address.
-  /// Stored lowercased — a farmer should not have to remember capitalisation to
-  /// get back into their own account.
+  /// A second way to sign in besides the email address. Stored lowercased — a
+  /// farmer should not have to remember capitalisation to get back into their
+  /// own account.
+  ///
+  /// No longer collected: registration asks for name, Gmail, mobile and a
+  /// password only, and Google Sign-In never set one either, so every account
+  /// created from now on has null here. The field stays because accounts that
+  /// predate the change still hold a username and `login` still accepts it as an
+  /// identifier — dropping it would lock those farmers out of the credential
+  /// they have been typing.
   ///
   /// Optional and deliberately NOT `@unique`, for exactly the reason documented
   /// on `googleId` above: MongoDB indexes a *missing* field as null, so a unique
@@ -174,9 +181,10 @@ model User {
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
 
-  farms     Farm[]
-  sessions  Session[]
-  emailOtps EmailOtp[]
+  farms          Farm[]
+  sessions       Session[]
+  emailOtps      EmailOtp[]
+  passwordResets PasswordReset[]
 
   @@index([googleId])
   @@index([username])
@@ -250,6 +258,55 @@ model EmailOtp {
   @@index([userId, createdAt])
   @@index([expiresAt])
   @@map("email_otps")
+}
+
+/// A one-time code emailed to a farmer who has forgotten their password.
+///
+/// Kept in its own collection rather than sharing `EmailOtp` with a `purpose`
+/// discriminator. The two codes must never be interchangeable — a code emailed
+/// to confirm an address must not also be able to set a new password — and a
+/// separate collection makes that structural instead of dependent on every
+/// query remembering to filter. It also avoids retrofitting a field onto the
+/// `email_otps` documents already in the database, where a missing key and a
+/// null one are not the same thing to a MongoDB query (see `consumedAt` above).
+///
+/// Rows survive being used, for the same two reasons `EmailOtp` rows do:
+/// `consumedAt` is what makes a code single-use, and the spent rows are what the
+/// per-hour send limit counts. `cleanupExpiredPasswordResets` clears old ones.
+model PasswordReset {
+  id     String @id @default(auto()) @map("_id") @db.ObjectId
+  userId String @map("user_id") @db.ObjectId
+
+  /// bcrypt hash of the six digits — never the digits themselves. This code is
+  /// worth more than a verification code (it grants the account), so hashing it
+  /// matters more here, not less.
+  codeHash String @map("code_hash")
+
+  /// Fifteen minutes after issue. Slightly longer than the verification code:
+  /// a farmer resetting a password often has to go and find the phone the mail
+  /// arrived on, where one verifying an address is already holding it.
+  expiresAt DateTime @map("expires_at")
+
+  /// Wrong guesses against this code. At the limit the code is dead — that cap
+  /// is what stops an online brute force of a six-digit space.
+  attempts Int @default(0)
+
+  /// Set the moment the password is actually changed. Non-null means spent, so
+  /// the same code cannot be replayed to set a second password later.
+  ///
+  /// Same MongoDB trap as `EmailOtp.consumedAt`: `where: { consumedAt: null }`
+  /// does not match a document that never had the key written. Always query
+  /// through `NOT_CONSUMED` in password-reset.ts, which accepts both shapes.
+  consumedAt DateTime? @map("consumed_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// The lookup every reset does: newest live code for one farmer.
+  @@index([userId, createdAt])
+  @@index([expiresAt])
+  @@map("password_resets")
 }
 
 model Farm {

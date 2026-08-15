@@ -37,8 +37,8 @@ render errors inline. Messages are written to be shown directly to a farmer.
 
 ### Authentication
 
-All endpoints except `/auth/register`, `/auth/login`, `/auth/google` and
-`/auth/refresh` require:
+All endpoints except `/auth/register`, `/auth/login`, `/auth/google`,
+`/auth/refresh`, `/auth/forgot-password` and `/auth/reset-password` require:
 
 ```
 Authorization: Bearer <accessToken>
@@ -97,16 +97,21 @@ One call creates the account and signs the farmer in.
 | Field             | Type   | Rules                                                                                                      |
 | ----------------- | ------ | ---------------------------------------------------------------------------------------------------------- |
 | `name`            | string | 2–100 characters                                                                                           |
-| `username`        | string | 3–20 chars, `a-z0-9._`, must start/end alphanumeric, no `..`/`__`; lowercased                              |
 | `email`           | string | Must end `@gmail.com`; lowercased                                                                          |
 | `phone`           | string | Indian mobile. `9876543210`, `+91 98765 43210`, `098765-43210` all accepted; normalised to `+919876543210` |
 | `password`        | string | Min 8 characters                                                                                           |
 | `confirmPassword` | string | Must equal `password` — compared server-side, not trusted from the browser                                 |
 | `language`        | string | Optional, defaults `en`                                                                                    |
 
+There is **no `username`**. The Gmail address is the credential: it signs the
+farmer in, receives the verification and reset codes, and is what "Continue with
+Google" matches on. A `username` sent by an older client is ignored, not
+rejected. Accounts created before this change keep the username they chose and
+can still sign in with it.
+
 The password is hashed with bcrypt at `BCRYPT_ROUNDS` before it is stored; the
-plaintext is never written or logged. Username, Gmail address and mobile number
-are each checked for availability before the insert.
+plaintext is never written or logged. Gmail address and mobile number are each
+checked for availability before the insert.
 
 **`201`** — the same `{ user, tokens }` shape as login, which is what makes
 registration and sign-in one moment: the client stores these tokens and goes
@@ -119,7 +124,7 @@ straight to the dashboard.
     "user": {
       "id": "6a7d…",
       "email": "ramesh@gmail.com",
-      "username": "rameshkumar",
+      "username": null,
       "name": "Ramesh Kumar",
       "phone": "+919876543210",
       "role": "FARMER"
@@ -129,22 +134,78 @@ straight to the dashboard.
 }
 ```
 
-| Response               | Meaning                                                          |
-| ---------------------- | ---------------------------------------------------------------- |
-| `400 VALIDATION_ERROR` | A field failed validation; `details` is keyed by field name      |
-| `409 CONFLICT`         | `details` names which of `username` / `email` / `phone` is taken |
+| Response               | Meaning                                                     |
+| ---------------------- | ----------------------------------------------------------- |
+| `400 VALIDATION_ERROR` | A field failed validation; `details` is keyed by field name |
+| `409 CONFLICT`         | `details` names which of `email` / `phone` is taken         |
 
 ### `POST /api/auth/login`
 
-Body: `{ "identifier", "password" }`, where `identifier` is a **username or a
-Gmail address** — the server looks up both. `{ "email", … }` is still accepted as a
-fallback for clients written against the previous contract.
+Body: `{ "identifier", "password" }`, where `identifier` is a **Gmail address** —
+or a username, on an account created before registration stopped asking for one.
+The server looks up both. `{ "email", … }` is still accepted as a fallback for
+clients written against the previous contract.
 
 Returns the same shape as register. `401` on bad credentials, and the message
 does not reveal whether the account exists.
 
-Logging out does not send anyone back to registration: the account, its username
-and its password hash outlive the session.
+Logging out does not send anyone back to registration: the account and its
+password hash outlive the session. A forgotten password is the other way back
+in — see the two endpoints below.
+
+### `POST /api/auth/forgot-password`
+
+Body: `{ "email" }`. Emails a six-digit code, valid **15 minutes**.
+
+Unauthenticated, which is the whole design constraint: anyone can call it, so it
+answers identically whether or not that address has an account. There is no
+`404`, and **no `429`** — a rate-limit reply that only appeared for real accounts
+would be an account-existence oracle. A request inside the 60-second cooldown, or
+past the 5-per-hour ceiling, quietly sends nothing and returns the same body.
+
+**`200`** — always:
+
+```json
+{
+  "success": true,
+  "data": {
+    "resendAfter": 60,
+    "message": "If that Gmail address has an account, a reset code is on its way."
+  }
+}
+```
+
+| Response                     | Meaning                                                                                   |
+| ---------------------------- | ----------------------------------------------------------------------------------------- |
+| `400 VALIDATION_ERROR`       | `email` is not a valid Gmail address — a fact about what was typed, not about any account |
+| `502 EXTERNAL_SERVICE_ERROR` | This server has no mailbox configured, or Gmail refused the message                       |
+
+A Google-only account gets a code too, and completing the reset gives it a first
+password. Whoever holds the code can already read the inbox Google verifies
+against, so this grants nothing new — and it rescues a farmer whose Google
+sign-in will not work on the phone in their hand.
+
+### `POST /api/auth/reset-password`
+
+Body: `{ "email", "code", "newPassword", "confirmPassword" }`. The address is
+repeated because there is no session to read it from; it is the **code** that
+authorises the change. `newPassword` has the same 8-character floor as
+registration, and `confirmPassword` is compared server-side.
+
+On success the password is replaced, the account is marked verified (receiving
+the code proved the mailbox is readable), the code is spent, and **every session
+on the account is revoked** — including any held by whoever knew the old
+password. No tokens are returned; the farmer signs in again.
+
+**`200`** — `{ "message": "Password changed. Please sign in with your new password." }`
+
+| Response               | Meaning                                                                                                                                                                                |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `400 VALIDATION_ERROR` | Code wrong, expired, already used, out of attempts, or the address has no account — all one message, keyed to `code`. A wrong guess against a live code also reports the attempts left |
+
+Five wrong guesses kill a code; a new one must be requested. Codes are stored as
+bcrypt hashes, never plaintext, and issuing one retires any previous code so only
+the newest email ever works.
 
 ### `POST /api/auth/google`
 

@@ -10,9 +10,12 @@ import {
   updateProfileSchema,
   googleAuthSchema,
   verifyEmailSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
 } from './auth.schema';
 import * as service from './auth.service';
 import { sendVerificationOtp, verifyOtp } from './email-otp';
+import { requestPasswordReset, resetPassword } from './password-reset';
 
 export const authRouter = Router();
 
@@ -60,6 +63,49 @@ authRouter.post(
   handler(async (req, res) => {
     const { isNewUser, ...result } = await service.loginWithGoogle(req.body);
     ok(res, { ...result, isNewUser }, isNewUser ? 201 : 200);
+  }),
+);
+
+// ───────────────────── Forgotten password ─────────────────────
+//
+// The mirror image of the verification routes above: those are authenticated
+// because the farmer is already signed in, and these cannot be, because being
+// unable to sign in is the entire reason for them. Everything that follows from
+// that — one reply for every address, no 429, no 404 — is in password-reset.ts.
+
+/**
+ * POST /api/auth/forgot-password — email a reset code.
+ *
+ * Always 200 with the same body, whether or not that address has an account.
+ * The only failure is 502, when the server has no mailbox configured at all.
+ */
+authRouter.post(
+  '/forgot-password',
+  validateBody(forgotPasswordSchema),
+  handler(async (req, res) => {
+    const result = await requestPasswordReset(req.body.email);
+    ok(res, {
+      ...result,
+      // Phrased as a conditional on purpose: it is true for an address with no
+      // account, and it is the same sentence either way.
+      message: 'If that Gmail address has an account, a reset code is on its way.',
+    });
+  }),
+);
+
+/**
+ * POST /api/auth/reset-password — submit the code and the new password.
+ *
+ * On success every session for the account is revoked, so no tokens come back
+ * here and the farmer signs in with the password they just chose. 400 with the
+ * message keyed to `code` for anything wrong with the code.
+ */
+authRouter.post(
+  '/reset-password',
+  validateBody(resetPasswordSchema),
+  handler(async (req, res) => {
+    await resetPassword(req.body);
+    ok(res, { message: 'Password changed. Please sign in with your new password.' });
   }),
 );
 
