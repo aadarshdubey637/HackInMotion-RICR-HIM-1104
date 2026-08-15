@@ -102,14 +102,40 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-dvh lg:flex">
-      {/* ── Desktop sidebar ── */}
-      <aside className="hidden w-64 shrink-0 border-r border-soil-200 bg-white lg:flex lg:flex-col">
-        <div className="flex items-center gap-2 border-b border-soil-200 px-5 py-4">
+      <aside className="hidden w-64 shrink-0 border-r border-soil-200 bg-white lg:flex lg:flex-col sticky top-0 h-dvh relative overflow-hidden">
+        {/* Animated scrolling leaf pattern in the background */}
+        <div className="sidebar-leaves-bg" />
+
+        <div className="flex items-center gap-2 border-b border-soil-200 px-5 py-4 z-10">
           <Sprout className="h-6 w-6 text-brand-600" aria-hidden />
           <span className="text-lg font-bold text-slate-800">Smart Farm</span>
         </div>
 
-        <nav className="flex-1 space-y-1 p-3">
+        {/* Decorative agriculture watermark in background */}
+        <div className="absolute bottom-24 left-0 w-full pointer-events-none opacity-[0.05] text-brand-600 z-0">
+          <svg
+            viewBox="0 0 200 100"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            className="w-full h-auto"
+          >
+            {/* Rolling hills */}
+            <path d="M0,80 Q50,60 100,80 T200,80 L200,100 L0,100 Z" fill="currentColor" />
+            <path
+              d="M0,90 Q70,75 140,90 T200,90 L200,100 L0,100 Z"
+              fill="currentColor"
+              opacity="0.7"
+            />
+            {/* Stylized crop sprouts */}
+            <path d="M30,80 C33,65 30,55 25,48 C32,58 32,68 30,80" fill="currentColor" />
+            <path d="M30,80 C35,70 42,65 48,60 C40,70 34,75 30,80" fill="currentColor" />
+            <path d="M120,83 C123,73 120,65 115,60 C122,68 122,76 120,83" fill="currentColor" />
+            <path d="M160,88 C163,78 160,70 155,65 C162,73 162,81 160,88" fill="currentColor" />
+            <path d="M160,88 C165,80 172,75 178,70 C170,80 164,85 160,88" fill="currentColor" />
+          </svg>
+        </div>
+
+        <nav className="flex-1 space-y-1 p-3 z-10">
           {[...PRIMARY, ...SECONDARY].map(({ href, labelKey, icon: Icon }) => {
             const active = pathname === href;
             return (
@@ -118,18 +144,32 @@ export function AppShell({ children }: { children: ReactNode }) {
                 href={href}
                 aria-current={active ? 'page' : undefined}
                 className={cn(
-                  'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition',
-                  active ? 'bg-brand-50 text-brand-800' : 'text-slate-600 hover:bg-soil-100',
+                  'sidebar-tab flex items-center justify-between gap-3 py-2.5 text-sm font-semibold transition-all duration-300 relative overflow-hidden',
+                  active
+                    ? 'bg-gradient-to-r from-brand-50 to-emerald-50 text-brand-900 border-l-4 border-brand-600 pl-2 pr-10 rounded-r-xl rounded-l-none shadow-sm'
+                    : 'text-slate-600 hover:bg-soil-100 pl-3 pr-3 rounded-xl',
                 )}
               >
-                <Icon className="h-5 w-5" aria-hidden />
-                {t(labelKey)}
+                <div className="flex items-center gap-3">
+                  <Icon className="h-5 w-5" aria-hidden />
+                  {t(labelKey)}
+                </div>
+                {active && (
+                  <svg
+                    className="w-4 h-4 text-emerald-500/40 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none animate-sprout-grow"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                  >
+                    <path d="M2,22 C8,22 12,18 12,12 C12,8 9,4 6,2 C8,6 8,10 6,12 C4,14 2,16 2,22 Z" />
+                    <path d="M12,12 C12,15 15,18 18,20 C16,16 16,12 18,10 C20,8 22,8 22,8 C22,8 18,8 15,10 C13,11 12,12 12,12 Z" />
+                  </svg>
+                )}
               </Link>
             );
           })}
         </nav>
 
-        <div className="border-t border-soil-200 p-3">
+        <div className="border-t border-soil-200 p-3 z-10 bg-white/90 backdrop-blur-sm">
           <p className="px-3 text-sm font-semibold text-slate-700">{user.name}</p>
           <p className="mb-2 px-3 text-xs text-slate-500">{user.email}</p>
           <button type="button" onClick={logout} className="btn-ghost w-full justify-start text-sm">
@@ -139,7 +179,39 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col relative overflow-hidden bg-soil-50">
+        {/* Subtle floating/falling leaves in background of the main content area */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden z-0 opacity-[0.14]">
+          <div className="absolute top-[10%] left-[5%] animate-float-slow text-brand-600">
+            <svg className="w-8 h-8" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M17,8C8,8 4,12 2,22C8,22 12,18 12,12C12,8 9,4 6,2C8,6 8,10 6,12C4,14 2,16 2,22" />
+            </svg>
+          </div>
+          <div
+            className="absolute top-[30%] right-[8%] animate-float-medium text-emerald-600"
+            style={{ animationDelay: '-2s' }}
+          >
+            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M17,8C8,8 4,12 2,22C8,22 12,18 12,12C12,8 9,4 6,2C8,6 8,10 6,12C4,14 2,16 2,22" />
+            </svg>
+          </div>
+          <div
+            className="absolute bottom-[20%] left-[15%] animate-float-fast text-green-600"
+            style={{ animationDelay: '-4s' }}
+          >
+            <svg className="w-10 h-10" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M17,8C8,8 4,12 2,22C8,22 12,18 12,12C12,8 9,4 6,2C8,6 8,10 6,12C4,14 2,16 2,22" />
+            </svg>
+          </div>
+          <div
+            className="absolute bottom-[40%] right-[25%] animate-float-slow text-brand-600"
+            style={{ animationDelay: '-6s' }}
+          >
+            <svg className="w-7 h-7" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M17,8C8,8 4,12 2,22C8,22 12,18 12,12C12,8 9,4 6,2C8,6 8,10 6,12C4,14 2,16 2,22" />
+            </svg>
+          </div>
+        </div>
         {/* ── Top bar ── */}
         <header className="sticky top-0 z-20 border-b border-soil-200 bg-white/95 backdrop-blur">
           <div className="flex items-center justify-between gap-3 px-4 py-3">
@@ -221,7 +293,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           ) : null}
         </header>
 
-        <main className="mx-auto w-full max-w-4xl flex-1 px-4 pb-24 pt-4 lg:pb-8">{children}</main>
+        <main className="mx-auto w-full max-w-7xl flex-1 px-4 pb-24 pt-4 lg:pb-8">{children}</main>
 
         {/* Voice is available on every screen, not just the dashboard — the
             farmer who wants prices should be able to ask from anywhere. */}
