@@ -391,7 +391,6 @@ npm run db:studio     # browse
 
 
   ## Demo user
-
-Name -    Demo 
-Email -    Demo@gmail.com
-password - Demo@123
+  Name -    Demo
+  Email -    Demo@gmail.com
+  password - Demo@123
