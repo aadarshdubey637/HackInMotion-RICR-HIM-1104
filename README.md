@@ -1,4 +1,4 @@
-# Smart Farm DSS
+# Smart Farm 
 
 An AI-powered farm decision-support system for Indian smallholders: crop
 recommendations, weather-driven irrigation, crop-photo disease diagnosis,
