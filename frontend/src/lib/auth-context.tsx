@@ -12,10 +12,7 @@ interface AuthState {
   currentFarm: Farm | null;
   /** True until the initial session check finishes. */
   loading: boolean;
-  /**
-   * `identifier` is a Gmail address, or a username on an account old enough to
-   * have one — registration no longer asks for a username.
-   */
+
   login: (identifier: string, password: string) => Promise<void>;
   /**
    * Create the account, sign in, and land on email verification.
@@ -64,11 +61,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [farms, setFarms] = useState<Farm[]>([]);
   const [currentFarm, setCurrentFarm] = useState<Farm | null>(null);
   const [loading, setLoading] = useState(true);
+  const [farmsLoaded, setFarmsLoaded] = useState(false);
 
   /** Load farms and resolve which one is active. */
   const loadFarms = useCallback(async (): Promise<Farm[]> => {
     const { farms: list } = await api.farms.list();
     setFarms(list);
+    setFarmsLoaded(true);
 
     const savedId = activeFarm.get();
     const selected = list.find((f) => f.id === savedId) ?? list[0] ?? null;
@@ -182,6 +181,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setFarms([]);
     setCurrentFarm(null);
+    setFarmsLoaded(false);
     router.push('/login');
   }, [router]);
 
@@ -202,6 +202,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         farms,
         currentFarm,
         loading,
+        farmsLoaded,
         login,
         register,
         loginWithGoogle,

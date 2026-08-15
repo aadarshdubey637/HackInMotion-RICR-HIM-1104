@@ -63,7 +63,7 @@ const SECONDARY = [
 export function AppShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { user, loading, farms, currentFarm, selectFarm, logout } = useAuth();
+  const { user, loading, farms, farmsLoaded, currentFarm, selectFarm, logout } = useAuth();
   const { online, pending, oldestCacheMs } = useOfflineState();
   const { t, syncFromProfile } = useTranslation();
 
@@ -76,8 +76,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (loading) return;
     if (!user) router.replace('/login');
-    else if (farms.length === 0) router.replace('/onboarding');
-  }, [user, farms, loading, router]);
+    else if (farmsLoaded && farms.length === 0) router.replace('/onboarding');
+  }, [user, farms, farmsLoaded, loading, router]);
 
   // Adopt the language saved on the account when this device has no choice of
   // its own — a farmer signing in on a new phone should not land in English.
