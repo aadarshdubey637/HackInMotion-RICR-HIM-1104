@@ -13,7 +13,7 @@ import { prisma } from '../../common/prisma';
 import { logger } from '../../common/logger';
 import { NotFoundError } from '../../common/errors';
 import { findCrop, currentSeason } from '../../domain/crops';
-import { getIrrigationGuidance } from '../weather/weather.service';
+import { getIrrigationGuidance, getWeatherForFarm } from '../weather/weather.service';
 import { getPriceTrend } from '../market/market.service';
 
 export type ActionPriority = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | 'INFO';
@@ -140,28 +140,36 @@ export async function getDashboard(farmId: string, userId: string): Promise<Dash
 
   // Run the independent sections concurrently. `allSettled` so one rejection
   // cannot take down the whole dashboard.
-  const [irrigationResult, healthResult, alertsResult, marketResult] = await Promise.allSettled([
-    getIrrigationGuidance(farmId, userId).catch((err) => {
-      logger.warn({ farmId, err }, 'Dashboard: irrigation unavailable');
-      throw err;
-    }),
-    prisma.healthLog.findMany({
-      where: { farmId, status: { in: ['ACTIVE', 'MONITORING'] } },
-      include: { crop: { select: { cropName: true } } },
-      orderBy: { observedAt: 'desc' },
-      take: 5,
-    }),
-    prisma.alert.findMany({
-      where: {
-        farmId,
-        isDismissed: false,
-        OR: [{ expiresAt: null }, { expiresAt: { gte: new Date() } }],
-      },
-      orderBy: [{ createdAt: 'desc' }],
-      take: 10,
-    }),
-    buildMarketSection(farm.crops),
-  ]);
+  const [irrigationResult, healthResult, alertsResult, marketResult, weatherBundleResult] =
+    await Promise.allSettled([
+      getIrrigationGuidance(farmId, userId).catch((err) => {
+        logger.warn({ farmId, err }, 'Dashboard: irrigation unavailable');
+        throw err;
+      }),
+      prisma.healthLog.findMany({
+        where: { farmId, status: { in: ['ACTIVE', 'MONITORING'] } },
+        include: { crop: { select: { cropName: true } } },
+        orderBy: { observedAt: 'desc' },
+        take: 5,
+      }),
+      prisma.alert.findMany({
+        where: {
+          farmId,
+          isDismissed: false,
+          OR: [{ expiresAt: null }, { expiresAt: { gte: new Date() } }],
+        },
+        orderBy: [{ createdAt: 'desc' }],
+        take: 10,
+      }),
+      buildMarketSection(farm.crops),
+      getWeatherForFarm(farmId, farm.latitude, farm.longitude).catch((err) => {
+        logger.warn({ farmId, err }, 'Dashboard: weather bundle unavailable');
+        throw err;
+      }),
+    ]);
+
+  const weatherBundle =
+    weatherBundleResult.status === 'fulfilled' ? weatherBundleResult.value.weather : null;
 
   // ── Weather + irrigation ──
   const weather: DashboardResult['weather'] = { available: false };
@@ -184,6 +192,13 @@ export async function getDashboard(farmId: string, userId: string): Promise<Dash
 
     weather.available = true;
     weather.warning = guidance.warning;
+    if (weatherBundle?.current) {
+      weather.current = {
+        temperatureC: weatherBundle.current.temperatureC,
+        humidityPct: weatherBundle.current.humidityPct,
+        description: weatherBundle.current.description,
+      };
+    }
     if (today) {
       weather.today = {
         tempMaxC: today.tempMaxC,

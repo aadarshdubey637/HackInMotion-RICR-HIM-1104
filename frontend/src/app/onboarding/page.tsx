@@ -258,31 +258,30 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="min-h-dvh bg-gradient-to-b from-brand-50 to-soil-50 pb-16">
-      {/* Top cover banner */}
-      <div
-        className="h-64 w-full bg-cover bg-center relative flex flex-col justify-between p-6"
-        style={{
-          backgroundImage:
-            'linear-gradient(to bottom, rgba(15, 23, 42, 0.15) 0%, rgba(15, 23, 42, 0.45) 50%, rgba(15, 23, 42, 0.85) 100%), url("/images/smart_farm_hero.png")',
-        }}
-      >
-        <div className="flex items-center gap-2 text-white bg-slate-900/60 backdrop-blur-md py-1.5 px-3 rounded-xl border border-white/10 self-start">
+    <div
+      className="min-h-dvh bg-cover bg-center bg-no-repeat bg-fixed relative pb-16 pt-8 flex flex-col items-center justify-start"
+      style={{
+        backgroundImage:
+          'linear-gradient(to bottom, rgba(15, 23, 42, 0.45) 0%, rgba(15, 23, 42, 0.8) 100%), url("/images/smart_farm_hero.png")',
+      }}
+    >
+      <div className="mx-auto w-full max-w-lg px-4 relative z-10 flex flex-col items-center">
+        {/* Logo/Tag */}
+        <div className="flex items-center gap-2 text-white bg-slate-900/70 backdrop-blur-md py-1.5 px-3 rounded-xl border border-white/10 mb-6">
           <Sprout className="h-4 w-4 text-emerald-400" />
           <span className="text-[10px] font-extrabold tracking-wider text-emerald-50">
             SMART ONBOARDING
           </span>
         </div>
 
-        <div className="text-center text-white pb-2">
+        {/* Title */}
+        <div className="text-center text-white mb-6">
           <h1 className="text-3xl font-extrabold text-white drop-shadow-md">Set up your farm</h1>
-          <p className="mt-2 text-sm text-slate-200 max-w-md mx-auto leading-relaxed font-medium">
+          <p className="mt-2 text-sm text-slate-200 max-w-md mx-auto leading-relaxed font-semibold">
             Everything the app tells you is based on this — so it is worth getting right.
           </p>
         </div>
-      </div>
 
-      <div className="mx-auto w-full max-w-lg px-4 mt-6 relative z-10">
         {/* Step indicator */}
         <div className="mb-6 flex items-center justify-center gap-2">
           {[1, 2].map((n) => (
@@ -292,17 +291,17 @@ export default function OnboardingPage() {
                   'flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold shadow-md transition-all duration-300',
                   step >= n
                     ? 'bg-brand-600 text-white scale-110'
-                    : 'bg-white text-slate-500 border border-soil-200',
+                    : 'bg-slate-900/60 text-slate-400 border border-white/10 backdrop-blur-md',
                 )}
               >
                 {step > n ? <Check className="h-4 w-4" /> : n}
               </div>
-              {n === 1 ? <div className="h-0.5 w-10 bg-slate-300" /> : null}
+              {n === 1 ? <div className="h-0.5 w-10 bg-white/20" /> : null}
             </div>
           ))}
         </div>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="w-full">
           {error ? (
             <div className="mb-4">
               <Notice tone="warn">{error}</Notice>
@@ -310,7 +309,7 @@ export default function OnboardingPage() {
           ) : null}
 
           {step === 1 ? (
-            <Card className="space-y-5 rounded-3xl shadow-xl border border-soil-100 p-6">
+            <Card className="space-y-5 rounded-3xl shadow-xl border border-white/20 p-6 bg-white/95 backdrop-blur-md">
               <div>
                 <label htmlFor="farm-name" className="label font-semibold text-slate-700">
                   Farm name
@@ -558,7 +557,7 @@ export default function OnboardingPage() {
               ) : null}
             </Card>
           ) : (
-            <Card className="space-y-5 rounded-3xl shadow-xl border border-soil-100 p-6">
+            <Card className="space-y-5 rounded-3xl shadow-xl border border-white/20 p-6 bg-white/95 backdrop-blur-md">
               <div>
                 <h2 className="text-lg font-bold text-slate-800">What are you growing?</h2>
                 <p className="mt-1 text-sm text-slate-600">
