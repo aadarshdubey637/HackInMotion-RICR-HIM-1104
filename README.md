@@ -20,13 +20,10 @@ languages, with voice, and usable offline.
 | Aaryan            |
 | Vijay Patel       |
 
+
 ## Deployment Link
 
-- **Frontend** http://65.0.45.45:3000
-
-- **Backend API** http://65.0.45.45:3001 
-
-- **Nginx** https://65.0.45.45
+- **Live** https://65.0.45.45
 
 
 
