@@ -1,19 +1,29 @@
 /**
  * Crop photo analysis — provider-neutral contract.
  *
- * Two engines can look at a farmer's photograph:
+ * Three engines can look at a farmer's photograph:
  *
- *   1. A **local Ollama vision model** (gemma4:e4b by default). Free, private,
+ *   1. **Google Gemini**, if `GEMINI_API_KEY` is set. A free key from
+ *      https://aistudio.google.com/apikey, no billing account, and the strongest
+ *      of the three at plant pathology. Tried first for exactly that reason.
+ *   2. A **local Ollama vision model** (gemma3:4b by default). Free, private,
  *      works offline, and — because it is a language model — it can also read
  *      the symptoms off the image in words the rule engine can score.
- *   2. **Plant.id**, if an API key is configured. Narrower but trained
+ *   3. **Plant.id**, if an API key is configured. Narrower but trained
  *      specifically on plant disease, and it returns reference photographs.
  *
- * Both return the same `ImageAssessment` so `diagnosis.ts` never has to know
- * which one ran. Ollama is tried first: it costs nothing and needs no key. If
- * it is not running, or the photo defeats it, Plant.id is the fallback.
+ * All three return the same `ImageAssessment` so `diagnosis.ts` never has to
+ * know which one ran.
  *
- * Neither is treated as the answer. Whatever comes back is folded into the
+ * Order note: Ollama used to be first, on the reasoning that it costs nothing
+ * and needs no key. In practice it needs a multimodal model pulled onto the
+ * server, and with none pulled — and no Plant.id key — photo analysis silently
+ * never ran at all. Gemini leads because a configured key is a deliberate choice
+ * by whoever deployed this, and it is the option most likely to actually answer.
+ * Set `VISION_PREFER_LOCAL=true` to put the local model back in front when
+ * keeping photographs on the premises matters more than accuracy.
+ *
+ * None is treated as the answer. Whatever comes back is folded into the
  * differential in diagnosis.ts as one weighted signal among symptoms, weather
  * and host susceptibility.
  */
@@ -21,10 +31,11 @@
 import type { HealthSeverity } from '@prisma/client';
 import { logger } from '../../common/logger';
 import { config } from '../../config';
+import { assessCropImageWithGemini } from './gemini-vision';
 import { assessCropImageWithOllama } from './ollama-vision';
 import { assessPlantHealth } from './plant-id';
 
-export type VisionProvider = 'ollama' | 'plant-id';
+export type VisionProvider = 'gemini' | 'ollama' | 'plant-id';
 
 export interface ImageTreatment {
   chemical: string[];
@@ -99,6 +110,13 @@ export interface VisionOptions {
   description?: string;
   /** When the photo was taken; season matters for what is plausible. */
   observedAt?: Date;
+  /**
+   * The uploaded file's MIME type, as recorded by multer.
+   *
+   * Hosted providers must be told what they are being sent. Guessing from the
+   * bytes is possible and is done as a fallback, but the upload already knew.
+   */
+  mimeType?: string;
 }
 
 /**
@@ -114,18 +132,47 @@ export async function analyseCropImage(
   imageBase64: string,
   options: VisionOptions = {},
 ): Promise<ImageAssessment | null> {
-  if (config.OLLAMA_VISION_ENABLED) {
-    const local = await assessCropImageWithOllama(imageBase64, options);
-    // A "not a plant" verdict is a real answer, not a failure — don't burn a
-    // Plant.id credit re-asking about a photo of somebody's shoe.
-    if (local) return local;
+  // Each entry is attempted in turn. A truthy result wins immediately — note
+  // that includes a "not a plant" or "looks healthy" verdict, which are real
+  // answers, not failures: there is nothing to gain from re-asking a second
+  // engine about a photo of somebody's shoe.
+  const attempts: Array<{ name: VisionProvider; run: () => Promise<ImageAssessment | null> }> = [];
+
+  const gemini = {
+    name: 'gemini' as const,
+    run: () => assessCropImageWithGemini(imageBase64, options),
+  };
+  const ollama = {
+    name: 'ollama' as const,
+    run: () => assessCropImageWithOllama(imageBase64, options),
+  };
+
+  if (config.VISION_PREFER_LOCAL) {
+    if (config.OLLAMA_VISION_ENABLED) attempts.push(ollama);
+    if (config.GEMINI_API_KEY) attempts.push(gemini);
+  } else {
+    if (config.GEMINI_API_KEY) attempts.push(gemini);
+    if (config.OLLAMA_VISION_ENABLED) attempts.push(ollama);
   }
 
   if (config.PLANT_ID_API_KEY) {
-    const remote = await assessPlantHealth(imageBase64, options);
-    if (remote) return remote;
+    attempts.push({ name: 'plant-id', run: () => assessPlantHealth(imageBase64, options) });
   }
 
-  logger.warn('No image analysis engine available; diagnosing from description and weather alone');
+  for (const attempt of attempts) {
+    const assessment = await attempt.run();
+    if (assessment) return assessment;
+    logger.debug({ provider: attempt.name }, 'Vision provider declined; trying the next');
+  }
+
+  // Naming what is missing, rather than "no engine available". This line is the
+  // only trace of *why* a farmer's photo went unread, and "set GEMINI_API_KEY"
+  // is a fix somebody can act on.
+  logger.warn(
+    { attempted: attempts.map((a) => a.name) },
+    attempts.length === 0
+      ? 'No image analysis engine is configured — set GEMINI_API_KEY (free: https://aistudio.google.com/apikey) or pull an Ollama vision model. Diagnosing from description and weather alone.'
+      : 'Every configured image analysis engine failed; diagnosing from description and weather alone',
+  );
   return null;
 }

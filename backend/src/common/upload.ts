@@ -48,6 +48,14 @@ export interface StoredImage {
   url: string;
   base64: string;
   filename: string;
+  /**
+   * The browser-declared MIME type, already validated against `ALLOWED_MIME`.
+   *
+   * Hosted vision providers have to be told what they are being handed; they
+   * cannot infer it from a bare base64 payload the way a local model reading
+   * the bytes can.
+   */
+  mimeType: string;
 }
 
 /** Persist an uploaded buffer and return its public URL plus base64 payload. */
@@ -65,6 +73,7 @@ export function storeImage(file: Express.Multer.File): StoredImage {
     // client reads only the trailing filename, so both shapes resolve.
     url: `${config.PUBLIC_URL.replace(/\/$/, '')}/api/crop-health/photo/${filename}`,
     base64: file.buffer.toString('base64'),
+    mimeType: file.mimetype,
   };
 }
 

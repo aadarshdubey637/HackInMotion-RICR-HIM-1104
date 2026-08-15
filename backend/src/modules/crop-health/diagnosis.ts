@@ -37,9 +37,10 @@
  */
 
 import type { HealthSeverity } from '@prisma/client';
+import { findCrop } from '../../domain/crops';
 import type { CropProfile, DiseaseProfile, PestProfile, WeatherTriggers } from '../../domain/crops';
 import type { DailyWeather } from '../weather/openmeteo';
-import type { ImageAssessment, ImageFinding } from './vision';
+import type { ImageAssessment, ImageFinding, VisionProvider } from './vision';
 import { expandRegionalSymptoms } from './symptom-lexicon';
 
 // ─────────────────────────── Types ───────────────────────────
@@ -110,13 +111,17 @@ export interface Diagnosis {
   nextSteps: string[];
   /** How much to trust this, 0-1. */
   confidence: number;
-  method: 'rule-engine' | 'rule-engine+ollama-vision' | 'rule-engine+plant-id';
+  method:
+    | 'rule-engine'
+    | 'rule-engine+gemini-vision'
+    | 'rule-engine+ollama-vision'
+    | 'rule-engine+plant-id';
   /** Honest statement of what the analysis could and could not use. */
   limitations: string[];
   /** What the image analysis concluded, when a photo was analysed. */
   image?: {
-    /** Which engine looked at the photo. */
-    provider: 'ollama' | 'plant-id';
+    /** Which engine looked at the photo. Mirrors `VisionProvider`. */
+    provider: VisionProvider;
     /** Model tag, when it ran locally. */
     model: string | null;
     /** False when the photo is not of a plant — the farmer should retake it. */
@@ -422,6 +427,64 @@ function findingMatchesProfile(finding: ImageFinding, profileName: string): bool
   return false;
 }
 
+/**
+ * Do two free-text problem names refer to the same problem?
+ *
+ * The string form of `findingMatchesProfile`, for callers that hold two names
+ * rather than a finding and a profile.
+ */
+function namesMatch(rawName: string, profileName: string): boolean {
+  const raw = normalise(rawName);
+  const profile = normalise(profileName);
+  if (!raw || !profile) return false;
+  if (raw === profile) return true;
+
+  // Multi-word names are distinctive enough to match on containment.
+  if (profile.includes(' ') && (raw.includes(profile) || profile.includes(raw))) return true;
+  // Single-word profile names must appear as a whole word.
+  if (!profile.includes(' ') && raw.split(' ').includes(profile)) return true;
+
+  for (const [needle, profiles] of Object.entries(NAME_SYNONYMS)) {
+    if (!raw.includes(needle)) continue;
+    if (profiles.some((p) => profile.includes(p) || p.includes(profile))) return true;
+  }
+
+  return false;
+}
+
+/**
+ * Resolve a detected problem name onto this crop's curated vocabulary.
+ *
+ * Community outbreak clustering lives or dies on this. The same problem reaches
+ * the database under whichever name its source happened to use: the vision model
+ * may write "Alternaria solani", a farmer filing a report types "early blight",
+ * and an older row holds "Early Blight (leaf spot)". Grouped by raw string those
+ * are three separate one-farm incidents, and an outbreak that three neighbours
+ * have all reported never crosses any threshold.
+ *
+ * Returns the curated profile name when one plainly matches, so every spelling
+ * collapses onto the same key. Falls back to the trimmed original — an unknown
+ * problem is still worth clustering with other reports of the same unknown
+ * problem, and inventing a match would be worse than not having one.
+ */
+export function canonicalProblemName(rawName: string, cropName: string | null): string {
+  const trimmed = rawName.trim();
+  if (!trimmed) return trimmed;
+
+  const profile = findCrop(cropName);
+  const curated = profile
+    ? [...profile.diseases.map((d) => d.name), ...profile.pests.map((p) => p.name)]
+    : [];
+
+  // Longest first: "bacterial leaf blight" must win over "blight" when both are
+  // in the crop's list, or the more specific report is folded into the vaguer one.
+  for (const name of [...curated].sort((a, b) => b.length - a.length)) {
+    if (namesMatch(trimmed, name)) return name;
+  }
+
+  return trimmed;
+}
+
 /** The name to show a farmer: a common name beats a fungal family. */
 function farmerFacingName(finding: ImageFinding): string {
   const common = finding.commonNames.find((n) => n.trim().length > 0);
@@ -696,10 +759,13 @@ function assemble(candidates: Candidate[], input: DiagnosisInput): Diagnosis {
     'This is guidance to help you check the right things — not a confirmed diagnosis. Consult your local extension officer for anything serious.',
   );
 
+  const METHOD_BY_PROVIDER: Record<VisionProvider, Diagnosis['method']> = {
+    gemini: 'rule-engine+gemini-vision',
+    ollama: 'rule-engine+ollama-vision',
+    'plant-id': 'rule-engine+plant-id',
+  };
   const method: Diagnosis['method'] = external
-    ? external.provider === 'ollama'
-      ? 'rule-engine+ollama-vision'
-      : 'rule-engine+plant-id'
+    ? METHOD_BY_PROVIDER[external.provider]
     : 'rule-engine';
 
   const imageSummary: Diagnosis['image'] = external

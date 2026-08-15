@@ -21,7 +21,13 @@ import { upsertWithoutTransaction } from '../../common/upsert';
 import { resolveCrop } from '../../domain/crops';
 import { getWeatherForFarm } from '../weather/weather.service';
 import { analyseCropImage } from './vision';
-import { diagnose, buildWeatherContext, type Diagnosis, type WeatherContext } from './diagnosis';
+import {
+  diagnose,
+  buildWeatherContext,
+  canonicalProblemName,
+  type Diagnosis,
+  type WeatherContext,
+} from './diagnosis';
 import type {
   CreateObservationInput,
   UpdateObservationInput,
@@ -57,7 +63,7 @@ export async function createObservation(
   farmId: string,
   userId: string,
   input: CreateObservationInput,
-  image: { url: string; base64: string } | null,
+  image: { url: string; base64: string; mimeType?: string } | null,
 ): Promise<ObservationResult> {
   const farm = await prisma.farm.findFirst({ where: { id: farmId, userId } });
   if (!farm) throw new NotFoundError('Farm', farmId);
@@ -82,6 +88,7 @@ export async function createObservation(
     image
       ? analyseCropImage(image.base64, {
           language,
+          mimeType: image.mimeType,
           // Regional priors: the same symptoms mean different things in
           // Punjab in January and in Kerala in July.
           latitude: farm.latitude,
@@ -402,11 +409,94 @@ export async function createCommunityReport(
   return log;
 }
 
-export async function nearbyOutbreaks(farmId: string, userId: string, radiusKm = 5) {
+/**
+ * How far back a report still counts toward an outbreak signal.
+ *
+ * Fourteen days rather than seven. A fungal epidemic builds over two to three
+ * weeks, and a one-week window drops the earliest reports — the very ones that
+ * make a cluster visible before it reaches the farmer asking.
+ */
+const OUTBREAK_WINDOW_DAYS = 14;
+
+/**
+ * Statuses that still represent a live problem in the area.
+ *
+ * A neighbour who has treated and resolved their infection is evidence the
+ * problem was *here*, but not that it is spreading now. Counting resolved rows
+ * kept stale outbreaks on the dashboard indefinitely.
+ */
+const LIVE_STATUSES = ['ACTIVE', 'MONITORING'] as const;
+
+/**
+ * Minimum other farms before a cluster is called an outbreak rather than a
+ * report worth knowing about.
+ *
+ * The previous threshold was three *including the farmer's own farm*, inside a
+ * 5 km radius, over 7 days. On any realistic map that never fires — which is why
+ * the panel was always empty. Two neighbours reporting the same problem is a
+ * genuine signal; one is still worth showing, flagged as a single report rather
+ * than dressed up as an outbreak.
+ */
+const OUTBREAK_MIN_FARMS = 2;
+
+/** Confidence floor for an engine-detected problem to count as a report. */
+const MIN_DETECTION_CONFIDENCE = 0.3;
+
+interface DetectionMeta extends CommunityReportMeta {
+  confidence?: number;
+}
+
+/**
+ * Should this log count as a report of a real problem?
+ *
+ * A farmer filing a community report has asserted it themselves, so it always
+ * counts. An engine-detected problem counts only above a confidence floor —
+ * without this, a low-confidence guess on a blurry photo becomes one third of an
+ * "outbreak" that nobody actually observed.
+ */
+function isCountableReport(analysisResult: Prisma.JsonValue | null): boolean {
+  const meta = readReportMeta(analysisResult) as DetectionMeta;
+  if (meta.isCommunityReport) return true;
+  if (typeof meta.confidence !== 'number') return true;
+  return meta.confidence >= MIN_DETECTION_CONFIDENCE;
+}
+
+export interface OutbreakSignal {
+  name: string;
+  crop: string;
+  /** Distinct *other* farms reporting this. Never counts the caller's own farm. */
+  count: number;
+  latest: Date;
+  approxDistanceKm: number;
+  severity: string;
+  guidance: string[];
+  /** True once `count` reaches the outbreak threshold; false for a lone report. */
+  isOutbreak: boolean;
+  /** True when the caller's own farm has also reported this problem. */
+  reportedOnYourFarm: boolean;
+}
+
+/**
+ * Anonymous outbreak signal for the area around one farm.
+ *
+ * Four things were wrong with this before, each of which alone was enough to keep
+ * the panel permanently empty:
+ *
+ *   1. Clustering keyed on the raw problem string, so "Alternaria solani" from the
+ *      vision model and "early blight" typed by a neighbour never grouped.
+ *   2. The threshold counted the caller's own farm toward "others in your area".
+ *   3. Resolved and treated rows counted the same as live ones.
+ *   4. A 5 km radius over 7 days needing 3 farms — a bar almost nothing clears.
+ *
+ * The response still leads with genuine outbreaks; single nearby reports are
+ * included and marked, because "one neighbour has this" is exactly the early
+ * warning the feature exists to give.
+ */
+export async function nearbyOutbreaks(farmId: string, userId: string, radiusKm = 25) {
   const farm = await prisma.farm.findFirst({ where: { id: farmId, userId } });
   if (!farm) throw new NotFoundError('Farm', farmId);
 
-  // 1. Get bounding box to narrow query
+  // 1. Bounding box first, to keep the query cheap; exact distance is applied below.
   const latDelta = radiusKm / 111;
   const lonDelta = radiusKm / (111 * Math.max(0.1, Math.cos((farm.latitude * Math.PI) / 180)));
 
@@ -418,21 +508,31 @@ export async function nearbyOutbreaks(farmId: string, userId: string, radiusKm =
     select: { id: true, latitude: true, longitude: true },
   });
 
-  // Calculate actual distance and filter to within exact radius
-  const filteredFarms = nearbyFarms
-    .map((f) => ({
-      id: f.id,
-      distance: getDistanceKm(farm.latitude, farm.longitude, f.latitude, f.longitude),
-    }))
-    .filter((f) => f.distance <= radiusKm);
+  const distanceByFarm = new Map<string, number>();
+  for (const candidate of nearbyFarms) {
+    const distance = getDistanceKm(
+      farm.latitude,
+      farm.longitude,
+      candidate.latitude,
+      candidate.longitude,
+    );
+    if (distance <= radiusKm) distanceByFarm.set(candidate.id, distance);
+  }
 
-  if (filteredFarms.length === 0) return { outbreaks: [], farmsInArea: 0, radiusKm };
+  // The caller's own farm is inside its own radius, so "farms in the area" means
+  // everyone else.
+  const otherFarmCount = [...distanceByFarm.keys()].filter((id) => id !== farmId).length;
 
-  // 2. Fetch reports in the last 7 days from these farms
+  if (distanceByFarm.size === 0) {
+    return { outbreaks: [], farmsInArea: 0, radiusKm };
+  }
+
+  // 2. Live reports from those farms inside the window.
   const logs = await prisma.healthLog.findMany({
     where: {
-      farmId: { in: filteredFarms.map((f) => f.id) },
-      observedAt: { gte: new Date(Date.now() - 7 * 86_400_000) },
+      farmId: { in: [...distanceByFarm.keys()] },
+      observedAt: { gte: new Date(Date.now() - OUTBREAK_WINDOW_DAYS * 86_400_000) },
+      status: { in: [...LIVE_STATUSES] },
     },
     select: {
       farmId: true,
@@ -445,13 +545,15 @@ export async function nearbyOutbreaks(farmId: string, userId: string, radiusKm =
     },
   });
 
-  // 3. Group by problem + crop, tracking unique farms
+  // 3. Group by canonical problem + crop, tracking distinct farms.
   const groups = new Map<
     string,
     {
       name: string;
       crop: string;
-      farmIds: Set<string>;
+      /** Other farms only — the caller's own is tracked separately. */
+      otherFarmIds: Set<string>;
+      onOwnFarm: boolean;
       latest: Date;
       minDistance: number;
       severities: string[];
@@ -459,59 +561,90 @@ export async function nearbyOutbreaks(farmId: string, userId: string, radiusKm =
   >();
 
   for (const log of logs) {
-    const name = log.diseaseDetected ?? log.pestDetected;
-    if (!name) continue;
-    // Use the stored customCropName if available (community reports with typed crop name)
+    const rawName = log.diseaseDetected ?? log.pestDetected;
+    if (!rawName) continue;
+    if (!isCountableReport(log.analysisResult)) continue;
+
+    // Community reports store the farmer's typed crop name when it was not one
+    // of ours; prefer it so grouping uses the name a person would recognise.
     const meta = readReportMeta(log.analysisResult);
-    const cropName = meta?.customCropName?.trim() || log.crop.cropName;
+    const cropName = meta.customCropName?.trim() || log.crop.cropName;
+
+    // The fix that makes clustering work at all: fold every spelling of a
+    // problem onto this crop's curated name before keying.
+    const name = canonicalProblemName(rawName, cropName);
     const key = `${name.toLowerCase()}|${cropName.toLowerCase()}`;
-    const farmDist = filteredFarms.find((f) => f.id === log.farmId)?.distance ?? 0;
+
+    const isOwnFarm = log.farmId === farmId;
+    const distance = distanceByFarm.get(log.farmId) ?? 0;
 
     const existing = groups.get(key);
     if (existing) {
-      existing.farmIds.add(log.farmId);
+      if (isOwnFarm) existing.onOwnFarm = true;
+      else existing.otherFarmIds.add(log.farmId);
       if (log.observedAt > existing.latest) existing.latest = log.observedAt;
-      if (farmDist < existing.minDistance) existing.minDistance = farmDist;
+      // Own-farm reports are at distance 0 and would collapse every cluster to
+      // "within 0.5 km", which says nothing about where the neighbours are.
+      if (!isOwnFarm && distance < existing.minDistance) existing.minDistance = distance;
       existing.severities.push(log.severity);
     } else {
       groups.set(key, {
         name,
-        crop: cropName, // use resolved name (custom or registered)
-        farmIds: new Set([log.farmId]),
+        crop: cropName,
+        otherFarmIds: isOwnFarm ? new Set() : new Set([log.farmId]),
+        onOwnFarm: isOwnFarm,
         latest: log.observedAt,
-        minDistance: farmDist,
+        minDistance: isOwnFarm ? Number.POSITIVE_INFINITY : distance,
         severities: [log.severity],
       });
     }
   }
 
-  // 4. Filter only groups with 3+ unique farmers (farms)
-  const outbreaks = [...groups.values()]
-    .filter((g) => g.farmIds.size >= 3)
-    .map((g) => {
-      // Determine dominant severity
-      const hasCritical = g.severities.includes('CRITICAL');
-      const hasSevere = g.severities.includes('SEVERE') || g.severities.includes('HIGH');
-      const severity = hasCritical ? 'CRITICAL' : hasSevere ? 'SEVERE' : 'MODERATE';
+  // 4. Anything at least one *other* farm is reporting. A cluster that exists
+  //    only on the caller's own farm is their own open issue, not community news.
+  const outbreaks: OutbreakSignal[] = [...groups.values()]
+    .filter((group) => group.otherFarmIds.size >= 1)
+    .map((group) => {
+      // Dominant severity. `HealthSeverity` has no 'HIGH' member — the previous
+      // check for one was dead code, so a SEVERE cluster relied on the SEVERE
+      // arm alone and MODERATE was the floor regardless of what was reported.
+      const severity = group.severities.includes('CRITICAL')
+        ? 'CRITICAL'
+        : group.severities.includes('SEVERE')
+          ? 'SEVERE'
+          : group.severities.includes('MODERATE')
+            ? 'MODERATE'
+            : 'MILD';
 
-      // Round distance to nearest 0.5 km for privacy, e.g., "Within 2.5 km"
-      const roundedDist = Math.max(0.5, Math.round(g.minDistance * 2) / 2);
+      // Rounded to the nearest 0.5 km: enough to judge proximity, not enough to
+      // locate a neighbour's field.
+      const roundedDistance = Number.isFinite(group.minDistance)
+        ? Math.max(0.5, Math.round(group.minDistance * 2) / 2)
+        : radiusKm;
 
       return {
-        name: g.name,
-        crop: g.crop,
-        count: g.farmIds.size,
-        latest: g.latest,
-        approxDistanceKm: roundedDist,
+        name: group.name,
+        crop: group.crop,
+        count: group.otherFarmIds.size,
+        latest: group.latest,
+        approxDistanceKm: roundedDistance,
         severity,
-        guidance: getOutbreakGuidance(g.name, g.crop),
+        guidance: getOutbreakGuidance(group.name, group.crop),
+        isOutbreak: group.otherFarmIds.size >= OUTBREAK_MIN_FARMS,
+        reportedOnYourFarm: group.onOwnFarm,
       };
     })
-    .sort((a, b) => b.count - a.count);
+    // Confirmed outbreaks first, then by how many farms, then by recency.
+    .sort(
+      (a, b) =>
+        Number(b.isOutbreak) - Number(a.isOutbreak) ||
+        b.count - a.count ||
+        b.latest.getTime() - a.latest.getTime(),
+    );
 
   return {
     outbreaks,
-    farmsInArea: filteredFarms.length,
+    farmsInArea: otherFarmCount,
     radiusKm,
   };
 }

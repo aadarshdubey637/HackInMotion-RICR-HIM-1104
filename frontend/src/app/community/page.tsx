@@ -393,7 +393,7 @@ function CommunityContent() {
           <EmptyState
             title="All Clear!"
             message={`No disease or pest outbreaks detected within ${
-              data?.radiusKm ?? 5
+              data?.radiusKm ?? 25
             } km in the last 7 days. Your crops are currently safe from spreading threats.`}
           />
         ) : (
@@ -429,7 +429,17 @@ function OutbreakCard({ outbreak }: { outbreak: NearbyOutbreaks['outbreaks'][0] 
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge tone={style.tone}>🔴 Potential Outbreak</Badge>
+            {/*
+              One neighbour reporting a problem is early warning, not an
+              outbreak. Labelling every cluster "Potential Outbreak" regardless
+              of size is how a farmer learns to ignore the badge.
+            */}
+            {outbreak.isOutbreak ? (
+              <Badge tone={style.tone}>🔴 Potential Outbreak</Badge>
+            ) : (
+              <Badge tone="neutral">👁 Single nearby report</Badge>
+            )}
+            {outbreak.reportedOnYourFarm && <Badge tone="warn">Also on your farm</Badge>}
             <span className="text-xs text-slate-500 font-medium">
               Last reported: {new Date(outbreak.latest).toLocaleDateString()}
             </span>
@@ -442,7 +452,10 @@ function OutbreakCard({ outbreak }: { outbreak: NearbyOutbreaks['outbreaks'][0] 
           <p className="text-sm text-slate-600 font-semibold flex items-center gap-1.5">
             <span>📍 Reported within ~{outbreak.approxDistanceKm} km of your farm</span>
             <span className="text-slate-300">•</span>
-            <span>👥 {outbreak.count} active reports</span>
+            {/* `count` is other farms, not raw report rows — say which. */}
+            <span>
+              👥 {outbreak.count} nearby farm{outbreak.count === 1 ? '' : 's'}
+            </span>
           </p>
         </div>
 

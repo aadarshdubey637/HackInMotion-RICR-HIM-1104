@@ -11,6 +11,113 @@ export interface LocationInfo {
 export interface SoilInfo {
   soilType: string | null;
   soilProperties: Record<string, unknown> | null;
+  /**
+   * The raw SoilGrids numbers reduced to the bands the fertiliser engine reads.
+   *
+   * Null when the lookup returned nothing usable. See `deriveSoilAnalysis` for
+   * why phosphorus and potassium are deliberately absent.
+   */
+  soilAnalysis: SoilAnalysis | null;
+}
+
+/** Soil test bands, as reported by Indian soil health cards. */
+export type NutrientLevel = 'low' | 'medium' | 'high';
+
+/**
+ * What the fertiliser engine is given about a farm's soil chemistry.
+ *
+ * `source` is load-bearing, not decoration: a modelled global raster and a
+ * laboratory soil health card justify very different confidence, and the advice
+ * shown to the farmer says which one it is standing on.
+ */
+export interface SoilAnalysis {
+  nitrogen?: NutrientLevel;
+  phosphorus?: NutrientLevel;
+  potassium?: NutrientLevel;
+  /** Soil pH in water. Drives availability, not the dose directly. */
+  ph?: number;
+  /** Organic carbon, g/kg. High carbon mineralises nitrogen through the season. */
+  organicCarbonGKg?: number;
+  source: 'soilgrids' | 'soil-health-card';
+  /** Which horizon these figures describe. */
+  depthCm?: string;
+}
+
+/**
+ * Total soil nitrogen bands, g/kg.
+ *
+ * SoilGrids reports *total* nitrogen. A soil health card reports *available*
+ * nitrogen in kg/ha, and the two are not interconvertible without a
+ * mineralisation rate nobody has for an individual field. These thresholds
+ * follow the conventional total-N interpretation (roughly <0.075%, 0.075-0.175%,
+ * >0.175% by mass) so the band means something even though the unit differs.
+ */
+const NITROGEN_BANDS = { low: 0.75, high: 1.75 };
+
+function bandNitrogen(totalNGKg: number): NutrientLevel {
+  if (totalNGKg < NITROGEN_BANDS.low) return 'low';
+  if (totalNGKg > NITROGEN_BANDS.high) return 'high';
+  return 'medium';
+}
+
+/**
+ * Reduce raw SoilGrids values to a `SoilAnalysis`.
+ *
+ * These numbers were already being fetched on every farm setup and thrown away:
+ * `soilProperties` was stored as an opaque blob and only the texture class was
+ * ever read from it. The consequence was that the fertiliser planner's
+ * soil-test path never once executed in normal use — every farmer got the
+ * textbook dose and the message "No soil test on file".
+ *
+ * Phosphorus and potassium are **not** derived. SoilGrids does not model plant-
+ * available P or K at all, and a fabricated band there would silently scale the
+ * DAP and MOP a farmer buys by ±25% on the strength of nothing. Their absence is
+ * the honest answer, and the engine already treats a missing band as "apply the
+ * standard dose".
+ *
+ * Values are in SoilGrids' mapped units and are converted here:
+ * nitrogen cg/kg → g/kg, phh2o pH×10 → pH, ocd hg/m³ → kg/m³.
+ */
+export function deriveSoilAnalysis(
+  soilProperties: Record<string, unknown> | null,
+): SoilAnalysis | null {
+  if (!soilProperties) return null;
+
+  const read = (property: string): number | null => {
+    for (const depth of ['0-5cm', '5-15cm']) {
+      const value = soilProperties[`${property}_${depth}`];
+      if (typeof value === 'number' && Number.isFinite(value)) return value;
+    }
+    return null;
+  };
+
+  const analysis: SoilAnalysis = { source: 'soilgrids', depthCm: '0-15' };
+
+  const nitrogenCgKg = read('nitrogen');
+  if (nitrogenCgKg !== null && nitrogenCgKg > 0) {
+    analysis.nitrogen = bandNitrogen(nitrogenCgKg / 100);
+  }
+
+  const phTimesTen = read('phh2o');
+  if (phTimesTen !== null && phTimesTen > 0) {
+    const ph = phTimesTen / 10;
+    // Sanity bound: a raster artefact outside this range is not a soil pH, and
+    // feeding one into a lime recommendation would be worse than having none.
+    if (ph >= 3 && ph <= 11) analysis.ph = Math.round(ph * 10) / 10;
+  }
+
+  const ocdHgM3 = read('ocd');
+  if (ocdHgM3 !== null && ocdHgM3 > 0) {
+    analysis.organicCarbonGKg = Math.round((ocdHgM3 / 10) * 10) / 10;
+  }
+
+  // Nothing but the source tag means nothing was actually resolved.
+  const hasAnyValue =
+    analysis.nitrogen !== undefined ||
+    analysis.ph !== undefined ||
+    analysis.organicCarbonGKg !== undefined;
+
+  return hasAnyValue ? analysis : null;
 }
 
 interface NominatimResponse {
@@ -132,10 +239,12 @@ export async function getSoilType(latitude: number, longitude: number): Promise<
     const topSilt = soilData['silt_0-5cm'] ?? soilData['silt_5-15cm'] ?? 0;
 
     const soilType = classifySoilTexture(topSand, topSilt, topClay);
+    const soilProperties = Object.keys(soilData).length > 0 ? soilData : null;
 
     return {
       soilType,
-      soilProperties: Object.keys(soilData).length > 0 ? soilData : null,
+      soilProperties,
+      soilAnalysis: deriveSoilAnalysis(soilProperties),
     };
   } catch (error) {
     logger.warn({ error, latitude, longitude }, 'Soil type lookup error');
@@ -182,5 +291,5 @@ function emptyLocation(): LocationInfo {
 }
 
 function emptySoil(): SoilInfo {
-  return { soilType: null, soilProperties: null };
+  return { soilType: null, soilProperties: null, soilAnalysis: null };
 }

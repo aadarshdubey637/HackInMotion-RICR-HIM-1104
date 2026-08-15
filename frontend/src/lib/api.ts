@@ -425,6 +425,20 @@ export const api = {
         soil: {
           soilType: string | null;
           soilProperties: Record<string, unknown> | null;
+          /**
+           * SoilGrids values banded for the fertiliser engine. The farm-create
+           * endpoint derives this server-side too, so onboarding does not have
+           * to forward it — this is here for display.
+           */
+          soilAnalysis: {
+            nitrogen?: 'low' | 'medium' | 'high';
+            phosphorus?: 'low' | 'medium' | 'high';
+            potassium?: 'low' | 'medium' | 'high';
+            ph?: number;
+            organicCarbonGKg?: number;
+            source: 'soilgrids' | 'soil-health-card';
+            depthCm?: string;
+          } | null;
         };
       }>(`/farms/location-info?latitude=${latitude}&longitude=${longitude}`),
 

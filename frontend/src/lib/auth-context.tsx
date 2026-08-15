@@ -12,6 +12,16 @@ interface AuthState {
   currentFarm: Farm | null;
   /** True until the initial session check finishes. */
   loading: boolean;
+  /**
+   * True once the farm list has actually been fetched.
+   *
+   * Distinct from `loading`: an empty `farms` array means "this farmer has no
+   * farm yet" only after a fetch has happened. Routing to /onboarding on the
+   * empty array alone redirects every signed-in farmer on first paint, before
+   * their farms have arrived. The provider has always supplied this; the
+   * declaration was lost in a merge, which broke the build for every consumer.
+   */
+  farmsLoaded: boolean;
 
   login: (identifier: string, password: string) => Promise<void>;
   /**

@@ -505,15 +505,25 @@ export interface RecordHarvestResult {
 export interface Outbreak {
   name: string;
   crop: string;
+  /** Distinct *other* farms reporting this. Never includes your own farm. */
   count: number;
   latest: string;
   approxDistanceKm: number;
   severity: Severity;
   guidance: string[];
+  /**
+   * True once enough neighbouring farms report this to call it an outbreak.
+   * False means a single nearby report — still worth seeing, but not a cluster,
+   * and the UI must not call it one.
+   */
+  isOutbreak: boolean;
+  /** True when your own farm has an open report of the same problem. */
+  reportedOnYourFarm: boolean;
 }
 
 export interface NearbyOutbreaks {
   outbreaks: Outbreak[];
+  /** Other farms within the radius. Excludes your own. */
   farmsInArea: number;
   radiusKm: number;
 }

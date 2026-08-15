@@ -60,13 +60,32 @@ const envSchema = z.object({
   UPLOAD_DIR: z.string().default('uploads'),
   PUBLIC_URL: z.string().default('http://localhost:3001'),
 
+  // ── Hosted vision model (Google Gemini) ──
+  // The primary crop-photo analyser. Gemini accepts an image plus a JSON
+  // schema and is markedly better at plant pathology than a small local model,
+  // which is why it is tried first when a key is present.
+  //
+  // The key is free: https://aistudio.google.com/apikey — no billing account,
+  // and the free tier's per-minute limits are far above what one farm's photo
+  // uploads will reach. Unset simply means this provider is skipped.
+  GEMINI_API_KEY: z.string().optional(),
+  GEMINI_VISION_MODEL: z.string().default('gemini-2.5-flash'),
+  // 90s, not 45s. Measured latency for a real crop photo is 30-40s even with
+  // thinking disabled, so a 45s budget aborted analyses that were about to
+  // succeed — and an abort costs the farmer the whole photo analysis.
+  GEMINI_TIMEOUT_MS: z.coerce.number().default(90_000),
+
   // ── Local vision model (Ollama) ──
-  // Crop photos are analysed by a multimodal model running on this machine:
-  // no key, no per-photo cost, no image leaving the network. Enabled by
-  // default and probed before use, so a stopped Ollama simply falls through to
-  // the rule engine.
+  // Fallback for when there is no Gemini key, or no internet: a multimodal
+  // model running on this machine — no key, no per-photo cost, no image
+  // leaving the network. Probed before use, so a stopped Ollama simply falls
+  // through to the rule engine.
   OLLAMA_BASE_URL: z.string().default('http://localhost:11434'),
-  OLLAMA_VISION_MODEL: z.string().default('gemma4:e4b'),
+  // Must be a model that actually exists and can see images. The previous
+  // default, `gemma4:e4b`, is not a published Ollama tag at all, so the
+  // availability probe failed on every machine and photo analysis silently
+  // never ran. `ollama pull gemma3:4b` is a ~3 GB download.
+  OLLAMA_VISION_MODEL: z.string().default('gemma3:4b'),
   // Anything but false/0/no/off leaves it on.
   OLLAMA_VISION_ENABLED: z
     .string()
@@ -76,6 +95,14 @@ const envSchema = z.object({
   // its first photo. Subsequent ones are fast while OLLAMA_KEEP_ALIVE holds.
   OLLAMA_TIMEOUT_MS: z.coerce.number().default(120_000),
   OLLAMA_KEEP_ALIVE: z.string().default('10m'),
+
+  // Put the local model ahead of Gemini in the provider chain. For deployments
+  // where crop photographs must not leave the premises, at some cost in
+  // accuracy. Off by default.
+  VISION_PREFER_LOCAL: z
+    .string()
+    .optional()
+    .transform((value) => (value === undefined ? false : /^(true|1|yes|on)$/i.test(value.trim()))),
 
   // ── Optional third-party keys ──
   // Weather needs NO key (Open-Meteo). These are upgrade paths only.
@@ -132,9 +159,22 @@ export const isProduction = config.NODE_ENV === 'production';
 
 /** Feature availability, derived from which keys are actually present. */
 export const features = {
+  /** Hosted crop-photo analysis. The primary provider when configured. */
+  geminiVision: Boolean(config.GEMINI_API_KEY),
   /** Local crop-photo analysis. Availability is re-checked at request time. */
   ollamaVision: config.OLLAMA_VISION_ENABLED,
   plantIdApi: Boolean(config.PLANT_ID_API_KEY),
+  /**
+   * Whether *any* engine can look at a photograph.
+   *
+   * Worth naming separately: with none of the three configured the app still
+   * accepts photos and still returns a diagnosis, but that diagnosis is drawn
+   * from the description and weather alone. That is a materially weaker answer
+   * and the farmer is told so rather than left to assume the photo was read.
+   */
+  get cropPhotoAnalysis(): boolean {
+    return this.geminiVision || this.ollamaVision || this.plantIdApi;
+  },
   dataGovIn: Boolean(config.DATA_GOV_IN_API_KEY),
   googleAuth: Boolean(config.GOOGLE_CLIENT_ID),
   // Both halves required: a username with no app password cannot authenticate

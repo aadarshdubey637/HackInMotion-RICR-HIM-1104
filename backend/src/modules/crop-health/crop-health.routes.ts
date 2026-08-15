@@ -167,7 +167,10 @@ cropHealthRouter.get(
   validateParams(farmIdParams),
   handler(async (req, res) => {
     const { farmId } = params(req, farmIdParams);
-    const radius = Number(req.query.radiusKm) || 5;
+    // 25 km by default. Pest and disease pressure is regional — the previous
+    // 5 km default meant a farmer heard nothing about an outbreak in the next
+    // village, which is precisely the warning this endpoint exists to give.
+    const radius = Number(req.query.radiusKm) || 25;
     ok(res, await service.nearbyOutbreaks(farmId, userId(req), Math.min(radius, 200)));
   }),
 );

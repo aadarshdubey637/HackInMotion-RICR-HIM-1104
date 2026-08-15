@@ -12,6 +12,7 @@ import { prisma } from '../../common/prisma';
 import { logger } from '../../common/logger';
 import { NotFoundError } from '../../common/errors';
 import { resolveCrop, findCrop, supportedCrops } from '../../domain/crops';
+import { getSoilType } from './location.service';
 import type {
   CreateFarmInput,
   UpdateFarmInput,
@@ -33,6 +34,25 @@ const farmInclude = {
 // ─────────────────────────── Farm ───────────────────────────
 
 export async function createFarm(userId: string, input: CreateFarmInput) {
+  // A farmer who did not paste a soil health card still has soil. Looking it up
+  // from the coordinates is what makes the fertiliser plan specific to this
+  // field rather than a textbook dose — see `deriveSoilAnalysis`. Best-effort:
+  // a slow or down SoilGrids must not block farm creation, and the plan simply
+  // falls back to standard rates when this returns nothing.
+  let derived: Awaited<ReturnType<typeof getSoilType>> | null = null;
+  if (!input.soilAnalysis || !input.soilTypePrimary) {
+    derived = await getSoilType(input.latitude, input.longitude).catch((err) => {
+      logger.warn({ err, userId }, 'Soil lookup failed during farm creation; using defaults');
+      return null;
+    });
+  }
+
+  const soilAnalysis = input.soilAnalysis ?? derived?.soilAnalysis ?? undefined;
+  // Only fill the texture class if the farmer did not choose one — their own
+  // knowledge of their field beats a 250 m raster cell.
+  const soilTypePrimary =
+    input.soilTypePrimary ?? (derived?.soilType as CreateFarmInput['soilTypePrimary']) ?? undefined;
+
   const farm = await prisma.farm.create({
     data: {
       userId,
@@ -40,15 +60,22 @@ export async function createFarm(userId: string, input: CreateFarmInput) {
       latitude: input.latitude,
       longitude: input.longitude,
       totalAreaHectares: input.totalAreaHectares,
-      soilTypePrimary: input.soilTypePrimary,
-      soilAnalysis: input.soilAnalysis as Prisma.InputJsonValue | undefined,
+      soilTypePrimary,
+      soilAnalysis: soilAnalysis as Prisma.InputJsonValue | undefined,
       address: input.address,
       boundary: input.boundary as Prisma.InputJsonValue | undefined,
     },
     include: farmInclude,
   });
 
-  logger.info({ farmId: farm.id, userId }, 'Farm created');
+  logger.info(
+    {
+      farmId: farm.id,
+      userId,
+      soilSource: input.soilAnalysis ? 'supplied' : derived?.soilAnalysis ? 'soilgrids' : 'none',
+    },
+    'Farm created',
+  );
   return farm;
 }
 

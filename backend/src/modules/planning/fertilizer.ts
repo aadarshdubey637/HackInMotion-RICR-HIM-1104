@@ -4,15 +4,34 @@
  * Turns a crop's nutrient requirement into something a farmer can act on:
  * how many bags of urea, DAP and MOP to buy, and when to apply each.
  *
- * Two adjustments make this specific rather than generic:
+ * Four adjustments make this specific to one field rather than generic:
  *
- *   1. **Soil test values.** If the farm profile records N-P-K status, the
+ *   1. **Soil nutrient status.** If the farm profile records N-P-K bands, the
  *      requirement is scaled — high phosphorus soil needs less DAP, low
  *      potassium needs more MOP. Applying a textbook dose to soil that already
  *      has the nutrient wastes money and pollutes groundwater.
  *
- *   2. **Growth stage.** Splits already applied are marked as passed, so the
+ *   2. **Soil pH.** Does not change what the crop needs; changes how much of
+ *      what you spread it can actually reach. Phosphorus is locked up by iron
+ *      and aluminium below pH 5.5 and by calcium above 8.5, so the dose is
+ *      raised at both ends — and the farmer is told that lime, or banding
+ *      instead of broadcasting, is the cheaper answer than more DAP.
+ *
+ *   3. **Organic carbon.** Humus-rich soil mineralises nitrogen through the
+ *      season and supplies part of the crop's need without a bag.
+ *
+ *   4. **Growth stage.** Splits already applied are marked as passed, so the
  *      farmer sees what is still owed rather than the whole season's plan.
+ *
+ * Where the soil figures come from: `soilAnalysis` is a farmer-entered soil
+ * health card when there is one, and otherwise bands derived from the SoilGrids
+ * lookup done at farm creation (see `farm/location.service.ts`). Which of the
+ * two is behind a given plan is reported in `adjustments` and `basis`, because a
+ * laboratory test and a modelled raster do not warrant the same confidence.
+ *
+ * Note that phosphorus and potassium bands are only ever present from a real
+ * soil test — SoilGrids does not model plant-available P or K, and the
+ * derivation deliberately leaves them unset rather than guessing.
  *
  * Order of operations matters: phosphorus is supplied by DAP, which also
  * carries 18% nitrogen. That nitrogen is subtracted from the urea requirement —
@@ -141,10 +160,80 @@ export function planFertilizer(input: FertilizerInputs): FertilizerPlan {
     else adjustments.push(`${name} is medium in your soil — standard dose.`);
   }
 
+  // Where the numbers above came from. A laboratory soil health card and a
+  // modelled global raster deserve very different confidence, and the farmer is
+  // told which one is behind the dose rather than left to assume the stronger.
+  const source = typeof input.soilAnalysis?.source === 'string' ? input.soilAnalysis.source : null;
+
+  if (adjustments.length > 0 && source === 'soilgrids') {
+    adjustments.push(
+      'Soil nitrogen is estimated from a soil map for your location, not a laboratory test. A soil health card would make this more exact — and often shows you need less than this.',
+    );
+  }
+
   if (adjustments.length === 0) {
     adjustments.push(
       'No soil test on file — these are standard recommendations. A soil health card would let us tune them and often reduce what you need to buy.',
     );
+  }
+
+  // ── pH ──
+  //
+  // pH does not change the elemental requirement, it changes how much of what
+  // you apply the crop can actually take up. Applying the textbook phosphorus
+  // dose to soil at pH 8.5 wastes most of it to calcium fixation, and the farmer
+  // has no way of knowing that from a bag count alone.
+  const ph = typeof input.soilAnalysis?.ph === 'number' ? input.soilAnalysis.ph : null;
+  let phFactorP = 1;
+  if (ph !== null) {
+    if (ph < 5.5) {
+      phFactorP = 1.2;
+      adjustments.push(
+        `Your soil is acidic (pH ${ph}). Phosphorus gets locked up by iron and aluminium, so the dose is raised 20% — but liming with 2-3 quintals of agricultural lime per acre before sowing is the cheaper fix.`,
+      );
+    } else if (ph < 6.5) {
+      phFactorP = 1.1;
+      adjustments.push(
+        `Your soil is slightly acidic (pH ${ph}) — phosphorus uptake is a little reduced, so the dose is raised 10%.`,
+      );
+    } else if (ph > 8.5) {
+      phFactorP = 1.15;
+      adjustments.push(
+        `Your soil is strongly alkaline (pH ${ph}). Phosphorus is fixed by calcium and zinc deficiency is common — the dose is raised 15%, place fertiliser in bands near the root rather than broadcasting, and consider 10 kg/acre zinc sulphate.`,
+      );
+    } else if (ph > 7.8) {
+      adjustments.push(
+        `Your soil is mildly alkaline (pH ${ph}). Broadcast urea loses nitrogen to the air here — apply it just before irrigation, or mix it into the soil.`,
+      );
+    } else {
+      adjustments.push(
+        `Your soil pH (${ph}) is in the ideal range — nutrients are fully available.`,
+      );
+    }
+  }
+
+  // ── Organic carbon ──
+  //
+  // Well-humified soil mineralises nitrogen through the season, so part of the
+  // crop's need is met without a bag. Ignoring this over-applies urea on the
+  // farms that need it least.
+  const organicCarbon =
+    typeof input.soilAnalysis?.organicCarbonGKg === 'number'
+      ? input.soilAnalysis.organicCarbonGKg
+      : null;
+  let carbonFactorN = 1;
+  if (organicCarbon !== null) {
+    if (organicCarbon >= 15) {
+      carbonFactorN = 0.9;
+      adjustments.push(
+        'Your soil is rich in organic matter, which releases nitrogen as the crop grows — nitrogen reduced 10%.',
+      );
+    } else if (organicCarbon < 5) {
+      carbonFactorN = 1.1;
+      adjustments.push(
+        'Your soil is low in organic matter, so it holds and releases little nitrogen of its own — nitrogen raised 10%. Farmyard manure or compost at 5 tonnes per acre would improve this lastingly.',
+      );
+    }
   }
 
   // Sandy soils leach nitrogen; splitting more finely matters, and total need rises.
@@ -158,8 +247,13 @@ export function planFertilizer(input: FertilizerInputs): FertilizerPlan {
   }
 
   // ── Elemental requirement for the whole area ──
-  const nKg = round1(nutrients.nitrogenKgHa * nFactor * sandyFactor * areaHectares);
-  const pKg = round1(nutrients.phosphorusKgHa * pFactor * areaHectares);
+  //
+  // Nitrogen carries the soil-test band, the sandy-soil leaching allowance and
+  // the organic-matter credit; phosphorus carries the pH availability
+  // correction. Potassium has no availability term here — pH affects K uptake
+  // far less, and inventing one would be noise dressed as precision.
+  const nKg = round1(nutrients.nitrogenKgHa * nFactor * sandyFactor * carbonFactorN * areaHectares);
+  const pKg = round1(nutrients.phosphorusKgHa * pFactor * phFactorP * areaHectares);
   const kKg = round1(nutrients.potassiumKgHa * kFactor * areaHectares);
 
   // ── Convert to products ──
@@ -221,7 +315,13 @@ export function planFertilizer(input: FertilizerInputs): FertilizerPlan {
     notes: nutrients.notes,
     basis:
       isKnown && input.cropIsKnown
-        ? 'Based on ICAR package-of-practices recommendations for irrigated conditions, adjusted for your soil and area.'
+        ? `Based on ICAR package-of-practices recommendations for irrigated conditions, adjusted for your ${
+            source === 'soil-health-card'
+              ? 'soil test'
+              : source === 'soilgrids'
+                ? 'mapped soil chemistry'
+                : 'soil type'
+          }, area${input.growthStage ? ' and growth stage' : ''}.`
         : 'This crop is not in our detailed database — these are general-purpose figures. Please confirm with your local extension officer.',
   };
 }

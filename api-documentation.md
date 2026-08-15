@@ -301,6 +301,45 @@ All 🔒. Ownership enforced per query.
 
 Soft delete — sets status `ARCHIVED`, preserving history.
 
+### `GET /api/farms/location-info`
+
+Query: `latitude`, `longitude`. Resolves a human address and the soil beneath a
+point, so onboarding can pre-fill the farm profile from a map tap. Keyless —
+Nominatim for the address, SoilGrids for the soil.
+
+```json
+{
+  "location": {
+    "village": "Kakori",
+    "district": "Lucknow",
+    "state": "Uttar Pradesh",
+    "country": "India",
+    "formattedAddress": "Kakori, Lucknow, Uttar Pradesh, India"
+  },
+  "soil": {
+    "soilType": "LOAMY",
+    "soilProperties": { "clay_0-5cm": 240, "sand_0-5cm": 450, "phh2o_0-5cm": 72 },
+    "soilAnalysis": {
+      "nitrogen": "medium",
+      "ph": 7.2,
+      "organicCarbonGKg": 8.4,
+      "source": "soilgrids",
+      "depthCm": "0-15"
+    }
+  }
+}
+```
+
+`soilProperties` holds raw SoilGrids values in **mapped units** (nitrogen cg/kg,
+pH×10, clay/sand/silt g/kg). `soilAnalysis` is the same data converted and banded
+for the fertiliser engine — see
+[Planning](#get-apiplanningfarmidcropscropidfertilizer-) for how it is used, and
+why `phosphorus` and `potassium` are absent.
+
+Every field can be `null`; both providers are best-effort and neither blocks farm
+creation. `POST /api/farms` performs this lookup server-side too, so a farm
+created without `soilAnalysis` still gets one.
+
 ### `GET /api/farms/supported-crops`
 
 Crops with full agronomic backing (crop coefficients, disease profiles).
@@ -516,7 +555,27 @@ Recording irrigation feeds back into the water balance and dismisses any open
 confidence weighted by severity — a possible CRITICAL outranks a marginally more
 confident MILD, because missing late blight costs more than a false alarm.
 
-`method` is `rule-engine` or `rule-engine+plant-id`.
+`method` names which vision provider actually looked at the photo:
+`rule-engine` (none did), `rule-engine+gemini-vision`, `rule-engine+ollama-vision`
+or `rule-engine+plant-id`.
+
+Providers are tried in order — **Gemini** (free key, primary), then a local
+**Ollama** model, then **Plant.id** — and the first to answer wins. A "not a
+plant" or "looks healthy" verdict _is_ an answer, so no further provider is
+asked. Set `VISION_PREFER_LOCAL=true` to put Ollama first.
+
+With no provider configured the photo is stored but never analysed and
+`limitations` says so explicitly:
+`"Image analysis was unavailable, so the photo was stored but not analysed."`
+The `image` object is then absent. See the root README for setting
+`GEMINI_API_KEY`.
+
+When a provider did run, `image` reports what it concluded — `isPlant`,
+`looksHealthy`, `quality` (`good` / `acceptable` / `poor`), `observedSymptoms`
+and `affectedParts`. `observedSymptoms` are short English symptom phrases read
+off the photograph; they are scored against the curated symptom vocabulary
+exactly like the farmer's own words, which is what lets a photo _corroborate_ a
+candidate rather than override the rest of the evidence.
 
 An empty `candidates` array is a valid, honest result: the description did not
 match anything for that crop. `nextSteps` then explains what detail would help.
@@ -538,16 +597,52 @@ Resolving clears the associated alert.
 
 ### `GET /api/crop-health/:farmId/nearby` 🔒
 
-Anonymous aggregate of severe problems reported by farms within `radiusKm`
-(default 50, max 200) in the last 21 days. Individual farms are never identified.
+Anonymous outbreak signal for the area around a farm. Query: `radiusKm`
+(default **25**, max 200).
+
+Counts **live** reports (`ACTIVE` or `MONITORING`) from the last **14 days**.
+Individual farms are never identified — `approxDistanceKm` is rounded to the
+nearest 0.5 km and no farm id, name or coordinate is returned.
 
 ```json
 {
-  "reports": [{ "name": "Rice Blast", "crop": "rice", "count": 3 }],
+  "outbreaks": [
+    {
+      "name": "Early Blight",
+      "crop": "tomato",
+      "count": 3,
+      "latest": "2026-08-14T06:12:00.000Z",
+      "approxDistanceKm": 2.5,
+      "severity": "SEVERE",
+      "guidance": ["Inspect leaves daily for water-soaked spots or dark lesions.", "…"],
+      "isOutbreak": true,
+      "reportedOnYourFarm": false
+    }
+  ],
   "farmsInArea": 7,
-  "radiusKm": 50
+  "radiusKm": 25
 }
 ```
+
+| Field                | Meaning                                                                                                                                                                                                               |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `count`              | Distinct **other** farms reporting this. Never includes the caller's own farm.                                                                                                                                        |
+| `farmsInArea`        | Other farms within the radius. Excludes the caller's own.                                                                                                                                                             |
+| `isOutbreak`         | `true` once ≥2 other farms report it. `false` is a single nearby report — still returned, because one neighbour is exactly the early warning this endpoint exists to give, but clients must not label it an outbreak. |
+| `reportedOnYourFarm` | The caller also has an open report of the same problem.                                                                                                                                                               |
+| `severity`           | Worst severity in the cluster: `CRITICAL` > `SEVERE` > `MODERATE` > `MILD`.                                                                                                                                           |
+
+Results are sorted confirmed-outbreaks first, then by farm count, then recency.
+
+**Clustering.** Problem names are canonicalised against the crop's curated
+disease and pest vocabulary before grouping, so a vision-model finding of
+`Alternaria solani` clusters with a neighbour who typed `early blight`. Without
+this, the same outbreak reaching three farms under three spellings counts as
+three unrelated single reports. Unrecognised names are preserved verbatim and
+still cluster with identical reports.
+
+Engine-detected problems below 30% confidence are excluded; farmer-submitted
+community reports always count.
 
 ---
 
@@ -813,21 +908,46 @@ independently; a failure on one does not lose the others.
       "passed": false
     }
   ],
-  "adjustments": ["Phosphorus is low in your soil — dose increased by 25%."],
+  "adjustments": [
+    "Nitrogen is low in your soil — dose increased by 25%.",
+    "Soil nitrogen is estimated from a soil map for your location, not a laboratory test. A soil health card would make this more exact — and often shows you need less than this.",
+    "Your soil is acidic (pH 5.2). Phosphorus gets locked up by iron and aluminium, so the dose is raised 20% — but liming with 2-3 quintals of agricultural lime per acre before sowing is the cheaper fix.",
+    "Your soil is rich in organic matter, which releases nitrogen as the crop grows — nitrogen reduced 10%."
+  ],
   "notes": [
     "Apply nitrogen to a drained field, then re-flood after 24 hours — this cuts losses sharply."
   ],
-  "basis": "Based on ICAR package-of-practices recommendations…"
+  "basis": "Based on ICAR package-of-practices recommendations for irrigated conditions, adjusted for your mapped soil chemistry, area and growth stage."
 }
 ```
 
-**Two things worth noting in the arithmetic:**
+**Things worth noting in the arithmetic:**
 
 1. DAP supplies phosphorus _and_ 18% nitrogen. That nitrogen is subtracted from
    the urea requirement — in the example above 181 + 59 = 240 kg N exactly.
    Skipping this step over-applies nitrogen by a meaningful margin.
-2. Soil test values scale the dose ±25% per nutrient, and sandy soil adds 10%
-   nitrogen for leaching. Every adjustment is reported in `adjustments`.
+2. Soil nutrient bands scale the dose ±25% per nutrient, and sandy soil adds 10%
+   nitrogen for leaching.
+3. **pH** does not change what the crop needs, it changes how much of what you
+   spread it can reach. Phosphorus is raised 20% below pH 5.5 (iron/aluminium
+   fixation) and 15% above pH 8.5 (calcium fixation) — and the farmer is told
+   that lime, or banding instead of broadcasting, is cheaper than more DAP.
+4. **Organic carbon** ≥15 g/kg cuts nitrogen 10% (humus-rich soil mineralises its
+   own), and <5 g/kg raises it 10%.
+
+Every adjustment is reported in `adjustments`.
+
+**Where the soil figures come from.** `Farm.soilAnalysis` is either a
+farmer-entered soil health card (`source: 'soil-health-card'`) or bands derived
+from a SoilGrids lookup at farm creation (`source: 'soilgrids'`). Which one is
+behind a given plan is stated in both `adjustments` and `basis`, because a
+laboratory test and a modelled raster do not warrant the same confidence.
+
+SoilGrids models nitrogen, pH and organic carbon but **not** plant-available
+phosphorus or potassium, so those bands are only ever present from a real soil
+test. They are deliberately left unset rather than guessed — a fabricated band
+would scale the DAP and MOP a farmer actually buys by ±25% on the strength of
+nothing. A missing band means "apply the standard dose".
 
 Splits whose growth stage has already passed are flagged `passed: true`, so the
 farmer sees what is still owed rather than the whole season's plan.
