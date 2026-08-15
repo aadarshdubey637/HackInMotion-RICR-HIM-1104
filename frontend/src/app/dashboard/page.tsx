@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import {
@@ -14,6 +14,8 @@ import {
   Snowflake,
   Stethoscope,
   TrendingUp,
+  TrendingDown,
+  Minus,
   Sprout,
   ArrowRight,
   CheckCircle2,
@@ -24,6 +26,10 @@ import {
   MapPin,
   Bell,
   Sparkles,
+  Layers,
+  CalendarDays,
+  AlertTriangle,
+  X,
 } from 'lucide-react';
 import { AppShell } from '@/components/app-shell';
 import { READ_ALOUD_EVENT } from '@/components/voice-assistant';
@@ -35,8 +41,24 @@ import { useTranslation } from '@/lib/language-context';
 import { LANGUAGES } from '@/lib/translations';
 import type { NearbyOutbreaks } from '@/lib/types';
 import type { Dashboard, ActionItem } from '@/lib/types';
-import { Card, SectionHeading, Badge, ErrorState, Notice, SkeletonCard } from '@/components/ui';
-import { cn, formatDay, cropLabel, humanise, weatherIcon, timeAgo } from '@/lib/utils';
+import {
+  Card,
+  SectionHeading,
+  Badge,
+  ErrorState,
+  Notice,
+  SkeletonCard,
+  severityStyles,
+} from '@/components/ui';
+import {
+  cn,
+  formatDay,
+  cropLabel,
+  humanise,
+  weatherIcon,
+  timeAgo,
+  formatRupees,
+} from '@/lib/utils';
 
 // ── Multi-Language Translation Dictionaries for mockup text ──
 const DASHBOARD_LOCALES: Record<string, Record<string, string>> = {
@@ -99,6 +121,28 @@ const DASHBOARD_LOCALES: Record<string, Record<string, string>> = {
       'Farmers within {radius} km have reported these in the last 7 days. Worth checking your own crop.',
     checkMyCrop: 'Check my crop',
     weatherStale: 'Live weather is unavailable. Showing saved data.',
+    irrigationNoData: 'Irrigation guidance is unavailable right now.',
+    soilType: 'Soil',
+    season: 'Season',
+    areaHa: '{area} ha',
+    rising: 'Rising',
+    falling: 'Falling',
+    stable: 'Stable',
+    sell: 'Sell',
+    hold: 'Hold',
+    watch: 'Watch',
+    noPriceData: 'No price data for your crops yet.',
+    recentAlerts: 'Recent Alerts',
+    noAlerts: 'No alerts for your farm.',
+    markAllRead: 'Mark all read',
+    showLess: 'Show less',
+    recentIssues: 'Recent issues',
+    noIssues: 'No open issues',
+    notNeededToday: 'Not needed today',
+    applyMm: 'Apply {amount} mm',
+    rainChance: '{percent}% chance of rain',
+    activeIssuesCount: '{count} open',
+    live: 'Live',
   },
   hi: {
     soilMoisture: 'मिट्टी की नमी',
@@ -159,6 +203,28 @@ const DASHBOARD_LOCALES: Record<string, Record<string, string>> = {
       '{radius} किमी के दायरे में किसानों ने पिछले 7 दिनों में ये समस्याएं रिपोर्ट की हैं।',
     checkMyCrop: 'अपनी फसल जांचें',
     weatherStale: 'लाइव मौसम उपलब्ध नहीं है। सहेजा गया डेटा दिखाया जा रहा है।',
+    irrigationNoData: 'सिंचाई की सलाह अभी उपलब्ध नहीं है।',
+    soilType: 'मिट्टी',
+    season: 'मौसम',
+    areaHa: '{area} हेक्टेयर',
+    rising: 'बढ़ रहा',
+    falling: 'घट रहा',
+    stable: 'स्थिर',
+    sell: 'बेचें',
+    hold: 'रोकें',
+    watch: 'नज़र रखें',
+    noPriceData: 'आपकी फसलों के भाव अभी उपलब्ध नहीं हैं।',
+    recentAlerts: 'हालिया अलर्ट',
+    noAlerts: 'आपके खेत के लिए कोई अलर्ट नहीं।',
+    markAllRead: 'सभी पढ़े हुए चिह्नित करें',
+    showLess: 'कम दिखाएँ',
+    recentIssues: 'हालिया समस्याएं',
+    noIssues: 'कोई खुली समस्या नहीं',
+    notNeededToday: 'आज ज़रूरत नहीं',
+    applyMm: '{amount} मिमी पानी दें',
+    rainChance: 'बारिश की {percent}% संभावना',
+    activeIssuesCount: '{count} खुली',
+    live: 'लाइव',
   },
   pa: {
     soilMoisture: 'ਮਿੱਟੀ ਦੀ ਨਮੀ',
@@ -219,6 +285,28 @@ const DASHBOARD_LOCALES: Record<string, Record<string, string>> = {
       '{radius} ਕਿਲੋਮੀਟਰ ਦੇ ਅੰਦਰ ਕਿਸਾਨਾਂ ਨੇ ਪਿਛਲੇ 7 ਦਿਨਾਂ ਵਿੱਚ ਇਹ ਸਮੱਸਿਆਵਾਂ ਰਿਪੋਰਟ ਕੀਤੀਆਂ ਹਨ।',
     checkMyCrop: 'ਆਪਣੀ ਫਸਲ ਚੈੱਕ ਕਰੋ',
     weatherStale: 'ਮੌਸਮ ਦੀ ਜਾਣਕਾਰੀ ਉਪਲਬਧ ਨਹੀਂ ਹੈ। ਸੇਵ ਕੀਤਾ ਡਾਟਾ ਦਿਖਾਇਆ ਜਾ ਰਿਹਾ ਹੈ।',
+    irrigationNoData: 'ਸਿੰਚਾਈ ਦੀ ਸਲਾਹ ਇਸ ਵੇਲੇ ਉਪਲਬਧ ਨਹੀਂ ਹੈ।',
+    soilType: 'ਮਿੱਟੀ',
+    season: 'ਮੌਸਮ',
+    areaHa: '{area} ਹੈਕਟੇਅਰ',
+    rising: 'ਵਧ ਰਿਹਾ',
+    falling: 'ਘਟ ਰਿਹਾ',
+    stable: 'ਸਥਿਰ',
+    sell: 'ਵੇਚੋ',
+    hold: 'ਰੋਕੋ',
+    watch: 'ਨਜ਼ਰ ਰੱਖੋ',
+    noPriceData: 'ਤੁਹਾਡੀਆਂ ਫਸਲਾਂ ਦੇ ਭਾਅ ਹਾਲੇ ਉਪਲਬਧ ਨਹੀਂ ਹਨ।',
+    recentAlerts: 'ਤਾਜ਼ਾ ਅਲਰਟ',
+    noAlerts: 'ਤੁਹਾਡੇ ਖੇਤ ਲਈ ਕੋਈ ਅਲਰਟ ਨਹੀਂ।',
+    markAllRead: 'ਸਭ ਪੜ੍ਹੇ ਹੋਏ ਨਿਸ਼ਾਨ ਲਗਾਓ',
+    showLess: 'ਘੱਟ ਦਿਖਾਓ',
+    recentIssues: 'ਤਾਜ਼ਾ ਸਮੱਸਿਆਵਾਂ',
+    noIssues: 'ਕੋਈ ਖੁੱਲ੍ਹੀ ਸਮੱਸਿਆ ਨਹੀਂ',
+    notNeededToday: 'ਅੱਜ ਲੋੜ ਨਹੀਂ',
+    applyMm: '{amount} ਮਿਲੀਮੀਟਰ ਪਾਣੀ ਦਿਓ',
+    rainChance: 'ਬਾਰਸ਼ ਦੀ {percent}% ਸੰਭਾਵਨਾ',
+    activeIssuesCount: '{count} ਖੁੱਲ੍ਹੀਆਂ',
+    live: 'ਲਾਈਵ',
   },
   te: {
     soilMoisture: 'నేల తేమ',
@@ -278,6 +366,28 @@ const DASHBOARD_LOCALES: Record<string, Record<string, string>> = {
     farmersWithin: '{radius} కి.మీ పరిధిలో రైతులు గత 7 రోజుల్లో ఈ సమస్యలను తెలిపారు.',
     checkMyCrop: 'నా పంటను తనిఖీ చేయండి',
     weatherStale: 'వాతావరణ వివరాలు అందుబాటులో లేవు. పాత వివరాలు చూపబడుతున్నాయి.',
+    irrigationNoData: 'నీటి పారుదల సలహా ప్రస్తుతం అందుబాటులో లేదు.',
+    soilType: 'నేల',
+    season: 'కాలం',
+    areaHa: '{area} హెక్టార్లు',
+    rising: 'పెరుగుతోంది',
+    falling: 'తగ్గుతోంది',
+    stable: 'స్థిరం',
+    sell: 'అమ్మండి',
+    hold: 'ఆపండి',
+    watch: 'గమనించండి',
+    noPriceData: 'మీ పంటల ధరలు ఇంకా అందుబాటులో లేవు.',
+    recentAlerts: 'ఇటీవలి హెచ్చరికలు',
+    noAlerts: 'మీ పొలానికి హెచ్చరికలు లేవు.',
+    markAllRead: 'అన్నీ చదివినట్లు గుర్తించండి',
+    showLess: 'తక్కువ చూపించు',
+    recentIssues: 'ఇటీవలి సమస్యలు',
+    noIssues: 'తెరిచిన సమస్యలు లేవు',
+    notNeededToday: 'ఈరోజు అవసరం లేదు',
+    applyMm: '{amount} మి.మీ నీరు పెట్టండి',
+    rainChance: 'వర్షం వచ్చే అవకాశం {percent}%',
+    activeIssuesCount: '{count} పరిష్కారం కాలేదు',
+    live: 'లైవ్',
   },
   mr: {
     soilMoisture: 'मातीची आर्द्रता',
@@ -337,6 +447,28 @@ const DASHBOARD_LOCALES: Record<string, Record<string, string>> = {
     farmersWithin: '{radius} किमी परिसरातील शेतकऱ्यांनी गेल्या 7 दिवसात या समस्या नोंदवल्या आहेत.',
     checkMyCrop: 'माझे पीक तपासा',
     weatherStale: 'हवामान माहिती उपलब्ध नाही. सेव्ह केलेली माहिती दाखवली जात आहे.',
+    irrigationNoData: 'सिंचनाचा सल्ला सध्या उपलब्ध नाही.',
+    soilType: 'माती',
+    season: 'हंगाम',
+    areaHa: '{area} हेक्टर',
+    rising: 'वाढत आहे',
+    falling: 'घटत आहे',
+    stable: 'स्थिर',
+    sell: 'विका',
+    hold: 'थांबा',
+    watch: 'लक्ष ठेवा',
+    noPriceData: 'तुमच्या पिकांचे भाव अजून उपलब्ध नाहीत.',
+    recentAlerts: 'अलीकडील अलर्ट',
+    noAlerts: 'तुमच्या शेतासाठी कोणतेही अलर्ट नाहीत.',
+    markAllRead: 'सर्व वाचले म्हणून खुणा करा',
+    showLess: 'कमी दाखवा',
+    recentIssues: 'अलीकडील समस्या',
+    noIssues: 'कोणतीही उघडी समस्या नाही',
+    notNeededToday: 'आज गरज नाही',
+    applyMm: '{amount} मिमी पाणी द्या',
+    rainChance: 'पावसाची {percent}% शक्यता',
+    activeIssuesCount: '{count} उघड्या',
+    live: 'लाइव्ह',
   },
   bn: {
     soilMoisture: 'মাটির আর্দ্রতা',
@@ -395,6 +527,28 @@ const DASHBOARD_LOCALES: Record<string, Record<string, string>> = {
     reportedNearYou: 'আপনার আশেপাশে নথিভুক্ত সমস্যা সমূহ',
     farmersWithin: '{radius} কিমি মধ্যে কৃষকরা গত 7 দিনে এই সমস্যাগুলি জানিয়েছেন।',
     checkMyCrop: 'নিজের ফসল দেখুন',
+    irrigationNoData: 'সেচের পরামর্শ এই মুহূর্তে পাওয়া যাচ্ছে না।',
+    soilType: 'মাটি',
+    season: 'ঋতু',
+    areaHa: '{area} হেক্টর',
+    rising: 'বাড়ছে',
+    falling: 'কমছে',
+    stable: 'স্থির',
+    sell: 'বিক্রি করুন',
+    hold: 'অপেক্ষা করুন',
+    watch: 'নজর রাখুন',
+    noPriceData: 'আপনার ফসলের দর এখনও পাওয়া যাচ্ছে না।',
+    recentAlerts: 'সাম্প্রতিক সতর্কতা',
+    noAlerts: 'আপনার খামারের জন্য কোনো সতর্কতা নেই।',
+    markAllRead: 'সব পড়া হিসেবে চিহ্নিত করুন',
+    showLess: 'কম দেখান',
+    recentIssues: 'সাম্প্রতিক সমস্যা',
+    noIssues: 'কোনো খোলা সমস্যা নেই',
+    notNeededToday: 'আজ প্রয়োজন নেই',
+    applyMm: '{amount} মিমি জল দিন',
+    rainChance: 'বৃষ্টির {percent}% সম্ভাবনা',
+    activeIssuesCount: '{count}টি খোলা',
+    live: 'লাইভ',
     weatherStale: 'আবহাওয়া তথ্য পাওয়া যাচ্ছে না। সংরক্ষিত তথ্য দেখানো হচ্ছে।',
   },
 };
@@ -415,6 +569,76 @@ const WEATHER_ICONS = {
   fog: CloudFog,
   snow: Snowflake,
 } as const;
+
+/** Shown wherever a reading is genuinely unavailable, rather than a stand-in number. */
+const NO_VALUE = '—';
+
+/** How often the dashboard re-fetches while left open, in milliseconds. */
+const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
+
+/**
+ * How often the relative timestamps ("updated 3m ago") are recomputed.
+ *
+ * Separate from the fetch interval and much shorter: the payload does not
+ * change, but a label reading "just now" half an hour later is a lie the page
+ * tells simply by sitting still.
+ */
+const CLOCK_TICK_MS = 30 * 1000;
+
+/** Icon and tone for a market trend direction. */
+const DIRECTION_STYLES = {
+  RISING: { Icon: TrendingUp, text: 'text-emerald-600', bg: 'bg-emerald-50' },
+  FALLING: { Icon: TrendingDown, text: 'text-red-600', bg: 'bg-red-50' },
+  STABLE: { Icon: Minus, text: 'text-slate-500', bg: 'bg-slate-50' },
+} as const;
+
+function directionStyle(direction: string) {
+  return DIRECTION_STYLES[direction as keyof typeof DIRECTION_STYLES] ?? DIRECTION_STYLES.STABLE;
+}
+
+/**
+ * A trend line plotted from real values.
+ *
+ * Each of these was previously a fixed `d="M 0 15 Q 15 5, …"` path — the same
+ * curve on every farm, every day, moving in a direction unrelated to the number
+ * printed beside it. Points are scaled to the series' own range so a flat run of
+ * readings renders flat instead of being stretched into invented movement.
+ */
+function Sparkline({
+  values,
+  className,
+  domain,
+}: {
+  values: number[];
+  className?: string;
+  /** Fixed axis, for series like percentages where 0–100 is meaningful. */
+  domain?: [number, number];
+}) {
+  // One point cannot describe a trend, so draw nothing rather than a stub.
+  if (values.length < 2) return null;
+
+  const [lo, hi] = domain ?? [Math.min(...values), Math.max(...values)];
+  // A zero-height range would divide by zero; centre the line instead.
+  const span = hi - lo || 1;
+
+  const points = values.map((value, index) => {
+    const x = (index / (values.length - 1)) * 100;
+    const y = 18 - ((value - lo) / span) * 16;
+    return `${x.toFixed(1)} ${y.toFixed(1)}`;
+  });
+
+  return (
+    <svg className={className} viewBox="0 0 100 20" fill="none" preserveAspectRatio="none">
+      <path
+        d={`M ${points.join(' L ')}`}
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
 
 function getCropThumbnail(cropName: string): string {
   const name = cropName.toLowerCase();
@@ -447,22 +671,54 @@ function DashboardContent() {
   const [cacheAge, setCacheAge] = useState<string | null>(null);
   const [nearby, setNearby] = useState<NearbyOutbreaks | null>(null);
   const [voiceNotice, setVoiceNotice] = useState<string | null>(null);
+  /** Alert rows the farmer has cleared this session, so the bell reacts at once. */
+  const [readAlertIds, setReadAlertIds] = useState<Set<string>>(new Set());
+  const [alertsOpen, setAlertsOpen] = useState(false);
+  const [showAllActions, setShowAllActions] = useState(false);
+  /**
+   * Bumped on a timer purely to re-render the relative timestamps. Nothing reads
+   * the value — it exists so "updated 2m ago" keeps counting up on a page the
+   * farmer has left open on a phone propped against a fence post.
+   */
+  const [, setTick] = useState(0);
 
   const voice = useVoice();
 
+  /**
+   * Whether anything is already on screen.
+   *
+   * A ref rather than reading `data` directly, because `load` must not change
+   * identity when the payload does — it is a dependency of the polling effect,
+   * and re-creating it every fetch would tear down and rebuild the interval on
+   * each tick.
+   */
+  const hasDataRef = useRef(false);
+
   const load = useCallback(
-    async (signal?: AbortSignal) => {
+    async (signal?: AbortSignal, options: { background?: boolean } = {}) => {
       if (!currentFarm) return;
-      setError(null);
+      if (!options.background) setError(null);
       const cacheKey = `dashboard:${currentFarm.id}`;
 
       try {
         const fresh = await api.dashboard.get(currentFarm.id, signal);
         setData(fresh);
+        hasDataRef.current = true;
+        setError(null);
         setCacheAge(null);
         writeCache(cacheKey, fresh);
       } catch (err) {
         if (err instanceof DOMException && err.name === 'AbortError') return;
+
+        // A failed background poll changes nothing: what is already rendered came
+        // from a successful fetch and is newer than anything in the cache. Falling
+        // back regardless would raise the "showing saved data" banner over
+        // identical numbers, teaching the farmer to distrust a warning that is in
+        // fact live. The next tick tries again.
+        //
+        // A failed *manual* refresh is not silenced — the farmer asked, and is
+        // owed an answer either way.
+        if (options.background && hasDataRef.current) return;
 
         const cached = readCache<Dashboard>(cacheKey);
         if (cached) {
@@ -483,13 +739,7 @@ function DashboardContent() {
     [currentFarm],
   );
 
-  useEffect(() => {
-    const controller = new AbortController();
-    void load(controller.signal);
-    return () => controller.abort();
-  }, [load]);
-
-  useEffect(() => {
+  const loadNearby = useCallback(() => {
     if (!currentFarm) return;
     api.health
       .nearby(currentFarm.id)
@@ -497,17 +747,136 @@ function DashboardContent() {
       .catch(() => setNearby(null));
   }, [currentFarm]);
 
+  useEffect(() => {
+    // `load` is re-created when the active farm changes, which is exactly when
+    // what is on screen stops belonging to the farm being loaded.
+    hasDataRef.current = false;
+    const controller = new AbortController();
+    void load(controller.signal);
+    return () => controller.abort();
+  }, [load]);
+
+  useEffect(() => {
+    loadNearby();
+  }, [loadNearby]);
+
+  /**
+   * Keep the page live while it is open.
+   *
+   * Irrigation urgency, weather and mandi prices all move during the day, and a
+   * dashboard a farmer opened at dawn was previously still showing dawn's
+   * numbers at noon. Three triggers, because they cover different situations:
+   * a periodic poll, a return to the tab, and the network coming back.
+   *
+   * The poll is skipped while the tab is hidden — a backgrounded phone should
+   * not be spending the farmer's data — and a refresh fires on the way back in,
+   * so nothing is missed by having paused.
+   */
+  useEffect(() => {
+    if (!currentFarm) return;
+
+    const controller = new AbortController();
+
+    const poll = () => {
+      if (document.visibilityState === 'hidden') return;
+      void load(controller.signal, { background: true });
+      loadNearby();
+    };
+
+    const interval = window.setInterval(poll, REFRESH_INTERVAL_MS);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') poll();
+    };
+
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('online', poll);
+
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('online', poll);
+      controller.abort();
+    };
+  }, [currentFarm, load, loadNearby]);
+
+  // Relative timestamps only. Deliberately does not refetch.
+  useEffect(() => {
+    const interval = window.setInterval(() => setTick((n) => n + 1), CLOCK_TICK_MS);
+    return () => window.clearInterval(interval);
+  }, []);
+
+  /**
+   * Close the alerts panel on an outside tap or Escape.
+   *
+   * It is an overlay anchored to the bell, so without this the only way to
+   * dismiss it is to find the bell again — awkward on a phone, where the panel
+   * covers most of what is behind it.
+   */
+  const alertsPanelRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!alertsOpen) return;
+
+    const onPointerDown = (event: MouseEvent | TouchEvent) => {
+      if (!alertsPanelRef.current?.contains(event.target as Node)) setAlertsOpen(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setAlertsOpen(false);
+    };
+
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('touchstart', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('touchstart', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [alertsOpen]);
+
   async function refresh() {
     setRefreshing(true);
     await load();
+    loadNearby();
     setRefreshing(false);
   }
 
+  /**
+   * Mark every alert read.
+   *
+   * Applied locally first so the bell stops flashing the moment it is tapped,
+   * then persisted. A failed write leaves the server state untouched and the
+   * next poll restores the badge, which is the right way round: better to be
+   * reminded again than to silently lose a warning.
+   */
+  async function markAlertsRead() {
+    if (!currentFarm || !data) return;
+    const ids = data.alerts.items.filter((item) => !item.isRead).map((item) => item.id);
+    if (ids.length === 0) return;
+
+    setReadAlertIds((previous) => new Set([...previous, ...ids]));
+    try {
+      await api.alerts.readAll(currentFarm.id);
+    } catch {
+      // Roll back only what this call claimed. Clearing the whole set would also
+      // un-read alerts an earlier, successful call had already persisted.
+      setReadAlertIds((previous) => {
+        const reverted = new Set(previous);
+        for (const id of ids) reverted.delete(id);
+        return reverted;
+      });
+    }
+  }
+
+  // `readAloud` closes over `data`, `voice` and the active language, so the
+  // listener has to be re-registered when those change. Without a dependency
+  // array at all it re-subscribed on every single render instead.
+  const readAloudRef = useRef<() => void>(() => {});
   useEffect(() => {
-    const handler = () => readAloud();
+    const handler = () => readAloudRef.current();
     window.addEventListener(READ_ALOUD_EVENT, handler);
     return () => window.removeEventListener(READ_ALOUD_EVENT, handler);
-  });
+  }, []);
 
   function readAloud() {
     if (!data) return;
@@ -537,6 +906,8 @@ function DashboardContent() {
     voice.speak(briefing, language);
   }
 
+  readAloudRef.current = readAloud;
+
   if (!currentFarm) return null;
 
   if (error && !data) {
@@ -563,52 +934,153 @@ function DashboardContent() {
   // ── Setup translation dictionary index ──
   const dict = DASHBOARD_LOCALES[language] || DASHBOARD_LOCALES['en'];
 
-  // ── Calculate dynamic weather and KPI fields ──
+  // ── Live values, straight from the API ──
+  //
+  // Every figure below is either a real reading or `null`. Nothing is invented
+  // to fill a gap: a card with no data renders NO_VALUE, because a plausible
+  // wrong number is worse for a farmer than a visible blank.
   const greeting = getGreeting(dict, user?.name || 'Farmer');
-  const hasCurrentWeather = data.weather.available && data.weather.current;
-  const currentTemp = hasCurrentWeather
-    ? Math.round(data.weather.current!.temperatureC)
+  const current = data.weather.available ? data.weather.current : undefined;
+
+  // Initials for the avatar. Falls back through name → email local part, so a
+  // Google account with no display name still gets its own letters rather than
+  // the literal placeholder "US" every farmer used to see.
+  const initials = avatarInitials(user?.name, user?.email);
+
+  const currentTemp = current
+    ? Math.round(current.temperatureC)
     : data.weather.today
       ? Math.round(data.weather.today.tempMaxC)
-      : 27;
-  const weatherDesc = hasCurrentWeather
-    ? data.weather.current!.description
-    : data.weather.upcoming?.[0]?.description || 'Partly Cloudy';
-  const humidityVal = hasCurrentWeather
-    ? data.weather.current!.humidityPct
-    : data.weather.today && data.weather.today.rainMm > 0
-      ? 82
-      : 62;
+      : null;
+  const weatherDesc = current?.description ?? data.weather.upcoming?.[0]?.description ?? null;
+  const humidityVal = current ? Math.round(current.humidityPct) : null;
+  const windVal = current ? Math.round(current.windSpeedKmh) : null;
 
-  // Stable but dynamic wind based on farm coordinates
-  const windVal = Math.round((Math.abs(data.farm.latitude) * 10) % 8) + 8;
-  const lastUpdatedFormatted = data.generatedAt
-    ? new Date(data.generatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    : '9:15 AM';
+  // The header icon now follows the actual conditions. It was a fixed
+  // `CloudSun`, so the widget showed sun-behind-cloud through a thunderstorm —
+  // while the five-day strip immediately below it drew the correct icons.
+  const CurrentWeatherIcon = weatherDesc ? WEATHER_ICONS[weatherIcon(weatherDesc)] : CloudSun;
 
-  // KPI 1: Soil Moisture
-  const moisturePct = Math.min(
-    100,
-    data.irrigation.depletionPercent !== undefined ? 100 - data.irrigation.depletionPercent : 83,
-  );
+  // The provider's observation time when we have one, else when this payload
+  // was built. Previously defaulted to the literal string '9:15 AM'.
+  const observedAtIso = current?.observedAt ?? data.generatedAt;
+  const lastUpdatedFormatted = observedAtIso
+    ? new Date(observedAtIso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    : NO_VALUE;
+
+  // KPI 1: Soil Moisture — computed and clamped server-side.
+  const moisturePct = data.irrigation.moisturePercent ?? null;
   const moistureRating =
-    moisturePct >= 70 ? dict.good : moisturePct >= 40 ? dict.moderate : dict.low;
+    moisturePct === null
+      ? null
+      : moisturePct >= 70
+        ? dict.good
+        : moisturePct >= 40
+          ? dict.moderate
+          : dict.low;
+
+  // Observed days feed the moisture card; projected days feed the irrigation
+  // card. Two halves of the same modelled series, so neither line is decorative.
+  const moistureHistory = (data.irrigation.trend ?? [])
+    .filter((day) => day.isPast)
+    .map((day) => day.moisturePercent);
+  const moistureOutlook = (data.irrigation.trend ?? [])
+    .filter((day) => !day.isPast)
+    .map((day) => day.moisturePercent);
 
   // KPI 2: Irrigation Status
-  const irrigationStatus = data.irrigation.shouldIrrigate ? dict.irrigationDue : dict.noIrrigation;
-  const irrigationBadge = data.irrigation.shouldIrrigate ? dict.urgent : dict.notNeeded;
+  const irrigationStatus = data.irrigation.available
+    ? data.irrigation.shouldIrrigate
+      ? dict.irrigationDue
+      : dict.noIrrigation
+    : NO_VALUE;
+  const irrigationBadge = data.irrigation.available
+    ? data.irrigation.shouldIrrigate
+      ? dict.urgent
+      : dict.notNeeded
+    : null;
 
   // KPI 3: Total 7-day Rainfall
-  const totalRainfall =
-    data.weather.upcoming?.reduce((sum, day) => sum + (day.rainMm || 0), 0) || 0;
+  const rainfallDays = data.weather.upcoming ?? [];
+  const rainfallWeek = rainfallDays.slice(0, 7);
+  const totalRainfall = rainfallDays.reduce((sum, day) => sum + (day.rainMm || 0), 0);
   const rainfallBadge =
-    totalRainfall >= 50 ? dict.high : totalRainfall >= 15 ? dict.moderate : dict.low;
+    rainfallDays.length === 0
+      ? null
+      : totalRainfall >= 50
+        ? dict.high
+        : totalRainfall >= 15
+          ? dict.moderate
+          : dict.low;
+  // Bars are scaled against the wettest day of the week. Computed once here
+  // rather than inside the render loop, which recalculated it per bar.
+  const rainfallPeak = Math.max(...rainfallWeek.map((day) => day.rainMm || 0), 1);
 
-  // KPI 4: Crop Health Score
-  const healthScore =
-    data.health.activeIssues === 0 ? 95 : data.health.activeIssues === 1 ? 82 : 65;
+  // KPI 4: Crop Health Score — severity-weighted on the server.
+  const healthScore = data.health.score;
   const healthBadge =
     healthScore >= 90 ? dict.excellent : healthScore >= 75 ? dict.good : dict.warning;
+
+  // The irrigation tip, only when there is something real to say.
+  const irrigationTip = !data.irrigation.available
+    ? null
+    : data.irrigation.shouldIrrigate
+      ? data.irrigation.depthMm
+        ? dict.moistureTipUrgent.replace('{amount}', String(data.irrigation.depthMm))
+        : null
+      : dict.moistureTipGood;
+
+  // ── Alerts ──
+  //
+  // `alerts.items` was fetched on every load and thrown away; only the unread
+  // count reached the screen, attached to a bell that did nothing. The panel
+  // below renders the rows, and the count subtracts anything cleared in this
+  // session so the badge responds before the next poll confirms it.
+  const alertItems = data.alerts.items.map((item) => ({
+    ...item,
+    isRead: item.isRead || readAlertIds.has(item.id),
+  }));
+  const unreadAlerts = alertItems.filter((item) => !item.isRead).length;
+
+  // ── Market ──
+  //
+  // Also already in the payload and never rendered. The dashboard's market tile
+  // read "Check latest prices" whether prices had moved 20% or were unavailable
+  // entirely.
+  const marketTrends = data.market.available ? data.market.trends : [];
+  // Headline mover: the largest absolute weekly swing, since that is the one
+  // worth a farmer's attention regardless of which way it went.
+  const topMover = marketTrends.reduce<(typeof marketTrends)[number] | null>((best, trend) => {
+    if (trend.change7DayPercent === null) return best;
+    if (!best || best.change7DayPercent === null) return trend;
+    return Math.abs(trend.change7DayPercent) > Math.abs(best.change7DayPercent) ? trend : best;
+  }, null);
+
+  // ── Quick action subtitles, driven by the same live figures as the cards ──
+  const irrigateHint = !data.irrigation.available
+    ? dict.irrigationNoData
+    : data.irrigation.shouldIrrigate
+      ? data.irrigation.depthMm
+        ? dict.applyMm.replace('{amount}', String(data.irrigation.depthMm))
+        : dict.startIrrigation
+      : dict.notNeededToday;
+
+  const healthHint =
+    data.health.activeIssues === 0
+      ? dict.noIssues
+      : dict.activeIssuesCount.replace('{count}', String(data.health.activeIssues));
+
+  // `topMover` only ever holds a trend with a non-null change, by construction
+  // above, but reading it back out keeps that guarantee visible to the compiler.
+  const topMoverChange = topMover?.change7DayPercent ?? null;
+  const marketHint =
+    topMover && topMoverChange !== null
+      ? `${cropLabel(topMover.cropName)} ${topMoverChange > 0 ? '+' : ''}${topMoverChange}%`
+      : (data.market.message ?? dict.checkLatestPrices);
+
+  // Three actions by default; the rest are one tap away rather than hidden
+  // behind a link that pointed back at this same page.
+  const visibleActions = showAllActions ? data.actions : data.actions.slice(0, 3);
 
   return (
     <div className="space-y-6 animate-fade-up">
@@ -625,28 +1097,55 @@ function DashboardContent() {
               {data.farm.address ||
                 `Lat: ${data.farm.latitude.toFixed(2)}, Lon: ${data.farm.longitude.toFixed(2)}`}
             </p>
+            {/*
+              Area, soil and season all came back with every dashboard payload
+              and none of them were shown. They are the three inputs the farmer
+              cannot see anywhere else on this page, and every recommendation
+              below is computed from them.
+            */}
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[10px] font-bold text-slate-500">
+              <span className="tabular-nums">
+                {dict.areaHa.replace('{area}', String(data.farm.totalAreaHectares))}
+              </span>
+              {data.farm.soilTypePrimary && (
+                <span className="inline-flex items-center gap-1">
+                  <Layers className="h-3 w-3 text-soil-400" aria-hidden />
+                  {humanise(data.farm.soilTypePrimary)}
+                </span>
+              )}
+              <span className="inline-flex items-center gap-1">
+                <CalendarDays className="h-3 w-3 text-brand-500" aria-hidden />
+                {humanise(data.farm.season)}
+              </span>
+            </div>
           </div>
         </Card>
 
         {/* Live Weather Widget */}
         <Card className="flex items-center justify-between p-4 bg-white/90 shadow-sm border border-soil-150 rounded-2xl">
           <div className="flex items-center gap-2.5">
-            <CloudSun className="h-8 w-8 text-amber-500 shrink-0" />
+            <CurrentWeatherIcon className="h-8 w-8 text-amber-500 shrink-0" aria-hidden />
             <div>
-              <p className="font-extrabold text-slate-800 text-sm">{currentTemp}°C</p>
+              <p className="font-extrabold text-slate-800 text-sm">
+                {currentTemp === null ? NO_VALUE : `${currentTemp}°C`}
+              </p>
               <p className="text-[10px] font-semibold text-slate-400 truncate max-w-[80px]">
-                {weatherDesc}
+                {weatherDesc ?? NO_VALUE}
               </p>
             </div>
           </div>
           <div className="h-8 w-[1px] bg-slate-200" />
           <div className="text-center">
-            <p className="text-xs font-bold text-slate-700">{humidityVal}%</p>
+            <p className="text-xs font-bold text-slate-700">
+              {humidityVal === null ? NO_VALUE : `${humidityVal}%`}
+            </p>
             <p className="text-[9px] font-semibold text-slate-400">{dict.humidity}</p>
           </div>
           <div className="h-8 w-[1px] bg-slate-200" />
           <div className="text-center">
-            <p className="text-xs font-bold text-slate-700">{windVal} km/h</p>
+            <p className="text-xs font-bold text-slate-700">
+              {windVal === null ? NO_VALUE : `${windVal} km/h`}
+            </p>
             <p className="text-[9px] font-semibold text-slate-400">{dict.wind}</p>
           </div>
           <div className="h-8 w-[1px] bg-slate-200" />
@@ -657,25 +1156,131 @@ function DashboardContent() {
         </Card>
 
         {/* Profile Card */}
-        <Card className="flex items-center justify-between p-4 bg-white/90 shadow-sm border border-soil-150 rounded-2xl">
-          <div className="flex items-center gap-3">
-            <div className="relative h-10 w-10 shrink-0 rounded-xl overflow-hidden bg-brand-100 border border-brand-200 flex items-center justify-center text-brand-700 font-extrabold">
-              {user?.name ? user.name.slice(0, 2).toUpperCase() : 'US'}
+        {/* The ref sits on a wrapper because `Card` is a plain function
+            component and cannot receive one. */}
+        <div ref={alertsPanelRef} className="relative">
+          <Card className="relative flex h-full items-center justify-between p-4 bg-white/90 shadow-sm border border-soil-150 rounded-2xl">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="relative h-10 w-10 shrink-0 rounded-xl overflow-hidden bg-brand-100 border border-brand-200 flex items-center justify-center text-brand-700 font-extrabold">
+                {initials}
+              </div>
+              <div className="min-w-0">
+                <p className="truncate font-extrabold text-slate-800 text-sm">
+                  {user?.name || 'Farmer'}
+                </p>
+                <p className="truncate text-xs font-semibold text-brand-600 mt-0.5">
+                  {data.farm.name}
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="font-extrabold text-slate-800 text-sm">{user?.name || 'Farmer'}</p>
-              <p className="text-xs font-semibold text-brand-600 mt-0.5">{data.farm.name}</p>
+            <div className="flex items-center gap-2">
+              {/*
+              Counts unread alerts, not open actions. `alerts.unread` is what the
+              API already tracks as "not yet seen"; `actions.length` is the
+              always-populated to-do list, so keying off it lit the dot
+              permanently and made it meaningless.
+
+              The button now opens the alert rows it is counting. Before, tapping
+              it did nothing at all — the badge was the only part of the alerts
+              payload that reached the screen.
+            */}
+              <button
+                type="button"
+                onClick={() => setAlertsOpen((open) => !open)}
+                aria-expanded={alertsOpen}
+                className={cn(
+                  'relative h-9 w-9 flex items-center justify-center rounded-xl border transition-colors',
+                  alertsOpen
+                    ? 'bg-brand-50 border-brand-200'
+                    : 'bg-slate-50 border-slate-100 hover:bg-slate-100',
+                )}
+                aria-label={unreadAlerts > 0 ? `${unreadAlerts} unread alerts` : dict.recentAlerts}
+              >
+                <Bell className="h-4.5 w-4.5 text-slate-600" aria-hidden />
+                {unreadAlerts > 0 && (
+                  <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                )}
+              </button>
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button className="relative h-9 w-9 flex items-center justify-center rounded-xl bg-slate-50 border border-slate-100 hover:bg-slate-100 transition-colors">
-              <Bell className="h-4.5 w-4.5 text-slate-600" />
-              {data.actions.length > 0 && (
-                <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-red-500 animate-pulse" />
-              )}
-            </button>
-          </div>
-        </Card>
+
+            {alertsOpen && (
+              <div className="absolute right-3 top-[calc(100%-0.25rem)] z-30 w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-soil-150 bg-white p-3 shadow-lg">
+                <div className="flex items-center justify-between gap-2 pb-2">
+                  <p className="text-xs font-extrabold uppercase tracking-wider text-slate-500">
+                    {dict.recentAlerts}
+                  </p>
+                  <div className="flex items-center gap-1.5">
+                    {unreadAlerts > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => void markAlertsRead()}
+                        className="text-[10px] font-extrabold text-brand-700 hover:text-brand-800"
+                      >
+                        {dict.markAllRead}
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setAlertsOpen(false)}
+                      // `close` lives under the voice namespace — that is where the
+                      // only existing translation of the word is.
+                      aria-label={t('voice.close')}
+                      className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                    >
+                      <X className="h-3.5 w-3.5" aria-hidden />
+                    </button>
+                  </div>
+                </div>
+
+                {alertItems.length === 0 ? (
+                  <p className="py-3 text-center text-xs font-semibold text-slate-500">
+                    {dict.noAlerts}
+                  </p>
+                ) : (
+                  <ul className="max-h-72 space-y-2 overflow-y-auto">
+                    {alertItems.map((item) => {
+                      const style = severityStyles[item.severity] ?? severityStyles.INFO;
+                      return (
+                        <li
+                          key={item.id}
+                          className={cn(
+                            'rounded-xl border px-2.5 py-2',
+                            style.bg,
+                            style.border,
+                            item.isRead && 'opacity-60',
+                          )}
+                        >
+                          <div className="flex items-start gap-2">
+                            <span
+                              className={cn('mt-1.5 h-2 w-2 shrink-0 rounded-full', style.dot)}
+                              aria-hidden
+                            />
+                            <div className="min-w-0 flex-1">
+                              <p className={cn('text-xs font-extrabold', style.text)}>
+                                {item.title ?? humanise(item.alertType)}
+                              </p>
+                              <p className="mt-0.5 text-[11px] font-semibold leading-snug text-slate-600">
+                                {item.message}
+                              </p>
+                              {item.action && (
+                                <p className="mt-1 text-[10px] font-bold text-slate-500">
+                                  {item.action}
+                                </p>
+                              )}
+                              <p className="mt-1 text-[10px] font-semibold text-slate-400">
+                                {timeAgo(item.createdAt)}
+                              </p>
+                            </div>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
+            )}
+          </Card>
+        </div>
       </div>
 
       {/* ── Greeting & Refresh ── */}
@@ -689,6 +1294,21 @@ function DashboardContent() {
           </h1>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
+          {/*
+            Says out loud that the page refreshes itself. Without it, the manual
+            refresh button reads as the only way to get new numbers, and a farmer
+            watching an irrigation warning has no reason to believe the figure in
+            front of them is current.
+          */}
+          {!cacheAge && (
+            <span
+              className="hidden items-center gap-1.5 rounded-xl border border-emerald-100 bg-emerald-50/70 px-2.5 py-2 text-xs font-extrabold text-emerald-700 sm:inline-flex"
+              title={`${dict.updated} ${timeAgo(data.generatedAt)}`}
+            >
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" aria-hidden />
+              {dict.live}
+            </span>
+          )}
           {voice.supported && (
             <button
               type="button"
@@ -739,35 +1359,31 @@ function DashboardContent() {
             <Droplets className="h-4.5 w-4.5 text-blue-500" />
           </div>
           <div className="mt-2.5 flex items-baseline gap-1.5">
-            <span className="text-2xl font-black text-slate-800">{moisturePct}%</span>
-            <span
-              className={cn(
-                'text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded-md',
-                moisturePct >= 70
-                  ? 'text-blue-600 bg-blue-50'
-                  : moisturePct >= 40
-                    ? 'text-amber-600 bg-amber-50'
-                    : 'text-red-600 bg-red-50',
-              )}
-            >
-              {moistureRating}
+            <span className="text-2xl font-black text-slate-800">
+              {moisturePct === null ? NO_VALUE : `${moisturePct}%`}
             </span>
+            {moistureRating && (
+              <span
+                className={cn(
+                  'text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded-md',
+                  moisturePct !== null && moisturePct >= 70
+                    ? 'text-blue-600 bg-blue-50'
+                    : moisturePct !== null && moisturePct >= 40
+                      ? 'text-amber-600 bg-amber-50'
+                      : 'text-red-600 bg-red-50',
+                )}
+              >
+                {moistureRating}
+              </span>
+            )}
           </div>
-          {/* Wave Sparkline */}
+          {/* Observed root-zone moisture, day by day */}
           <div className="absolute bottom-0 left-0 w-full px-2 opacity-80 z-0">
-            <svg
+            <Sparkline
+              values={moistureHistory}
+              domain={[0, 100]}
               className="w-full h-8 text-blue-400"
-              viewBox="0 0 100 20"
-              fill="none"
-              preserveAspectRatio="none"
-            >
-              <path
-                d="M 0 15 Q 15 5, 30 15 T 60 10 T 90 12 T 100 8"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
-            </svg>
+            />
           </div>
         </Card>
 
@@ -781,32 +1397,26 @@ function DashboardContent() {
             <span className="text-lg font-black text-slate-800 truncate max-w-[100px]">
               {irrigationStatus}
             </span>
-            <span
-              className={cn(
-                'text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded-md',
-                data.irrigation.shouldIrrigate
-                  ? 'text-red-600 bg-red-50 animate-pulse'
-                  : 'text-emerald-600 bg-emerald-50',
-              )}
-            >
-              {irrigationBadge}
-            </span>
+            {irrigationBadge && (
+              <span
+                className={cn(
+                  'text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded-md',
+                  data.irrigation.shouldIrrigate
+                    ? 'text-red-600 bg-red-50 animate-pulse'
+                    : 'text-emerald-600 bg-emerald-50',
+                )}
+              >
+                {irrigationBadge}
+              </span>
+            )}
           </div>
-          {/* Soft Flat Sparkline */}
+          {/* Projected moisture over the coming days — where the balance is heading */}
           <div className="absolute bottom-0 left-0 w-full px-2 opacity-80 z-0">
-            <svg
+            <Sparkline
+              values={moistureOutlook}
+              domain={[0, 100]}
               className="w-full h-8 text-emerald-400"
-              viewBox="0 0 100 20"
-              fill="none"
-              preserveAspectRatio="none"
-            >
-              <path
-                d="M 0 12 Q 25 15, 50 10 T 100 12"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
-            </svg>
+            />
           </div>
         </Card>
 
@@ -818,19 +1428,23 @@ function DashboardContent() {
           </div>
           <div className="mt-2.5 flex items-baseline gap-1.5">
             <span className="text-2xl font-black text-slate-800">
-              {totalRainfall.toFixed(0)} mm
+              {rainfallDays.length === 0 ? NO_VALUE : `${totalRainfall.toFixed(0)} mm`}
             </span>
-            <span className="text-[10px] font-extrabold text-purple-600 uppercase bg-purple-50 px-1.5 py-0.5 rounded-md">
-              {rainfallBadge}
-            </span>
+            {rainfallBadge && (
+              <span className="text-[10px] font-extrabold text-purple-600 uppercase bg-purple-50 px-1.5 py-0.5 rounded-md">
+                {rainfallBadge}
+              </span>
+            )}
           </div>
-          {/* Sparkline Bar Chart */}
+          {/* Daily rainfall bars — already real data, scaled against the
+              wettest day so a light week is not flattened to nothing. */}
           <div className="absolute bottom-1 left-0 w-full px-4 opacity-50 z-0 flex justify-between items-end h-6">
-            {data.weather.upcoming?.slice(0, 7).map((day, idx) => (
+            {rainfallWeek.map((day) => (
               <div
-                key={day.date + idx}
+                key={day.date}
                 className="w-1.5 bg-purple-500 rounded-t-sm"
-                style={{ height: `${Math.max(2, Math.min(24, (day.rainMm || 0) * 2.5))}px` }}
+                title={`${formatDay(day.date)}: ${(day.rainMm || 0).toFixed(1)} mm`}
+                style={{ height: `${Math.max(2, ((day.rainMm || 0) / rainfallPeak) * 24)}px` }}
               />
             ))}
           </div>
@@ -857,21 +1471,32 @@ function DashboardContent() {
               {healthBadge}
             </span>
           </div>
-          {/* Healthy Sparkline */}
-          <div className="absolute bottom-0 left-0 w-full px-2 opacity-80 z-0">
-            <svg
-              className="w-full h-8 text-emerald-400"
-              viewBox="0 0 100 20"
-              fill="none"
-              preserveAspectRatio="none"
-            >
-              <path
-                d="M 0 16 Q 20 12, 40 14 T 80 5 T 100 8"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
+          {/*
+            One segment per open issue, coloured by severity — this is what the
+            score above is built from, so the card shows its own working.
+
+            Health has no time series to plot: `health_logs` records when an
+            issue was observed but never when it was resolved, so a trend line
+            here would have to be invented. A breakdown is the honest chart for
+            the data that exists.
+          */}
+          <div className="absolute bottom-2 left-0 w-full px-4 z-0 flex items-end gap-1 h-5">
+            {data.health.recent.map((issue) => (
+              <div
+                key={issue.id}
+                title={`${cropLabel(issue.cropName)}: ${humanise(issue.severity)}`}
+                className={cn(
+                  'flex-1 rounded-sm',
+                  issue.severity === 'CRITICAL'
+                    ? 'bg-red-500 h-5'
+                    : issue.severity === 'SEVERE'
+                      ? 'bg-orange-400 h-4'
+                      : issue.severity === 'MODERATE'
+                        ? 'bg-amber-300 h-3'
+                        : 'bg-emerald-300 h-2',
+                )}
               />
-            </svg>
+            ))}
           </div>
         </Card>
       </div>
@@ -902,9 +1527,14 @@ function DashboardContent() {
                       {data.irrigation.headline ||
                         (data.irrigation.shouldIrrigate ? dict.irrigationDue : dict.noIrrigation)}
                     </p>
+                    {/*
+                      No invented fallback sentence here. The old one claimed
+                      "soil moisture is good … rain expected over the coming
+                      week" whenever the engine returned nothing — which is
+                      exactly when nobody knows whether either is true.
+                    */}
                     <p className="text-base text-slate-600 leading-relaxed font-medium">
-                      {data.irrigation.reason ||
-                        'Soil moisture is good and crops are well-hydrated. Rain expected over the coming week will cover crop water needs.'}
+                      {data.irrigation.reason ?? data.irrigation.warning ?? dict.irrigationNoData}
                     </p>
                   </div>
                   {/* Circular SVG progress ring */}
@@ -920,7 +1550,9 @@ function DashboardContent() {
                       <path
                         className="text-blue-500"
                         strokeWidth="3.2"
-                        strokeDasharray={`${moisturePct}, 100`}
+                        // No reading means no arc — an empty ring, rather than
+                        // a full one implying perfectly wet soil.
+                        strokeDasharray={`${moisturePct ?? 0}, 100`}
                         strokeLinecap="round"
                         stroke="currentColor"
                         fill="none"
@@ -928,7 +1560,9 @@ function DashboardContent() {
                       />
                     </svg>
                     <div className="absolute flex flex-col items-center justify-center">
-                      <span className="text-lg font-black text-slate-800">{moisturePct}%</span>
+                      <span className="text-lg font-black text-slate-800">
+                        {moisturePct === null ? NO_VALUE : `${moisturePct}%`}
+                      </span>
                       <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider">
                         {dict.soilMoisture.split(' ')[0]}
                       </span>
@@ -957,17 +1591,17 @@ function DashboardContent() {
                   </div>
                 </div>
 
-                <div className="p-3 bg-blue-50/70 border border-blue-100/50 rounded-xl flex items-center gap-2">
-                  <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
-                  <p className="text-xs font-bold text-blue-800">
-                    {data.irrigation.shouldIrrigate
-                      ? dict.moistureTipUrgent.replace(
-                          '{amount}',
-                          String(data.irrigation.depthMm || 20),
-                        )
-                      : dict.moistureTipGood}
-                  </p>
-                </div>
+                {/*
+                  Only shown when the engine actually produced a depth. The
+                  previous `|| 20` meant a farmer could be told to apply
+                  "about 20 mm" on a day the model had computed nothing.
+                */}
+                {irrigationTip && (
+                  <div className="p-3 bg-blue-50/70 border border-blue-100/50 rounded-xl flex items-center gap-2">
+                    <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
+                    <p className="text-xs font-bold text-blue-800">{irrigationTip}</p>
+                  </div>
+                )}
               </div>
             </Card>
           </Link>
@@ -1019,6 +1653,20 @@ function DashboardContent() {
                           ? `${data.weather.today.rainMm.toFixed(0)} mm rain expected today`
                           : 'No rain expected today'}
                       </p>
+                      {/*
+                        Rain probability arrives with every forecast and was
+                        dropped on the floor. "4 mm expected" reads very
+                        differently at 30% confidence than at 90%, and that
+                        difference decides whether irrigating today is wasted.
+                      */}
+                      {data.weather.today.rainProbability !== null && (
+                        <p className="text-xs font-bold text-blue-600 mt-0.5 tabular-nums">
+                          {dict.rainChance.replace(
+                            '{percent}',
+                            String(Math.round(data.weather.today.rainProbability)),
+                          )}
+                        </p>
+                      )}
                     </div>
                   </div>
                 )}
@@ -1060,16 +1708,25 @@ function DashboardContent() {
       <div className="grid gap-6 md:grid-cols-3">
         {/* Col 1: Priority Alerts */}
         <section className="flex flex-col h-full justify-between">
+          {/*
+            "View all" used to be a Link to /dashboard — this very page — so it
+            appeared to offer more and did nothing. It now expands the list,
+            which is where the remaining actions actually are, and only appears
+            when there is something beyond the three on show.
+          */}
           <SectionHeading
             icon={Bell}
             title={dict.priorityAlerts}
             action={
-              <Link
-                href="/dashboard"
-                className="text-base font-extrabold text-brand-700 hover:text-brand-800 transition-colors drop-shadow-sm"
-              >
-                {dict.viewAll}
-              </Link>
+              data.actions.length > 3 ? (
+                <button
+                  type="button"
+                  onClick={() => setShowAllActions((shown) => !shown)}
+                  className="text-base font-extrabold text-brand-700 hover:text-brand-800 transition-colors drop-shadow-sm"
+                >
+                  {showAllActions ? dict.showLess : `${dict.viewAll} (${data.actions.length})`}
+                </button>
+              ) : undefined
             }
           />
           <div className="space-y-3 flex-1">
@@ -1086,7 +1743,7 @@ function DashboardContent() {
                 </div>
               </Card>
             ) : (
-              data.actions.slice(0, 3).map((action) => {
+              visibleActions.map((action) => {
                 const Icon =
                   {
                     IRRIGATION: Droplets,
@@ -1203,9 +1860,45 @@ function DashboardContent() {
               </div>
             </div>
 
+            {/*
+              The open issues themselves. `health.recent` was already fetched and
+              only ever used to draw five anonymous severity bars on the KPI card
+              above — the farmer could see that something was wrong but not what,
+              or on which crop.
+            */}
+            {data.health.recent.length > 0 && (
+              <ul className="mt-4 space-y-1.5 border-t border-soil-100 pt-3">
+                {data.health.recent.slice(0, 3).map((issue) => (
+                  <li key={issue.id} className="flex items-center justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs font-extrabold text-slate-700">
+                        {cropLabel(issue.cropName)}
+                        <span className="font-semibold text-slate-500"> · {issue.summary}</span>
+                      </p>
+                      <p className="text-[10px] font-semibold text-slate-400">
+                        {timeAgo(issue.observedAt)}
+                      </p>
+                    </div>
+                    <Badge
+                      tone={
+                        issue.severity === 'CRITICAL'
+                          ? 'danger'
+                          : issue.severity === 'SEVERE'
+                            ? 'warn'
+                            : 'neutral'
+                      }
+                      className="shrink-0 text-[9px] font-extrabold uppercase"
+                    >
+                      {humanise(issue.severity)}
+                    </Badge>
+                  </li>
+                ))}
+              </ul>
+            )}
+
             <Link
               href="/health"
-              className="btn-secondary w-full py-2.5 rounded-xl text-sm font-extrabold border border-soil-200 hover:bg-slate-50 mt-6 text-center shadow-sm"
+              className="btn-secondary w-full py-2.5 rounded-xl text-sm font-extrabold border border-soil-200 hover:bg-slate-50 mt-4 text-center shadow-sm"
             >
               {t('health.logObservation').split(' ')[0]}
             </Link>
@@ -1215,17 +1908,37 @@ function DashboardContent() {
         {/* Col 3: Quick Actions */}
         <section className="flex flex-col h-full justify-between">
           <SectionHeading icon={Sparkles} title={dict.quickActions} />
+          {/*
+            The four tiles are still fixed destinations — they are navigation —
+            but their captions now report live state instead of restating the
+            title. "Irrigate Now / Start irrigation" said the same thing twice
+            and looked identical on a day the model had computed that no water
+            was needed at all.
+          */}
           <div className="grid grid-cols-2 gap-3 flex-1">
             {/* Quick Action 1: Irrigate */}
             <Link href="/weather" className="block h-full">
-              <Card className="p-4 bg-blue-50/50 hover:bg-blue-50 border border-blue-100 shadow-sm rounded-2xl flex flex-col justify-between h-full hover:shadow-md transition-all duration-300">
-                <div className="h-9 w-9 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 shadow-inner">
-                  <Droplets className="h-4.5 w-4.5" />
+              <Card
+                className={cn(
+                  'p-4 bg-blue-50/50 hover:bg-blue-50 border border-blue-100 shadow-sm rounded-2xl flex flex-col justify-between h-full hover:shadow-md transition-all duration-300',
+                  data.irrigation.shouldIrrigate &&
+                    'border-blue-300 bg-blue-50 ring-1 ring-blue-200',
+                )}
+              >
+                <div className="flex items-start justify-between gap-1">
+                  <div className="h-9 w-9 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 shadow-inner">
+                    <Droplets className="h-4.5 w-4.5" />
+                  </div>
+                  {data.irrigation.shouldIrrigate && (
+                    <span className="rounded-md bg-red-100 px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-red-700">
+                      {dict.urgent}
+                    </span>
+                  )}
                 </div>
                 <div className="mt-4">
                   <p className="text-sm font-extrabold text-blue-950">{dict.irrigateNow}</p>
-                  <p className="text-[10px] font-bold text-blue-800 mt-0.5">
-                    {dict.startIrrigation}
+                  <p className="text-[10px] font-bold text-blue-800 mt-0.5 line-clamp-2">
+                    {irrigateHint}
                   </p>
                 </div>
               </Card>
@@ -1233,14 +1946,46 @@ function DashboardContent() {
 
             {/* Quick Action 2: Check Crop */}
             <Link href="/health" className="block h-full">
-              <Card className="p-4 bg-emerald-50/50 hover:bg-emerald-50 border border-emerald-100 shadow-sm rounded-2xl flex flex-col justify-between h-full hover:shadow-md transition-all duration-300">
-                <div className="h-9 w-9 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 shadow-inner">
-                  <Stethoscope className="h-4.5 w-4.5" />
+              <Card
+                className={cn(
+                  'p-4 bg-emerald-50/50 hover:bg-emerald-50 border border-emerald-100 shadow-sm rounded-2xl flex flex-col justify-between h-full hover:shadow-md transition-all duration-300',
+                  data.health.activeIssues > 0 &&
+                    'border-amber-200 bg-amber-50/60 hover:bg-amber-50',
+                )}
+              >
+                <div className="flex items-start justify-between gap-1">
+                  <div
+                    className={cn(
+                      'h-9 w-9 rounded-xl flex items-center justify-center shrink-0 shadow-inner',
+                      data.health.activeIssues > 0
+                        ? 'bg-amber-100 text-amber-700'
+                        : 'bg-emerald-100 text-emerald-600',
+                    )}
+                  >
+                    <Stethoscope className="h-4.5 w-4.5" />
+                  </div>
+                  {data.health.activeIssues > 0 && (
+                    <span className="rounded-md bg-amber-100 px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-amber-800 tabular-nums">
+                      {data.health.activeIssues}
+                    </span>
+                  )}
                 </div>
                 <div className="mt-4">
-                  <p className="text-sm font-extrabold text-emerald-950">{dict.checkCrop}</p>
-                  <p className="text-[10px] font-bold text-emerald-800 mt-0.5">
-                    {dict.scanDiagnose}
+                  <p
+                    className={cn(
+                      'text-sm font-extrabold',
+                      data.health.activeIssues > 0 ? 'text-amber-950' : 'text-emerald-950',
+                    )}
+                  >
+                    {dict.checkCrop}
+                  </p>
+                  <p
+                    className={cn(
+                      'text-[10px] font-bold mt-0.5 line-clamp-2',
+                      data.health.activeIssues > 0 ? 'text-amber-800' : 'text-emerald-800',
+                    )}
+                  >
+                    {healthHint}
                   </p>
                 </div>
               </Card>
@@ -1249,13 +1994,30 @@ function DashboardContent() {
             {/* Quick Action 3: Market Prices */}
             <Link href="/market" className="block h-full">
               <Card className="p-4 bg-purple-50/50 hover:bg-purple-50 border border-purple-100 shadow-sm rounded-2xl flex flex-col justify-between h-full hover:shadow-md transition-all duration-300">
-                <div className="h-9 w-9 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center shrink-0 shadow-inner">
-                  <TrendingUp className="h-4.5 w-4.5" />
+                <div className="flex items-start justify-between gap-1">
+                  <div className="h-9 w-9 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center shrink-0 shadow-inner">
+                    <TrendingUp className="h-4.5 w-4.5" />
+                  </div>
+                  {topMover && (
+                    <span
+                      className={cn(
+                        'rounded-md px-1.5 py-0.5 text-[9px] font-extrabold uppercase',
+                        directionStyle(topMover.direction).bg,
+                        directionStyle(topMover.direction).text,
+                      )}
+                    >
+                      {topMover.direction === 'RISING'
+                        ? dict.rising
+                        : topMover.direction === 'FALLING'
+                          ? dict.falling
+                          : dict.stable}
+                    </span>
+                  )}
                 </div>
                 <div className="mt-4">
                   <p className="text-sm font-extrabold text-purple-950">{dict.marketPrices}</p>
-                  <p className="text-[10px] font-bold text-purple-800 mt-0.5">
-                    {dict.checkLatestPrices}
+                  <p className="text-[10px] font-bold text-purple-800 mt-0.5 line-clamp-2">
+                    {marketHint}
                   </p>
                 </div>
               </Card>
@@ -1344,6 +2106,116 @@ function DashboardContent() {
         )}
       </section>
 
+      {/* ── Market Prices ── */}
+      {/*
+        `data.market` has been part of the dashboard payload all along: a mandi
+        price, direction, weekly change and sell/hold signal for each of the
+        farm's crops. None of it was rendered. The dashboard even raises MARKET
+        action items from these same trends, so a farmer could be told "good time
+        to sell" with no price anywhere on the page to judge it against.
+      */}
+      <section className="mt-6">
+        <SectionHeading
+          icon={TrendingUp}
+          title={dict.marketPrices}
+          action={
+            <Link
+              href="/market"
+              className="text-base font-extrabold text-brand-700 hover:text-brand-800 transition-colors drop-shadow-sm"
+            >
+              {dict.viewAll}
+            </Link>
+          }
+        />
+        {marketTrends.length === 0 ? (
+          <Card className="p-5 text-center bg-white/90 border border-soil-150 rounded-2xl">
+            <p className="text-sm font-semibold text-slate-600">
+              {data.market.message ?? dict.noPriceData}
+            </p>
+          </Card>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {marketTrends.map((trend) => {
+              const style = directionStyle(trend.direction);
+              const signalLabel =
+                trend.signal === 'SELL'
+                  ? dict.sell
+                  : trend.signal === 'HOLD'
+                    ? dict.hold
+                    : dict.watch;
+
+              return (
+                <Link key={trend.commodity} href="/market" className="block h-full">
+                  <Card className="flex h-full flex-col justify-between gap-3 p-4 bg-white/90 border border-soil-150 rounded-2xl shadow-sm transition-all duration-300 hover:border-brand-300 hover:shadow-md">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-extrabold text-slate-800">
+                          {cropLabel(trend.cropName)}
+                        </p>
+                        <p className="truncate text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                          {trend.commodity}
+                        </p>
+                      </div>
+                      <Badge
+                        tone={
+                          trend.signal === 'SELL'
+                            ? 'success'
+                            : trend.signal === 'HOLD'
+                              ? 'warn'
+                              : 'neutral'
+                        }
+                        className="shrink-0 text-[9px] font-extrabold uppercase"
+                      >
+                        {signalLabel}
+                      </Badge>
+                    </div>
+
+                    <div className="flex items-end justify-between gap-2">
+                      <div>
+                        {/* No price means no price. The previous market tile
+                            simply said "Check latest prices" either way. */}
+                        <p className="text-xl font-black tabular-nums text-slate-900">
+                          {trend.currentPrice === null
+                            ? NO_VALUE
+                            : formatRupees(trend.currentPrice)}
+                        </p>
+                        <p className="text-[10px] font-semibold text-slate-400">{trend.unit}</p>
+                      </div>
+                      <div
+                        className={cn(
+                          'flex items-center gap-1 rounded-lg px-1.5 py-1 text-xs font-extrabold tabular-nums',
+                          style.bg,
+                          style.text,
+                        )}
+                      >
+                        <style.Icon className="h-3.5 w-3.5" aria-hidden />
+                        {trend.change7DayPercent === null
+                          ? NO_VALUE
+                          : `${trend.change7DayPercent > 0 ? '+' : ''}${trend.change7DayPercent}%`}
+                      </div>
+                    </div>
+
+                    <p className="text-xs font-semibold leading-snug text-slate-500 line-clamp-2">
+                      {tNarrative(trend.headline)}
+                    </p>
+
+                    {/* Seeded rows are demo figures, not a real mandi quote —
+                        saying so is the difference between a price a farmer can
+                        act on and one they cannot. */}
+                    {trend.isSeeded && (
+                      <span className="inline-flex items-center gap-1 text-[9px] font-extrabold uppercase text-amber-700">
+                        <AlertTriangle className="h-3 w-3" aria-hidden />
+                        {dict.limitedData}
+                      </span>
+                    )}
+                  </Card>
+                </Link>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
       {/* ── Plan Ahead Sections ── */}
       <section className="mt-6">
         <SectionHeading title={dict.planAhead} />
@@ -1420,6 +2292,24 @@ function DashboardContent() {
       </p>
     </div>
   );
+}
+
+/**
+ * Up to two initials for the avatar.
+ *
+ * Two words give one letter each ("Harsh Patel" → HP); a single word gives its
+ * first two. Google accounts can arrive with no display name, so the email's
+ * local part is the fallback before the generic placeholder — every farmer used
+ * to see the literal "US" on the profile card regardless of who they were.
+ */
+function avatarInitials(name?: string | null, email?: string | null): string {
+  const source = name?.trim() || email?.split('@')[0]?.trim();
+  if (!source) return '👤';
+
+  const words = source.split(/[\s._-]+/).filter(Boolean);
+  const letters =
+    words.length >= 2 ? `${words[0][0]}${words[1][0]}` : (words[0]?.slice(0, 2) ?? '');
+  return letters.toUpperCase();
 }
 
 function getGreeting(dict: Record<string, string>, name: string): string {

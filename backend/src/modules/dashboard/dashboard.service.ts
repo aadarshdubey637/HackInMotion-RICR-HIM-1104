@@ -65,7 +65,19 @@ export interface DashboardResult {
   }>;
   weather: {
     available: boolean;
-    current?: { temperatureC: number; humidityPct: number; description: string };
+    current?: {
+      temperatureC: number;
+      humidityPct: number;
+      /**
+       * Forwarded from Open-Meteo's `wind_speed_10m`. The dashboard used to
+       * derive a wind figure from the farm's latitude, which produced a number
+       * that looked plausible, never changed, and meant nothing.
+       */
+      windSpeedKmh: number;
+      description: string;
+      /** When the provider observed this reading — not when we rendered it. */
+      observedAt: string;
+    };
     today?: { tempMaxC: number; tempMinC: number; rainMm: number; rainProbability: number | null };
     upcoming?: Array<{
       date: string;
@@ -84,11 +96,31 @@ export interface DashboardResult {
     reason?: string;
     depthMm?: number | null;
     depletionPercent?: number;
+    /**
+     * Root-zone water remaining, as a percentage. The inverse of
+     * `depletionPercent`, clamped: depletion is measured against *readily*
+     * available water and legitimately exceeds 100% once the crop is stressed,
+     * which would otherwise render as a negative moisture reading.
+     */
+    moisturePercent?: number;
+    /**
+     * Day-by-day moisture across the modelled window — past days rolled forward
+     * through observed weather, future days projected. This is what the trend
+     * line on the dashboard plots; before, that line was a fixed SVG path.
+     */
+    trend?: Array<{ date: string; isPast: boolean; moisturePercent: number }>;
     cropName?: string;
     warning?: string;
   };
   health: {
     activeIssues: number;
+    /**
+     * 0–100, derived from the severity of the farm's open issues rather than a
+     * count of them. The dashboard previously mapped 0/1/many issues onto the
+     * fixed scores 95/82/65, so one critical outbreak and one mild leaf spot
+     * scored identically.
+     */
+    score: number;
     recent: Array<{
       id: string;
       cropName: string;
@@ -140,8 +172,14 @@ export async function getDashboard(farmId: string, userId: string): Promise<Dash
 
   // Run the independent sections concurrently. `allSettled` so one rejection
   // cannot take down the whole dashboard.
-  const [irrigationResult, healthResult, alertsResult, marketResult, weatherBundleResult] =
-    await Promise.allSettled([
+  const [
+    irrigationResult,
+    healthResult,
+    healthTallyResult,
+    alertsResult,
+    marketResult,
+    weatherBundleResult,
+  ] = await Promise.allSettled([
       getIrrigationGuidance(farmId, userId).catch((err) => {
         logger.warn({ farmId, err }, 'Dashboard: irrigation unavailable');
         throw err;
@@ -151,6 +189,15 @@ export async function getDashboard(farmId: string, userId: string): Promise<Dash
         include: { crop: { select: { cropName: true } } },
         orderBy: { observedAt: 'desc' },
         take: 5,
+      }),
+      // Counted separately, across *every* open issue. The query above is
+      // capped at 5 because the card only lists five, but deriving the issue
+      // count from that capped list made a farm with twelve problems report
+      // five — and the health score built on it was wrong in the same way.
+      prisma.healthLog.groupBy({
+        by: ['severity'],
+        where: { farmId, status: { in: ['ACTIVE', 'MONITORING'] } },
+        _count: { _all: true },
       }),
       prisma.alert.findMany({
         where: {
@@ -187,6 +234,15 @@ export async function getDashboard(farmId: string, userId: string): Promise<Dash
     irrigation.reason = guidance.reason;
     irrigation.depthMm = guidance.recommendation?.depthMm ?? null;
     irrigation.depletionPercent = guidance.waterBalance.depletionPercent;
+    irrigation.moisturePercent = toMoisturePercent(guidance.waterBalance.depletionPercent);
+    irrigation.trend = guidance.forecast.map((day) => ({
+      date: day.date,
+      isPast: day.isPast,
+      // `stressRatio` is depletion over readily-available water on the same
+      // basis as `depletionPercent`, so the last past point of this series
+      // lines up with the headline figure above rather than drifting from it.
+      moisturePercent: toMoisturePercent(day.stressRatio * 100),
+    }));
     irrigation.cropName = guidance.crop.name;
     if (guidance.warning) irrigation.warning = guidance.warning;
 
@@ -196,7 +252,9 @@ export async function getDashboard(farmId: string, userId: string): Promise<Dash
       weather.current = {
         temperatureC: weatherBundle.current.temperatureC,
         humidityPct: weatherBundle.current.humidityPct,
+        windSpeedKmh: weatherBundle.current.windSpeedKmh,
         description: weatherBundle.current.description,
+        observedAt: weatherBundle.current.time,
       };
     }
     if (today) {
@@ -257,6 +315,7 @@ export async function getDashboard(farmId: string, userId: string): Promise<Dash
 
   // ── Crop health ──
   const healthLogs = healthResult.status === 'fulfilled' ? healthResult.value : [];
+  const healthTally = healthTallyResult.status === 'fulfilled' ? healthTallyResult.value : [];
   for (const log of healthLogs) {
     if (log.severity !== 'SEVERE' && log.severity !== 'CRITICAL') continue;
     const analysis = log.analysisResult as { summary?: string } | null;
@@ -358,7 +417,8 @@ export async function getDashboard(farmId: string, userId: string): Promise<Dash
     weather,
     irrigation,
     health: {
-      activeIssues: healthLogs.length,
+      activeIssues: healthTally.reduce((sum, row) => sum + row._count._all, 0),
+      score: healthScore(healthTally),
       recent: healthLogs.map((log) => {
         const analysis = log.analysisResult as { summary?: string } | null;
         return {
@@ -390,6 +450,39 @@ export async function getDashboard(farmId: string, userId: string): Promise<Dash
     },
     generatedAt: new Date().toISOString(),
   };
+}
+
+/**
+ * Root-zone water remaining, from a depletion percentage.
+ *
+ * Depletion is measured against *readily* available water, so it passes 100%
+ * as soon as the crop is drawing on reserves it cannot easily reach. Clamping
+ * keeps the gauge honest at the bottom instead of rendering a negative width.
+ */
+function toMoisturePercent(depletionPercent: number): number {
+  return Math.max(0, Math.min(100, Math.round(100 - depletionPercent)));
+}
+
+/**
+ * Crop health as a 0–100 score, weighted by how bad each open issue is.
+ *
+ * A count alone cannot separate three mild leaf spots from one critical
+ * outbreak, and the farmer's decision differs completely between those. The
+ * weights below are deliberately steep so a single CRITICAL drops the score
+ * further than several MILD entries combined.
+ */
+function healthScore(tally: Array<{ severity: string; _count: { _all: number } }>): number {
+  const penalties: Record<string, number> = {
+    MILD: 5,
+    MODERATE: 12,
+    SEVERE: 22,
+    CRITICAL: 35,
+  };
+  const total = tally.reduce(
+    (sum, row) => sum + (penalties[row.severity] ?? 10) * row._count._all,
+    0,
+  );
+  return Math.max(0, 100 - total);
 }
 
 /** Price trends for the farm's crops, shaped for the dashboard card. */

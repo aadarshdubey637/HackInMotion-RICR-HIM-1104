@@ -97,7 +97,13 @@ export interface Dashboard {
   }>;
   weather: {
     available: boolean;
-    current?: { temperatureC: number; humidityPct: number; description: string };
+    current?: {
+      temperatureC: number;
+      humidityPct: number;
+      windSpeedKmh: number;
+      description: string;
+      observedAt: string;
+    };
     today?: { tempMaxC: number; tempMinC: number; rainMm: number; rainProbability: number | null };
     upcoming?: Array<{
       date: string;
@@ -116,11 +122,14 @@ export interface Dashboard {
     reason?: string;
     depthMm?: number | null;
     depletionPercent?: number;
+    moisturePercent?: number;
+    trend?: Array<{ date: string; isPast: boolean; moisturePercent: number }>;
     cropName?: string;
     warning?: string;
   };
   health: {
     activeIssues: number;
+    score: number;
     recent: Array<{
       id: string;
       cropName: string;
