@@ -17,7 +17,7 @@ languages, with voice, and usable offline.
 | ----------------- |
 | Aadarsh Dubey     |
 | Harsh Kumar Verma |
-| Aaryan            |
+| Aaryan verma      |
 | Vijay Patel       |
 
 
