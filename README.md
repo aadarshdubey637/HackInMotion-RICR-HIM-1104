@@ -1,4 +1,4 @@
-# Smart Farm DSS
+# Smart Farm 
 
 An AI-powered farm decision-support system for Indian smallholders: crop
 recommendations, weather-driven irrigation, crop-photo disease diagnosis,
@@ -17,8 +17,20 @@ languages, with voice, and usable offline.
 | ----------------- |
 | Aadarsh Dubey     |
 | Harsh Kumar Verma |
-| Aaryan            |
+| Aaryan verma      |
 | Vijay Patel       |
+
+
+
+
+## Deployment Link
+
+
+- **Live** https://65.0.45.45
+
+
+
+
 
 ## Selected Theme
 
@@ -339,9 +351,9 @@ npm run db:studio     # browse
 
 ## Screenshots
 
-<img width="1900" height="900" alt="Dashboard" src="https://github.com/user-attachments/assets/f6b59fd5-5984-4cff-b876-155c4bac3f57" />
+<img width="1892" height="898" alt="image" src="https://github.com/user-attachments/assets/31023234-113d-4492-b774-6c55e500e68a" />
 
-<img width="1891" height="906" alt="Weather and irrigation" src="https://github.com/user-attachments/assets/37a66ff2-e9f2-481d-b848-043bdccb9b9e" />
+<img width="1890" height="884" alt="image" src="https://github.com/user-attachments/assets/0ebca56b-fc76-40ea-ad29-d230ddedec20" />
 
 <img width="1885" height="880" alt="Crop health" src="https://github.com/user-attachments/assets/f84f0b35-b5c9-4f44-ab96-a327b7c82b72" />
 
@@ -357,12 +369,7 @@ npm run db:studio     # browse
 
 ---
 
-## Deployment Link
 
-| Service     | URL                    |
-| ----------- | ---------------------- |
-| Frontend    | http://65.0.45.45:3000 |
-| Backend API | http://65.0.45.45:3001 |
 
 ---
 
@@ -386,3 +393,12 @@ npm run db:studio     # browse
   worker would cache the app shell for a genuine cold start offline.
 - **Automated tests.** The engines are pure functions and well suited to unit
   tests; coverage is currently thin.
+
+
+  ## Demo user
+
+  - Name ->    Demo
+
+  - Email ->    Demo@gmail.com
+
+  - password -> Demo@123
