@@ -12,6 +12,8 @@
     "lint:fix": "eslint src --ext .ts --fix",
     "format": "prettier --write \"src/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\"",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:indexes": "tsx src/prisma/apply-sparse-indexes.ts",
@@ -52,6 +54,7 @@
     "@typescript-eslint/parser": "^8.67.0",
     "eslint": "^8.57.1",
     "eslint-config-prettier": "^9.1.2",
+    "eslint-plugin-import": "^2.32.0",
     "prisma": "^5.22.0",
     "tsx": "^4.19.2",
     "typescript": "^5.6.3"

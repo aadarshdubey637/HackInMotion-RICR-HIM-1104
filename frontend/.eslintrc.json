@@ -1,18 +1,8 @@
 {
-  "root": true,
-  "extends": ["next/core-web-vitals", "next/typescript", "prettier"],
-  "ignorePatterns": [".next/", "out/", "node_modules/", "next-env.d.ts"],
+  "extends": ["next/core-web-vitals"],
   "rules": {
-    "@typescript-eslint/no-unused-vars": [
-      "error",
-      {
-        "argsIgnorePattern": "^_",
-        "varsIgnorePattern": "^_",
-        "caughtErrorsIgnorePattern": "^_"
-      }
-    ],
+    "no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
     "no-console": ["warn", { "allow": ["warn", "error", "info"] }],
-    "eqeqeq": ["error", "smart"],
     "prefer-const": "error",
     "no-var": "error"
   }

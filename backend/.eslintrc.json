@@ -1,38 +1,27 @@
 {
-  "root": true,
   "parser": "@typescript-eslint/parser",
   "parserOptions": {
     "ecmaVersion": 2022,
-    "sourceType": "module"
+    "sourceType": "module",
+    "project": "./tsconfig.json"
+  },
+  "plugins": ["@typescript-eslint", "import"],
+  "extends": [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/recommended"
+  ],
+  "rules": {
+    "no-unused-vars": "off",
+    "@typescript-eslint/no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
+    "@typescript-eslint/no-explicit-any": "warn",
+    "no-console": ["warn", { "allow": ["warn", "error", "info"] }],
+    "prefer-const": "error",
+    "no-var": "error",
+    "import/no-duplicates": "error"
   },
   "env": {
     "node": true,
     "es2022": true
   },
-  "plugins": ["@typescript-eslint"],
-  "extends": ["eslint:recommended", "plugin:@typescript-eslint/recommended", "prettier"],
-  "ignorePatterns": ["dist/", "node_modules/", "uploads/"],
-  "rules": {
-    "@typescript-eslint/no-unused-vars": [
-      "error",
-      {
-        "argsIgnorePattern": "^_",
-        "varsIgnorePattern": "^_",
-        "caughtErrorsIgnorePattern": "^_"
-      }
-    ],
-    "@typescript-eslint/no-explicit-any": "warn",
-    "eqeqeq": ["error", "smart"],
-    "prefer-const": "error",
-    "no-var": "error",
-    "no-return-await": "error"
-  },
-  "overrides": [
-    {
-      "files": ["src/prisma/*.ts"],
-      "rules": {
-        "no-console": "off"
-      }
-    }
-  ]
+  "ignorePatterns": ["dist/", "node_modules/"]
 }

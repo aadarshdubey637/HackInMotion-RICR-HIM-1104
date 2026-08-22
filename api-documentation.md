@@ -1,9 +1,13 @@
 # API Documentation
 
-**Smart Farm Decision Support System** — REST API
-Team RICR-HIM-1104
+**Smart Farm Decision Support System** — REST API  
+**Team:** RICR-HIM-1104 | **Hackathon:** HackInMotion
 
-Base URL: `http://localhost:3001/api` (development)
+| Environment | URL |
+|---|---|
+| Development | `http://localhost:3001/api` |
+| Live backend | `http://65.0.45.45:3001/api` |
+| Live frontend | `http://65.0.45.45:3000` |
 
 ---
 
